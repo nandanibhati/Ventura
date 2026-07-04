@@ -1,0 +1,93 @@
+/**
+ * Ventura Design System — Theme Tokens
+ * Tailwind CSS v4 (CSS-first config)
+ *
+ * Import this once at the root of your app:
+ *   import "./styles/theme.css";
+ */
+
+@import "tailwindcss";
+
+/* Enables `dark:` variants via a `.dark` class on <html> or any ancestor,
+   instead of relying solely on prefers-color-scheme. Toggle by adding/removing
+   `dark` on <html> (e.g. via a theme switcher). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* ---------- Brand palette ---------- */
+  --color-gold-50:  #fbf6ea;
+  --color-gold-100: #f4e6c3;
+  --color-gold-200: #ecd7a1;
+  --color-gold-300: #e2c483;
+  --color-gold-400: #d8b36a;
+  --color-gold-500: #c79a4c;
+  --color-gold-600: #a97e3b;
+  --color-gold-700: #86602d;
+
+  --color-ink-0:   #ffffff;
+  --color-ink-50:  #f7f5f0;
+  --color-ink-100: #ece9e0;
+  --color-ink-200: #d8d4c8;
+  --color-ink-300: #a9a6ad;
+  --color-ink-400: #8f8d99;
+  --color-ink-500: #6b6875;
+  --color-ink-600: #4a4855;
+  --color-ink-700: #302e3a;
+  --color-ink-800: #191926;
+  --color-ink-900: #10101a;
+  --color-ink-950: #08080d;
+
+  --color-success-500: #6fae76;
+  --color-success-600: #4d8c56;
+  --color-error-500:   #e0645f;
+  --color-error-600:   #c14741;
+  --color-warning-500: #d9a656;
+
+  /* ---------- Radius ---------- */
+  /* System-wide "premium" radius. Surfaces (cards, modals, inputs, dropdowns)
+     use --radius-lg (20px per spec). Buttons use a slightly tighter radius
+     so pill-shaped controls stay ergonomic at small heights. */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* ---------- Shadows (soft, diffuse, "Apple-level") ---------- */
+  --shadow-soft-sm: 0 2px 8px -2px rgb(16 16 26 / 0.08), 0 1px 2px -1px rgb(16 16 26 / 0.06);
+  --shadow-soft-md: 0 12px 24px -8px rgb(16 16 26 / 0.12), 0 4px 8px -4px rgb(16 16 26 / 0.08);
+  --shadow-soft-lg: 0 24px 48px -16px rgb(16 16 26 / 0.18), 0 8px 16px -8px rgb(16 16 26 / 0.10);
+  --shadow-gold-glow: 0 0 0 3px rgb(216 179 106 / 0.16);
+
+  /* ---------- Typography ---------- */
+  --font-display: "Cormorant Garamond", ui-serif, Georgia, serif;
+  --font-sans: "Inter", "Jost", system-ui, -apple-system, sans-serif;
+
+  /* ---------- Motion ---------- */
+  --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- Base surface variables (light / dark aware) ---------- */
+:root {
+  --surface: var(--color-ink-0);
+  --surface-muted: var(--color-ink-50);
+  --surface-inset: var(--color-ink-100);
+  --border: var(--color-ink-200);
+  --text-primary: var(--color-ink-900);
+  --text-muted: var(--color-ink-500);
+}
+
+.dark {
+  --surface: var(--color-ink-900);
+  --surface-muted: var(--color-ink-800);
+  --surface-inset: var(--color-ink-700);
+  --border: rgb(216 179 106 / 0.16);
+  --text-primary: var(--color-ink-50);
+  --text-muted: var(--color-ink-300);
+}
+
+body {
+  background-color: var(--surface);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
