@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Search,
   Heart,
@@ -20,6 +21,9 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import { useCart } from "../../context/CartContext";
+import { wishlistApi, notificationsApi } from "../../api/orders";
 
 const NAV_LINKS = [
   { label: "New Arrivals", to: "/new-arrivals" },
@@ -45,11 +49,15 @@ const MEGA_MENU = {
 const LANGUAGES = ["English", "Français", "Deutsch", "Español", "日本語"];
 const CURRENCIES = ["£", "EUR", "GBP", "JPY", "INR"];
 
-const NOTIFICATIONS = [
-  { title: "Order Shipped", desc: "Your order #V4021 is on the way", time: "2h ago" },
-  { title: "Price Drop", desc: "An item in your wishlist is now on sale", time: "5h ago" },
-  { title: "Welcome to Ventura", desc: "Enjoy 10% off your first order", time: "1d ago" },
-];
+function timeAgo(dateString) {
+  const seconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
 
 function NavItem({ to, label, accent }) {
   return (
@@ -159,6 +167,23 @@ function Navbar() {
   const navRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
+  const { itemCount } = useCart();
+  const queryClient = useQueryClient();
+
+  const { data: wishlist = [] } = useQuery({
+    queryKey: ["wishlist"],
+    queryFn: wishlistApi.list,
+    enabled: isAuthenticated,
+  });
+
+  const { data: notifications = [] } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: notificationsApi.list,
+    enabled: isAuthenticated,
+    refetchInterval: 60_000,
+  });
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -199,12 +224,24 @@ function Navbar() {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (!query.trim()) return;
-    navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+    navigate(`/shop?search=${encodeURIComponent(query.trim())}`);
     setQuery("");
     setSearchOpen(false);
   };
 
   const toggleMenu = (name) => setOpenMenu((m) => (m === name ? null : name));
+
+  const handleNotificationsOpen = () => {
+    toggleMenu("notif");
+    if (openMenu !== "notif" && unreadCount > 0) {
+      notificationsApi.markAllRead().then(() => queryClient.invalidateQueries({ queryKey: ["notifications"] }));
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
+  };
 
   return (
     <header ref={navRef} className="sticky top-0 z-50">
@@ -403,12 +440,12 @@ function Navbar() {
             </button>
 
             <div className="hidden sm:block">
-              <IconButton icon={Heart} count={5} label="Wishlist" onClick={() => navigate("/wishlist")} />
+              <IconButton icon={Heart} count={wishlist.length} label="Wishlist" onClick={() => navigate("/wishlist")} />
             </div>
 
             <IconButton
               icon={ShoppingBag}
-              count={3}
+              count={itemCount}
               label="Cart"
               onClick={() => navigate("/cart")}
             />
@@ -416,10 +453,10 @@ function Navbar() {
             <div className="relative hidden sm:block">
               <IconButton
                 icon={Bell}
-                count={NOTIFICATIONS.length}
+                count={unreadCount}
                 label="Notifications"
                 active={openMenu === "notif"}
-                onClick={() => toggleMenu("notif")}
+                onClick={handleNotificationsOpen}
               />
               <AnimatePresence>
                 {openMenu === "notif" && (
@@ -432,80 +469,102 @@ function Navbar() {
                   >
                     <div className="flex items-center justify-between border-b border-black/5 px-4 py-3 dark:border-white/10">
                       <h4 className="text-sm font-semibold text-neutral-900 dark:text-white">Notifications</h4>
-                      <span className="text-xs text-neutral-400">{NOTIFICATIONS.length} new</span>
+                      <span className="text-xs text-neutral-400">{notifications.length} total</span>
                     </div>
-                    <ul className="max-h-80 overflow-y-auto py-1">
-                      {NOTIFICATIONS.map((n) => (
-                        <li
-                          key={n.title}
-                          className="flex flex-col gap-0.5 px-4 py-3 transition-colors hover:bg-black/[0.03] dark:hover:bg-white/5"
-                        >
-                          <span className="text-sm font-medium text-neutral-900 dark:text-white">{n.title}</span>
-                          <span className="text-xs text-neutral-500 dark:text-neutral-400">{n.desc}</span>
-                          <span className="mt-0.5 text-[11px] text-neutral-400">{n.time}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="border-t border-black/5 px-4 py-2.5 dark:border-white/10">
-                      <button className="text-xs font-medium text-neutral-500 hover:text-neutral-900 dark:hover:text-white">
-                        View all notifications
-                      </button>
-                    </div>
+                    {notifications.length === 0 ? (
+                      <p className="px-4 py-6 text-center text-sm text-neutral-400">You're all caught up.</p>
+                    ) : (
+                      <ul className="max-h-80 overflow-y-auto py-1">
+                        {notifications.slice(0, 8).map((n) => (
+                          <li
+                            key={n.id}
+                            className="flex flex-col gap-0.5 px-4 py-3 transition-colors hover:bg-black/[0.03] dark:hover:bg-white/5"
+                          >
+                            <span className="text-sm font-medium text-neutral-900 dark:text-white">{n.title}</span>
+                            <span className="text-xs text-neutral-500 dark:text-neutral-400">{n.body}</span>
+                            <span className="mt-0.5 text-[11px] text-neutral-400">{timeAgo(n.createdAt)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
 
-            <div className="relative hidden lg:block">
-              <button
-                onClick={() => toggleMenu("profile")}
-                aria-label="Account"
-                className={`flex h-10 w-10 items-center justify-center rounded-full border transition-colors ${
-                  openMenu === "profile"
-                    ? "border-neutral-900 dark:border-white"
-                    : "border-black/10 hover:border-neutral-400 dark:border-white/15 dark:hover:border-white/40"
-                }`}
-              >
-                <User className="h-[1.05rem] w-[1.05rem] text-neutral-700 dark:text-neutral-200" strokeWidth={1.75} />
-              </button>
-              <AnimatePresence>
-                {openMenu === "profile" && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                    transition={{ duration: 0.18 }}
-                    className="absolute right-0 top-full mt-3 w-56 overflow-hidden rounded-2xl border border-black/5 bg-white/95 py-2 shadow-2xl shadow-black/10 backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-900/95"
-                  >
-                    <div className="border-b border-black/5 px-4 py-3 dark:border-white/10">
-                      <p className="text-sm font-semibold text-neutral-900 dark:text-white">Alex Morgan</p>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400">alex@example.com</p>
-                    </div>
-                    {[
-                      { icon: User, label: "My Profile", to: "/account" },
-                      { icon: Package, label: "Orders", to: "/orders" },
-                      { icon: Heart, label: "Wishlist", to: "/wishlist" },
-                      { icon: Settings, label: "Settings", to: "/settings" },
-                    ].map(({ icon: Icon, label, to }) => (
-                      <Link
-                        key={label}
-                        to={to}
-                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-neutral-600 transition-colors hover:bg-black/[0.03] hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-white/5 dark:hover:text-white"
-                      >
-                        <Icon className="h-4 w-4" strokeWidth={1.75} />
-                        {label}
-                      </Link>
-                    ))}
-                    <div className="mt-1 border-t border-black/5 pt-1 dark:border-white/10">
-                      <button className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-rose-600 transition-colors hover:bg-rose-50 dark:hover:bg-rose-500/10">
-                        <LogOut className="h-4 w-4" strokeWidth={1.75} />
-                        Logout
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            {isAuthenticated ? (
+              <div className="relative hidden lg:block">
+                <button
+                  onClick={() => toggleMenu("profile")}
+                  aria-label="Account"
+                  className={`flex h-10 w-10 items-center justify-center rounded-full border transition-colors ${
+                    openMenu === "profile"
+                      ? "border-neutral-900 dark:border-white"
+                      : "border-black/10 hover:border-neutral-400 dark:border-white/15 dark:hover:border-white/40"
+                  }`}
+                >
+                  <User className="h-[1.05rem] w-[1.05rem] text-neutral-700 dark:text-neutral-200" strokeWidth={1.75} />
+                </button>
+                <AnimatePresence>
+                  {openMenu === "profile" && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                      transition={{ duration: 0.18 }}
+                      className="absolute right-0 top-full mt-3 w-56 overflow-hidden rounded-2xl border border-black/5 bg-white/95 py-2 shadow-2xl shadow-black/10 backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-900/95"
+                    >
+                      <div className="border-b border-black/5 px-4 py-3 dark:border-white/10">
+                        <p className="text-sm font-semibold text-neutral-900 dark:text-white">{user?.name}</p>
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400">{user?.email}</p>
+                      </div>
+                      {[
+                        { icon: User, label: "My Profile", to: "/account" },
+                        { icon: Package, label: "Orders", to: "/orders" },
+                        { icon: Heart, label: "Wishlist", to: "/wishlist" },
+                        ...(user?.role === "admin" ? [{ icon: Settings, label: "Admin Dashboard", to: "/admin" }] : []),
+                        ...(user?.role === "seller"
+                          ? [{ icon: Settings, label: "Seller Dashboard", to: "/seller/dashboard" }]
+                          : []),
+                      ].map(({ icon: Icon, label, to }) => (
+                        <Link
+                          key={label}
+                          to={to}
+                          className="flex items-center gap-2.5 px-4 py-2 text-sm text-neutral-600 transition-colors hover:bg-black/[0.03] hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-white/5 dark:hover:text-white"
+                        >
+                          <Icon className="h-4 w-4" strokeWidth={1.75} />
+                          {label}
+                        </Link>
+                      ))}
+                      <div className="mt-1 border-t border-black/5 pt-1 dark:border-white/10">
+                        <button
+                          onClick={handleLogout}
+                          className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-rose-600 transition-colors hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                        >
+                          <LogOut className="h-4 w-4" strokeWidth={1.75} />
+                          Logout
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <div className="hidden items-center gap-2 lg:flex">
+                <Link
+                  to="/login"
+                  className="rounded-full px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-black/5 dark:text-neutral-200 dark:hover:bg-white/10"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  to="/signup"
+                  className="rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
+                >
+                  Sign up
+                </Link>
+              </div>
+            )}
 
             <button
               onClick={() => setMobileOpen(true)}
@@ -621,13 +680,32 @@ function Navbar() {
                 >
                   <Heart className="h-4 w-4" /> Wishlist
                 </Link>
-                <Link
-                  to="/account"
-                  className="flex items-center gap-2 rounded-xl border border-black/10 px-3.5 py-2.5 text-sm font-medium text-neutral-700 dark:border-white/10 dark:text-neutral-200"
-                >
-                  <User className="h-4 w-4" /> Account
-                </Link>
+                {isAuthenticated ? (
+                  <Link
+                    to="/account"
+                    className="flex items-center gap-2 rounded-xl border border-black/10 px-3.5 py-2.5 text-sm font-medium text-neutral-700 dark:border-white/10 dark:text-neutral-200"
+                  >
+                    <User className="h-4 w-4" /> Account
+                  </Link>
+                ) : (
+                  <Link
+                    to="/login"
+                    className="flex items-center gap-2 rounded-xl border border-black/10 px-3.5 py-2.5 text-sm font-medium text-neutral-700 dark:border-white/10 dark:text-neutral-200"
+                  >
+                    <User className="h-4 w-4" /> Sign in
+                  </Link>
+                )}
               </div>
+              {isAuthenticated && (
+                <div className="mt-2 px-5">
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2 rounded-xl border border-black/10 px-3.5 py-2.5 text-sm font-medium text-rose-600 dark:border-white/10"
+                  >
+                    <LogOut className="h-4 w-4" /> Log out
+                  </button>
+                </div>
+              )}
 
               <div className="mt-4 flex items-center justify-between border-t border-black/5 px-5 py-4 dark:border-white/10">
                 <button

@@ -39,11 +39,11 @@ import {
   XCircle,
   Crown,
   UserPlus,
-  Shirt,
   Watch,
-  Footprints,
+  Keyboard,
   Headphones,
-  Gem,
+  Laptop,
+  Lamp,
 } from "lucide-react";
 
 const CHART_TOKENS = {
@@ -70,8 +70,8 @@ const CHART_TOKENS = {
 };
 
 const CATEGORY_COLORS = {
-  light: { Women: "#2a78d6", Men: "#1baf7a", Footwear: "#eda100", Accessories: "#008300", Electronics: "#4a3aa7" },
-  dark: { Women: "#3987e5", Men: "#199e70", Footwear: "#c98500", Accessories: "#008300", Electronics: "#9085e9" },
+  light: { Audio: "#2a78d6", Computing: "#1baf7a", Wearables: "#eda100", "Smart Home": "#008300", "Home & Kitchen": "#4a3aa7" },
+  dark: { Audio: "#3987e5", Computing: "#199e70", Wearables: "#c98500", "Smart Home": "#008300", "Home & Kitchen": "#9085e9" },
 };
 
 const NAV_ITEMS = [
@@ -95,20 +95,20 @@ const CONVERSION_BY_RANGE = {
 };
 
 const CATEGORY_SALES = [
-  { category: "Women", revenue: 48200 },
-  { category: "Footwear", revenue: 31500 },
-  { category: "Men", revenue: 27800 },
-  { category: "Accessories", revenue: 19600 },
-  { category: "Electronics", revenue: 14300 },
+  { category: "Audio", revenue: 48200 },
+  { category: "Computing", revenue: 31500 },
+  { category: "Wearables", revenue: 27800 },
+  { category: "Smart Home", revenue: 19600 },
+  { category: "Home & Kitchen", revenue: 14300 },
 ];
 
 const TOP_PRODUCTS = [
-  { id: "p1", name: "Aurora Cashmere Coat", sku: "VNT-AWC-2041", category: "Women", icon: Shirt, price: 428, sold: 214, revenue: 91592, stock: 18 },
-  { id: "p2", name: "Nova Titanium Watch", sku: "VNT-NTW-1187", category: "Accessories", icon: Watch, price: 890, sold: 98, revenue: 87220, stock: 6 },
-  { id: "p3", name: "Meridian Leather Loafers", sku: "VNT-MLL-0742", category: "Footwear", icon: Footprints, price: 265, sold: 156, revenue: 41340, stock: 0 },
-  { id: "p4", name: "Zenith Noise-Cancel Headphones", sku: "VNT-ZNH-3390", category: "Electronics", icon: Headphones, price: 349, sold: 312, revenue: 108888, stock: 42 },
-  { id: "p5", name: "Onyx Wool Blazer", sku: "VNT-OWB-2205", category: "Men", icon: Shirt, price: 340, sold: 187, revenue: 63580, stock: 24 },
-  { id: "p6", name: "Lumen Silk Scarf", sku: "VNT-LSS-0899", category: "Accessories", icon: Gem, price: 135, sold: 76, revenue: 10260, stock: 3 },
+  { id: "p1", name: "Aurora Pro Wireless Earbuds", sku: "VNT-APE-2041", category: "Audio", icon: Headphones, price: 178, sold: 214, revenue: 38092, stock: 18 },
+  { id: "p2", name: "Nova Titanium Smartwatch", sku: "VNT-NTS-1187", category: "Wearables", icon: Watch, price: 890, sold: 98, revenue: 87220, stock: 6 },
+  { id: "p3", name: "Meridian Mechanical Keyboard", sku: "VNT-MMK-0742", category: "Computing", icon: Keyboard, price: 145, sold: 156, revenue: 22620, stock: 0 },
+  { id: "p4", name: "Zenith Noise-Cancel Headphones", sku: "VNT-ZNH-3390", category: "Audio", icon: Headphones, price: 349, sold: 312, revenue: 108888, stock: 42 },
+  { id: "p5", name: "Onyx 14\" Ultrabook", sku: "VNT-OUB-2205", category: "Computing", icon: Laptop, price: 1340, sold: 47, revenue: 62980, stock: 24 },
+  { id: "p6", name: "Lumen Smart Desk Lamp", sku: "VNT-LSD-0899", category: "Smart Home", icon: Lamp, price: 65, sold: 76, revenue: 4940, stock: 3 },
 ];
 
 const RECENT_ORDERS = [
@@ -189,13 +189,13 @@ function stockStatus(stock) {
 }
 
 function formatCurrency(value) {
-  return `££{Math.round(value).toLocaleString()}`;
+  return `£${Math.round(value).toLocaleString()}`;
 }
 
 function formatCompact(value) {
-  if (value >= 1000000) return `£{(value / 1000000).toFixed(1)}M`;
-  if (value >= 1000) return `£{(value / 1000).toFixed(1)}K`;
-  return `£{Math.round(value)}`;
+  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+  return `${Math.round(value)}`;
 }
 
 function ChartTooltip({ active, payload, label, tokens, valuePrefix = "", valueSuffix = "" }) {
@@ -223,7 +223,7 @@ function ChartTooltip({ active, payload, label, tokens, valuePrefix = "", valueS
 }
 
 function Sparkline({ data, dataKey, color }) {
-  const gradientId = `spark-£{dataKey}`;
+  const gradientId = `spark-${dataKey}`;
   return (
     <div className="h-10 w-24">
       <ResponsiveContainer width="100%" height="100%">
@@ -239,7 +239,7 @@ function Sparkline({ data, dataKey, color }) {
             dataKey={dataKey}
             stroke={color}
             strokeWidth={2}
-            fill={`url(#£{gradientId})`}
+            fill={`url(#${gradientId})`}
             dot={false}
             isAnimationActive={false}
           />
@@ -263,7 +263,7 @@ function StatTile({ icon: Icon, label, value, delta, sparkData, sparkKey, color 
       <div className="mt-1 flex items-end justify-between">
         <span className="text-2xl font-bold text-neutral-900 dark:text-white">{value}</span>
         <span
-          className={`flex items-center gap-0.5 text-xs font-semibold £{
+          className={`flex items-center gap-0.5 text-xs font-semibold ${
             isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"
           }`}
         >
@@ -295,7 +295,7 @@ function StockMeter({ stock, max = 60 }) {
   return (
     <div className="flex items-center gap-2">
       <div className="h-1.5 w-20 overflow-hidden rounded-full" style={{ backgroundColor: trackColor }}>
-        <div className="h-full rounded-full" style={{ width: `£{percent}%`, backgroundColor: fillColor }} />
+        <div className="h-full rounded-full" style={{ width: `${percent}%`, backgroundColor: fillColor }} />
       </div>
       <span className="text-xs text-neutral-500 dark:text-neutral-400">{stock} left</span>
     </div>
@@ -337,7 +337,7 @@ function RevenueChart({ data, tokens, range, onRangeChange }) {
             <button
               key={opt.id}
               onClick={() => onRangeChange(opt.id)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors £{
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                 range === opt.id
                   ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
                   : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
@@ -369,7 +369,7 @@ function RevenueChart({ data, tokens, range, onRangeChange }) {
               tick={{ fill: tokens.muted, fontSize: 11 }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v) => `££{formatCompact(v)}`}
+              tickFormatter={(v) => `£${formatCompact(v)}`}
               width={48}
             />
             <Tooltip content={<ChartTooltip tokens={tokens} valuePrefix="£" />} />
@@ -430,7 +430,7 @@ function CategorySalesChart({ data, tokens, categoryColors }) {
               tick={{ fill: tokens.muted, fontSize: 11 }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v) => `££{formatCompact(v)}`}
+              tickFormatter={(v) => `£${formatCompact(v)}`}
             />
             <YAxis
               type="category"
@@ -445,7 +445,7 @@ function CategorySalesChart({ data, tokens, categoryColors }) {
               {sorted.map((entry) => (
                 <Cell key={entry.category} fill={categoryColors[entry.category]} />
               ))}
-              <LabelList dataKey="revenue" position="right" formatter={(v) => `££{formatCompact(v)}`} fill={tokens.secondary} fontSize={11} />
+              <LabelList dataKey="revenue" position="right" formatter={(v) => `£${formatCompact(v)}`} fill={tokens.secondary} fontSize={11} />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -492,7 +492,7 @@ function OverviewTab({ tokens, categoryColors, range, onRangeChange, revenueData
         <StatTile
           icon={Percent}
           label="Conversion Rate"
-          value={`£{conversion.value}%`}
+          value={`${conversion.value}%`}
           delta={conversion.delta}
           sparkData={conversionPoints}
           sparkKey="v"
@@ -750,7 +750,7 @@ function Sidebar({ activeTab, onSelect, isOpen, onClose }) {
         )}
       </AnimatePresence>
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-white/10 bg-neutral-950 transition-transform duration-300 lg:static lg:translate-x-0 £{
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-white/10 bg-neutral-950 transition-transform duration-300 lg:static lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -766,7 +766,7 @@ function Sidebar({ activeTab, onSelect, isOpen, onClose }) {
                 onSelect(item.id);
                 onClose();
               }}
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors £{
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                 activeTab === item.id ? "bg-white/10 text-white" : "text-neutral-400 hover:bg-white/5 hover:text-white"
               }`}
             >

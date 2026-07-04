@@ -17,24 +17,26 @@ import {
   Lock,
   Info,
   Watch,
-  Shirt,
-  Footprints,
-  Gem,
+  Keyboard,
+  Lamp,
+  Mouse,
+  Speaker,
+  Laptop,
   Headphones,
 } from "lucide-react";
 
 const INITIAL_CART_ITEMS = [
-  { id: "c1", name: "Aurora Cashmere Coat", category: "Women", size: "M", color: "Charcoal", price: 428, quantity: 1, icon: Shirt, gradient: "from-rose-600 to-neutral-900" },
-  { id: "c2", name: "Nova Titanium Watch", category: "Accessories", size: "One Size", color: "Slate", price: 890, quantity: 1, icon: Watch, gradient: "from-slate-600 to-neutral-900" },
-  { id: "c3", name: "Meridian Leather Loafers", category: "Footwear", size: "42", color: "Cognac", price: 265, quantity: 2, icon: Footprints, gradient: "from-amber-700 to-neutral-900" },
+  { id: "c1", name: "Aurora Pro Wireless Earbuds", category: "Audio", size: "Standard", color: "Black", price: 178, quantity: 1, icon: Headphones, gradient: "from-rose-600 to-neutral-900" },
+  { id: "c2", name: "Nova Titanium Smartwatch", category: "Wearables", size: "44mm", color: "Titanium", price: 890, quantity: 1, icon: Watch, gradient: "from-slate-600 to-neutral-900" },
+  { id: "c3", name: "Meridian Mechanical Keyboard", category: "Computing", size: "Full-size", color: "Charcoal", price: 145, quantity: 2, icon: Keyboard, gradient: "from-amber-700 to-neutral-900" },
 ];
 
 const RECOMMENDATIONS = [
-  { id: "r1", name: "Onyx Wool Blazer", category: "Men", price: 340, rating: 4.7, icon: Shirt, gradient: "from-neutral-700 to-neutral-950" },
-  { id: "r2", name: "Lumen Silk Scarf", category: "Accessories", price: 135, rating: 4.6, icon: Gem, gradient: "from-fuchsia-600 to-neutral-900" },
-  { id: "r3", name: "Zenith Noise-Cancel Headphones", category: "Electronics", price: 349, rating: 4.8, icon: Headphones, gradient: "from-indigo-700 to-neutral-900" },
-  { id: "r4", name: "Atlas Leather Belt", category: "Accessories", price: 85, rating: 4.7, icon: Gem, gradient: "from-amber-600 to-neutral-900" },
-  { id: "r5", name: "Solstice Merino Sweater", category: "Men", price: 195, rating: 4.7, icon: Shirt, gradient: "from-teal-700 to-neutral-900" },
+  { id: "r1", name: "Onyx 14\" Ultrabook", category: "Computing", price: 1340, rating: 4.7, icon: Laptop, gradient: "from-neutral-700 to-neutral-950" },
+  { id: "r2", name: "Lumen Smart Desk Lamp", category: "Smart Home", price: 65, rating: 4.6, icon: Lamp, gradient: "from-fuchsia-600 to-neutral-900" },
+  { id: "r3", name: "Zenith Noise-Cancel Headphones", category: "Audio", price: 349, rating: 4.8, icon: Headphones, gradient: "from-indigo-700 to-neutral-900" },
+  { id: "r4", name: "Atlas Mechanical Mouse", category: "Computing", price: 55, rating: 4.7, icon: Mouse, gradient: "from-amber-600 to-neutral-900" },
+  { id: "r5", name: "Halo Portable Bluetooth Speaker", category: "Audio", price: 96, rating: 4.7, icon: Speaker, gradient: "from-teal-700 to-neutral-900" },
 ];
 
 const SHIPPING_OPTIONS = [
@@ -51,7 +53,7 @@ const COUPONS = {
 
 function AnimatedNumber({ value, decimals = 2, className = "" }) {
   const spring = useSpring(value, { stiffness: 150, damping: 22, mass: 0.6 });
-  const display = useTransform(spring, (v) => `££{v.toFixed(decimals)}`);
+  const display = useTransform(spring, (v) => `£${v.toFixed(decimals)}`);
 
   useEffect(() => {
     spring.set(value);
@@ -94,7 +96,7 @@ function CartLineItem({ item, onIncrease, onDecrease, onRemove }) {
       className="flex gap-4 rounded-2xl border border-black/5 bg-white p-4 dark:border-white/10 dark:bg-neutral-900 sm:gap-5 sm:p-5"
     >
       <div
-        className={`relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br £{item.gradient} sm:h-28 sm:w-28`}
+        className={`relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${item.gradient} sm:h-28 sm:w-28`}
       >
         <item.icon className="h-10 w-10 text-white/40" strokeWidth={1} />
       </div>
@@ -199,7 +201,7 @@ function ShippingBox({ options, selectedId, onSelect }) {
           <button
             key={option.id}
             onClick={() => onSelect(option.id)}
-            className={`flex w-full items-center justify-between rounded-xl border px-4 py-3.5 text-left transition-colors £{
+            className={`flex w-full items-center justify-between rounded-xl border px-4 py-3.5 text-left transition-colors ${
               selectedId === option.id
                 ? "border-neutral-900 bg-neutral-50 dark:border-white dark:bg-white/5"
                 : "border-black/10 hover:border-neutral-300 dark:border-white/15 dark:hover:border-white/30"
@@ -207,7 +209,7 @@ function ShippingBox({ options, selectedId, onSelect }) {
           >
             <div className="flex items-center gap-3">
               <span
-                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 £{
+                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
                   selectedId === option.id ? "border-neutral-900 dark:border-white" : "border-neutral-300 dark:border-neutral-600"
                 }`}
               >
@@ -219,7 +221,7 @@ function ShippingBox({ options, selectedId, onSelect }) {
               </div>
             </div>
             <span className="shrink-0 text-sm font-semibold text-neutral-900 dark:text-white">
-              {option.price === 0 ? "Free" : `££{option.price.toFixed(2)}`}
+              {option.price === 0 ? "Free" : `£${option.price.toFixed(2)}`}
             </span>
           </button>
         ))}
@@ -251,7 +253,7 @@ function OrderSummary({ subtotal, discount, shippingCost, tax, total, appliedCou
               className="flex items-center justify-between overflow-hidden text-sm"
             >
               <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                <Sparkles className="h-3.5 w-3.5" /> Discount {appliedCoupon && `(£{appliedCoupon.code})`}
+                <Sparkles className="h-3.5 w-3.5" /> Discount {appliedCoupon && `(${appliedCoupon.code})`}
               </span>
               <span className="flex items-center font-medium text-emerald-600 dark:text-emerald-400">
                 -<AnimatedNumber value={discount} />
@@ -302,7 +304,7 @@ function RecommendationCard({ product, onAdd }) {
   return (
     <div className="w-[190px] shrink-0 rounded-2xl border border-black/5 bg-white p-4 dark:border-white/10 dark:bg-neutral-900 sm:w-[220px]">
       <div
-        className={`relative mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br £{product.gradient}`}
+        className={`relative mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${product.gradient}`}
       >
         <product.icon className="h-10 w-10 text-white/40" strokeWidth={1} />
       </div>
@@ -314,7 +316,7 @@ function RecommendationCard({ product, onAdd }) {
         {Array.from({ length: 5 }).map((_, i) => (
           <Star
             key={i}
-            className={`h-3 w-3 £{
+            className={`h-3 w-3 ${
               i < Math.round(product.rating)
                 ? "fill-amber-400 text-amber-400"
                 : "fill-neutral-200 text-neutral-200 dark:fill-neutral-700 dark:text-neutral-700"
@@ -326,7 +328,7 @@ function RecommendationCard({ product, onAdd }) {
         <span className="text-sm font-bold text-neutral-900 dark:text-white">£{product.price}</span>
         <button
           onClick={() => onAdd(product)}
-          aria-label={`Add £{product.name} to cart`}
+          aria-label={`Add ${product.name} to cart`}
           className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-900 text-white transition-transform hover:scale-110 dark:bg-white dark:text-neutral-900"
         >
           <Plus className="h-4 w-4" />
@@ -406,7 +408,7 @@ function Cart() {
       return;
     }
     if (coupon.minSubtotal && subtotal < coupon.minSubtotal) {
-      setCouponError(`This code requires a subtotal of ££{coupon.minSubtotal}+.`);
+      setCouponError(`This code requires a subtotal of £${coupon.minSubtotal}+.`);
       return;
     }
     setAppliedCoupon({ code, ...coupon });

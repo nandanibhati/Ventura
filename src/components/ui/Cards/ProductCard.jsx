@@ -90,7 +90,7 @@ export default function ProductCard({
               ))}
             </span>
             <span className="text-xs text-[var(--text-muted)]">
-              {rating.toFixed(1)} {reviews != null && `(£{reviews})`}
+              {rating.toFixed(1)} {reviews != null && `(${reviews})`}
             </span>
           </div>
         )}
