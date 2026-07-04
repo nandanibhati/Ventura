@@ -159,7 +159,7 @@ function Navbar() {
   const [currency, setCurrency] = useState("£");
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return false;
-    const stored = localStorage.getItem("ventura-theme");
+    const stored = localStorage.getItem("Veluntra-theme");
     if (stored) return stored === "dark";
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
@@ -195,7 +195,7 @@ function Navbar() {
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle("dark", isDark);
-    localStorage.setItem("ventura-theme", isDark ? "dark" : "light");
+    localStorage.setItem("Veluntra-theme", isDark ? "dark" : "light");
   }, [isDark]);
 
   const [prevPathname, setPrevPathname] = useState(location.pathname);
@@ -292,7 +292,7 @@ function Navbar() {
         >
           <Link to="/" className="shrink-0">
             <span className="text-[1.6rem] font-bold uppercase tracking-[0.15em] text-neutral-900 dark:text-white">
-              Ventura
+              Veluntra
             </span>
           </Link>
 
@@ -596,7 +596,7 @@ function Navbar() {
             >
               <div className="flex items-center justify-between border-b border-black/5 px-5 py-4 dark:border-white/10">
                 <span className="text-xl font-bold uppercase tracking-[0.15em] text-neutral-900 dark:text-white">
-                  Ventura
+                  Veluntra
                 </span>
                 <button
                   onClick={() => setMobileOpen(false)}

@@ -53,7 +53,7 @@ api.interceptors.response.use(
         return api(original);
       } catch {
         tokenStorage.clear();
-        window.dispatchEvent(new CustomEvent("ventura:session-expired"));
+        window.dispatchEvent(new CustomEvent("Veluntra:session-expired"));
       }
     }
 

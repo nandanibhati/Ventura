@@ -46,12 +46,12 @@ export default function Signup() {
             className="text-xl font-medium tracking-[0.2em] text-[var(--text-primary)]"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            VENTURA
+            Veluntra
           </Link>
           <h1 className="mt-4 text-2xl font-medium text-[var(--text-primary)]" style={{ fontFamily: "var(--font-display)" }}>
             Create your account
           </h1>
-          <p className="mt-1.5 text-sm text-[var(--text-muted)]">Join Ventura to start shopping or selling.</p>
+          <p className="mt-1.5 text-sm text-[var(--text-muted)]">Join Veluntra to start shopping or selling.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -79,8 +79,8 @@ export default function Signup() {
             value={form.role}
             onChange={setField("role")}
             options={[
-              { value: "customer", label: "Customer — shop on Ventura" },
-              { value: "seller", label: "Seller — sell on Ventura" },
+              { value: "customer", label: "Customer — shop on Veluntra" },
+              { value: "seller", label: "Seller — sell on Veluntra" },
             ]}
           />
 

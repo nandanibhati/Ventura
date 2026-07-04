@@ -386,7 +386,7 @@ function HeroSection() {
   );
 }
 
-function WhyVenturaSection() {
+function WhyVeluntraSection() {
   return (
     <section className="border-b border-black/5 bg-white py-16 dark:border-white/10 dark:bg-neutral-950">
       <div className="mx-auto max-w-7xl px-6">
@@ -832,7 +832,7 @@ function BrandsSection() {
           </div>
         )}
         <div className="mt-10 flex flex-col items-center justify-center gap-3 text-center sm:flex-row sm:gap-2">
-          <p className="text-xs text-neutral-500 dark:text-neutral-400">Interested in partnering with Ventura?</p>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">Interested in partnering with Veluntra?</p>
           <Link to="/signup" className="inline-flex items-center gap-1 text-xs font-semibold text-neutral-900 dark:text-white">
             Get in touch <ArrowRight className="h-3 w-3" />
           </Link>
@@ -941,7 +941,7 @@ function TestimonialsSection() {
         <SectionHeading
           eyebrow="Testimonials"
           title="Loved By Thousands"
-          subtitle="Real words from real members of the Ventura community."
+          subtitle="Real words from real members of the Veluntra community."
         />
         <SectionStatus isLoading={isLoading} isError={isError} isEmpty={false} onRetry={refetch} />
         {!isLoading && !isError && testimonial && (
@@ -1019,7 +1019,7 @@ function InstagramSection() {
       <div className="mx-auto max-w-7xl px-6">
         <SectionHeading
           eyebrow="Follow the Journey"
-          title="#PoweredByVentura"
+          title="#PoweredByVeluntra"
           subtitle="Tag us in your setup for a chance to be featured."
         />
         <motion.div
@@ -1040,7 +1040,7 @@ function InstagramSection() {
               </div>
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 opacity-0 backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-100">
                 <span className="flex items-center gap-1 text-xs text-white/70">
-                  <AtSign className="h-3 w-3" /> ventura.tech
+                  <AtSign className="h-3 w-3" /> Veluntra.tech
                 </span>
               </div>
             </motion.div>
@@ -1053,7 +1053,7 @@ function InstagramSection() {
             rel="noreferrer"
             className="inline-flex items-center gap-2 rounded-full border border-black/10 px-6 py-3 text-sm font-semibold text-neutral-900 transition-colors hover:bg-black/5 dark:border-white/15 dark:text-white dark:hover:bg-white/10"
           >
-            <AtSign className="h-4 w-4" /> Follow @ventura.tech
+            <AtSign className="h-4 w-4" /> Follow @Veluntra.tech
           </a>
         </div>
       </div>
@@ -1159,7 +1159,7 @@ function NewsletterSection() {
               animate={{ opacity: 1, y: 0 }}
               className="mt-8 flex items-center justify-center gap-2 rounded-full bg-white/10 px-6 py-3.5 text-sm font-medium text-white"
             >
-              <Check className="h-4 w-4 text-emerald-400" /> You&apos;re on the list — welcome to Ventura.
+              <Check className="h-4 w-4 text-emerald-400" /> You&apos;re on the list — welcome to Veluntra.
             </motion.div>
           ) : (
             <motion.form
@@ -1205,7 +1205,7 @@ function CTASection() {
           Ready to Upgrade Your Everyday?
         </h2>
         <p className="relative mx-auto mt-4 max-w-lg text-neutral-800/80 md:text-lg">
-          Join a growing community who trust Ventura for premium quality, smart design and effortless shopping.
+          Join a growing community who trust Veluntra for premium quality, smart design and effortless shopping.
         </p>
         <div className="relative mt-9 flex flex-wrap items-center justify-center gap-4">
           <Link
@@ -1239,7 +1239,7 @@ function Home() {
   return (
     <div className="bg-white dark:bg-neutral-950">
       <HeroSection />
-      <WhyVenturaSection />
+      <WhyVeluntraSection />
       <CategoriesSection />
       <FeaturedProductsSection />
       <TrendingSection />

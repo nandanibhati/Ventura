@@ -31,8 +31,8 @@ export function AuthProvider({ children }) {
       setUser(null);
       setStatus("guest");
     };
-    window.addEventListener("ventura:session-expired", onExpired);
-    return () => window.removeEventListener("ventura:session-expired", onExpired);
+    window.addEventListener("Veluntra:session-expired", onExpired);
+    return () => window.removeEventListener("Veluntra:session-expired", onExpired);
   }, [bootstrap]);
 
   const afterAuth = useCallback(async (result) => {

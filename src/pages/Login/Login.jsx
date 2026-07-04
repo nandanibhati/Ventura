@@ -48,7 +48,7 @@ export default function Login() {
             className="text-xl font-medium tracking-[0.2em] text-[var(--text-primary)]"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            VENTURA
+            Veluntra
           </Link>
           <h1 className="mt-4 text-2xl font-medium text-[var(--text-primary)]" style={{ fontFamily: "var(--font-display)" }}>
             Welcome back

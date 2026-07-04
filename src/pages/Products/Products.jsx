@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 
 /* -----------------------------------------------------------
-   VENTURA — Products
+   Veluntra — Products
    Filterable, sortable catalogue
    ----------------------------------------------------------- */
 
@@ -350,7 +350,7 @@ const IconArrowRight = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="curr
 
 /* Data */
 const CATEGORIES = ["Audio", "Wearables", "Computing", "Smart Home", "Home & Kitchen", "Mobile & Tablets"];
-const BRANDS = ["Ventura", "Nexora", "Meridian", "Nordline", "Circuit & Co.", "Orbital"];
+const BRANDS = ["Veluntra", "Nexora", "Meridian", "Nordline", "Circuit & Co.", "Orbital"];
 const CAT_GRADIENT = {
   "Audio": "linear-gradient(160deg, #2a2118, #17130f)",
   "Wearables": "linear-gradient(160deg, #1c2230, #10131c)",
@@ -361,27 +361,27 @@ const CAT_GRADIENT = {
 };
 
 const PRODUCTS = [
-  { id: 1, name: "Aurora Pro Wireless Earbuds", brand: "Ventura", category: "Audio", price: 178, oldPrice: 220, rating: 4.9, reviews: 214, isNew: true },
+  { id: 1, name: "Aurora Pro Wireless Earbuds", brand: "Veluntra", category: "Audio", price: 178, oldPrice: 220, rating: 4.9, reviews: 214, isNew: true },
   { id: 2, name: "Zenith Noise-Cancel Headphones", brand: "Circuit & Co.", category: "Audio", price: 349, oldPrice: 420, rating: 4.8, reviews: 312 },
-  { id: 3, name: "Halo Portable Bluetooth Speaker", brand: "Ventura", category: "Audio", price: 96, rating: 4.7, reviews: 129 },
+  { id: 3, name: "Halo Portable Bluetooth Speaker", brand: "Veluntra", category: "Audio", price: 96, rating: 4.7, reviews: 129 },
   { id: 4, name: "Ember Bluetooth Mini Speaker", brand: "Nordline", category: "Audio", price: 58, rating: 4.6, reviews: 142 },
   { id: 5, name: "Nova Titanium Smartwatch", brand: "Nexora", category: "Wearables", price: 890, oldPrice: 1050, rating: 5.0, reviews: 98 },
   { id: 6, name: "Halo Smart Fitness Ring", brand: "Nexora", category: "Wearables", price: 199, rating: 4.9, reviews: 88 },
   { id: 7, name: "Minimalist Fitness Watch", brand: "Meridian", category: "Wearables", price: 130, rating: 4.8, reviews: 110 },
   { id: 8, name: "Atlas Fitness Band", brand: "Orbital", category: "Wearables", price: 65, rating: 4.4, reviews: 58 },
   { id: 9, name: "Meridian Mechanical Keyboard", brand: "Meridian", category: "Computing", price: 145, rating: 4.8, reviews: 156 },
-  { id: 10, name: "Onyx 14\" Ultrabook", brand: "Ventura", category: "Computing", price: 1340, rating: 4.7, reviews: 187, isNew: true },
+  { id: 10, name: "Onyx 14\" Ultrabook", brand: "Veluntra", category: "Computing", price: 1340, rating: 4.7, reviews: 187, isNew: true },
   { id: 11, name: "Atlas Mechanical Mouse", brand: "Nordline", category: "Computing", price: 55, rating: 4.7, reviews: 110 },
   { id: 12, name: "Ridge Laptop Backpack", brand: "Circuit & Co.", category: "Computing", price: 89, rating: 4.6, reviews: 167 },
   { id: 13, name: "Lumen Smart Desk Lamp", brand: "Nordline", category: "Smart Home", price: 65, oldPrice: 90, rating: 4.6, reviews: 76 },
-  { id: 14, name: "Quartz Smart Table Lamp", brand: "Ventura", category: "Smart Home", price: 150, oldPrice: 200, rating: 4.5, reviews: 46 },
+  { id: 14, name: "Quartz Smart Table Lamp", brand: "Veluntra", category: "Smart Home", price: 150, oldPrice: 200, rating: 4.5, reviews: 46 },
   { id: 15, name: "Sable Smart Thermostat", brand: "Orbital", category: "Smart Home", price: 89, oldPrice: 149, rating: 4.4, reviews: 83 },
   { id: 16, name: "Nimbus Smart Air Purifier", brand: "Circuit & Co.", category: "Smart Home", price: 165, rating: 4.8, reviews: 198, isNew: true },
-  { id: 17, name: "Terra Ceramic Cookware Set", brand: "Ventura", category: "Home & Kitchen", price: 210, rating: 4.9, reviews: 240 },
+  { id: 17, name: "Terra Ceramic Cookware Set", brand: "Veluntra", category: "Home & Kitchen", price: 210, rating: 4.9, reviews: 240 },
   { id: 18, name: "Marble Ceramic Mug Set", brand: "Nordline", category: "Home & Kitchen", price: 40, oldPrice: 80, rating: 4.6, reviews: 91 },
   { id: 19, name: "Everyday Insulated Water Bottle", brand: "Meridian", category: "Home & Kitchen", price: 28, rating: 4.8, reviews: 76 },
   { id: 20, name: "Glacier Cordless Handheld Vacuum", brand: "Orbital", category: "Home & Kitchen", price: 120, rating: 4.8, reviews: 176 },
-  { id: 21, name: "Drift Fast Wireless Charging Pad", brand: "Ventura", category: "Mobile & Tablets", price: 45, rating: 4.7, reviews: 203 },
+  { id: 21, name: "Drift Fast Wireless Charging Pad", brand: "Veluntra", category: "Mobile & Tablets", price: 45, rating: 4.7, reviews: 203 },
   { id: 22, name: "Cobalt Portable SSD 1TB", brand: "Circuit & Co.", category: "Mobile & Tablets", price: 130, oldPrice: 200, rating: 4.6, reviews: 58 },
   { id: 23, name: "Essential USB-C Hub", brand: "Nexora", category: "Mobile & Tablets", price: 29, rating: 4.8, reviews: 220, isNew: true },
   { id: 24, name: "Vertex Smart Audio Glasses", brand: "Meridian", category: "Mobile & Tablets", price: 89, oldPrice: 162, rating: 4.5, reviews: 72 },

@@ -755,7 +755,7 @@ function Sidebar({ activeTab, onSelect, isOpen, onClose }) {
         }`}
       >
         <div className="flex h-16 items-center px-6">
-          <span className="text-xl font-bold uppercase tracking-[0.15em] text-white">Ventura</span>
+          <span className="text-xl font-bold uppercase tracking-[0.15em] text-white">Veluntra</span>
         </div>
         <p className="px-6 pb-4 text-[11px] font-medium uppercase tracking-wider text-neutral-500">Seller Dashboard</p>
         <nav className="flex-1 space-y-1 px-3">
@@ -823,7 +823,7 @@ function Topbar({ title, onMenuClick, isDark, onToggleDark }) {
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-rose-400 text-xs font-bold text-white">
             VS
           </div>
-          <span className="hidden text-sm font-medium text-neutral-700 dark:text-neutral-200 sm:block">Ventura Seller</span>
+          <span className="hidden text-sm font-medium text-neutral-700 dark:text-neutral-200 sm:block">Veluntra Seller</span>
         </div>
       </div>
     </header>
@@ -836,7 +836,7 @@ function SellerDashboard() {
   const [range, setRange] = useState("30d");
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return false;
-    const stored = localStorage.getItem("ventura-theme");
+    const stored = localStorage.getItem("Veluntra-theme");
     if (stored) return stored === "dark";
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
@@ -844,7 +844,7 @@ function SellerDashboard() {
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle("dark", isDark);
-    localStorage.setItem("ventura-theme", isDark ? "dark" : "light");
+    localStorage.setItem("Veluntra-theme", isDark ? "dark" : "light");
   }, [isDark]);
 
   const tokens = isDark ? CHART_TOKENS.dark : CHART_TOKENS.light;

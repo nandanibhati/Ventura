@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 /* ─────────────────────────────────────────────────────────
-   VENTURA — Premium Footer
+   Veluntra — Premium Footer
    Deep-ink gradient field, champagne accents, ghost wordmark
    ───────────────────────────────────────────────────────── */
 
@@ -360,13 +360,13 @@ export default function Footer() {
   return (
     <footer className="vf-root" aria-label="Site footer">
       <style>{css}</style>
-      <div aria-hidden="true" className="vf-ghost">VENTURA</div>
+      <div aria-hidden="true" className="vf-ghost">Veluntra</div>
 
       <div className="vf-shell">
         {/* Brand + Newsletter */}
         <div className="vf-top">
           <div>
-            <h2 className="vf-brand">VENTURA</h2>
+            <h2 className="vf-brand">Veluntra</h2>
             <p className="vf-tagline">
               Considered design, enduring materials. Crafted in small ateliers and
               delivered to sixty countries worldwide.
@@ -374,7 +374,7 @@ export default function Footer() {
           </div>
 
           <div>
-            <span className="vf-news-label">The Ventura Letter</span>
+            <span className="vf-news-label">The Veluntra Letter</span>
             {joined ? (
               <p className="vf-news-done">Welcome to the house. Your first letter arrives soon.</p>
             ) : (
@@ -440,7 +440,7 @@ export default function Footer() {
               Mon – Sat, 10:00 – 19:00
             </p>
             <p>
-              <a href="mailto:concierge@ventura.com">concierge@ventura.com</a>
+              <a href="mailto:concierge@Veluntra.com">concierge@Veluntra.com</a>
             </p>
             <div className="vf-social">
               {socials.map((s) => (
@@ -475,7 +475,7 @@ export default function Footer() {
             ))}
           </div>
 
-          <p className="vf-copy">© {new Date().getFullYear()} Ventura S.p.A. All rights reserved.</p>
+          <p className="vf-copy">© {new Date().getFullYear()} Veluntra S.p.A. All rights reserved.</p>
         </div>
       </div>
     </footer>

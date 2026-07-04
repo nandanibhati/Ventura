@@ -1,5 +1,5 @@
 /**
- * Ventura Design System
+ * Veluntra Design System
  * Single entry point — import anything from "@/components/ui".
  */
 

@@ -103,11 +103,11 @@ const ADMIN_ORDERS = [
 ];
 
 const ADMIN_PRODUCTS = [
-  { id: 1, name: "Aurora Pro Wireless Earbuds", category: "Audio", brand: "Ventura", price: 178, stock: 14, status: "active" },
+  { id: 1, name: "Aurora Pro Wireless Earbuds", category: "Audio", brand: "Veluntra", price: 178, stock: 14, status: "active" },
   { id: 2, name: "Nova Titanium Smartwatch", category: "Wearables", brand: "Nexora", price: 890, stock: 3, status: "active" },
   { id: 3, name: "Meridian Mechanical Keyboard", category: "Computing", brand: "Meridian", price: 145, stock: 0, status: "draft" },
   { id: 4, name: "Zenith Noise-Cancel Headphones", category: "Audio", brand: "Circuit & Co.", price: 349, stock: 42, status: "active" },
-  { id: 5, name: "Onyx 14\" Ultrabook", category: "Computing", brand: "Ventura", price: 1340, stock: 24, status: "active" },
+  { id: 5, name: "Onyx 14\" Ultrabook", category: "Computing", brand: "Veluntra", price: 1340, stock: 24, status: "active" },
   { id: 6, name: "Lumen Smart Desk Lamp", category: "Smart Home", brand: "Nordline", price: 65, stock: 3, status: "active" },
 ];
 
@@ -121,7 +121,7 @@ const CATEGORIES = [
 ];
 
 const COUPONS = [
-  { id: 1, code: "VENTURA10", type: "Percent", value: "10%", used: 284, limit: 500, expires: "31 Aug 2026", status: "active" },
+  { id: 1, code: "Veluntra10", type: "Percent", value: "10%", used: 284, limit: 500, expires: "31 Aug 2026", status: "active" },
   { id: 2, code: "WELCOME15", type: "Percent", value: "15%", used: 612, limit: 1000, expires: "30 Sep 2026", status: "active" },
   { id: 3, code: "FREESHIP", type: "Fixed", value: `${CURRENCY}18`, used: 190, limit: 200, expires: "10 Jul 2026", status: "active" },
   { id: 4, code: "SPRING24", type: "Percent", value: "20%", used: 500, limit: 500, expires: "01 Jun 2026", status: "expired" },
@@ -177,7 +177,7 @@ export default function AdminDashboard() {
           <span className="text-sm font-medium">{activeItem?.label}</span>
         </button>
         <span className="text-base tracking-[0.2em] font-medium" style={{ fontFamily: "var(--font-display)" }}>
-          VENTURA <span className="text-gold-500">Admin</span>
+          Veluntra <span className="text-gold-500">Admin</span>
         </span>
       </div>
 
@@ -227,7 +227,7 @@ function SidebarContent({ active, onSelect, embedded }) {
             V
           </span>
           <div>
-            <p className="text-sm font-medium text-[var(--text-primary)]">Ventura Admin</p>
+            <p className="text-sm font-medium text-[var(--text-primary)]">Veluntra Admin</p>
             <p className="text-xs text-[var(--text-muted)]">Operations console</p>
           </div>
         </div>

@@ -46,7 +46,7 @@ const SHIPPING_OPTIONS = [
 ];
 
 const COUPONS = {
-  VENTURA10: { label: "10% off your entire order", type: "percent", value: 10 },
+  Veluntra10: { label: "10% off your entire order", type: "percent", value: 10 },
   FREESHIP: { label: "Free shipping, any method", type: "shipping" },
   WELCOME20: { label: "£20 off orders over £150", type: "flat", value: 20, minSubtotal: 150 },
 };
@@ -185,7 +185,7 @@ function CouponBox({ couponInput, onInputChange, onApply, appliedCoupon, onRemov
           </motion.p>
         )}
       </AnimatePresence>
-      <p className="mt-3 text-[11px] text-neutral-400">Try: VENTURA10, FREESHIP or WELCOME20</p>
+      <p className="mt-3 text-[11px] text-neutral-400">Try: Veluntra10, FREESHIP or WELCOME20</p>
     </div>
   );
 }

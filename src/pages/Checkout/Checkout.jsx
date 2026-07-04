@@ -29,7 +29,7 @@ const CART_ITEMS = [
 ];
 
 const COUPONS = {
-  VENTURA10: 0.1,
+  Veluntra10: 0.1,
   WELCOME15: 0.15,
 };
 
@@ -164,7 +164,7 @@ export default function Checkout() {
             className="text-lg font-medium tracking-[0.2em] text-[var(--text-primary)]"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            VENTURA
+            Veluntra
           </span>
           <span className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
             <Lock className="size-3.5 text-gold-500" /> Secure checkout
@@ -387,7 +387,7 @@ export default function Checkout() {
                 {placing ? "Placing your order…" : `Pay ${CURRENCY}${total.toFixed(2)}`}
               </PrimaryButton>
               <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-[var(--text-muted)]">
-                <ShieldCheck className="size-3.5 text-gold-500" /> Encrypted and secured by Ventura Payments
+                <ShieldCheck className="size-3.5 text-gold-500" /> Encrypted and secured by Veluntra Payments
               </p>
             </div>
           </form>
@@ -419,7 +419,7 @@ export default function Checkout() {
             {placing ? "Placing your order…" : `Pay ${CURRENCY}${total.toFixed(2)}`}
           </PrimaryButton>
           <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-[var(--text-muted)]">
-            <ShieldCheck className="size-3.5 text-gold-500" /> Encrypted and secured by Ventura Payments
+            <ShieldCheck className="size-3.5 text-gold-500" /> Encrypted and secured by Veluntra Payments
           </p>
         </div>
       </div>

@@ -3,8 +3,8 @@
  * Native app can swap this module for SecureStore/AsyncStorage without
  * touching anything that calls it.
  */
-const ACCESS_KEY = "ventura.accessToken";
-const REFRESH_KEY = "ventura.refreshToken";
+const ACCESS_KEY = "Veluntra.accessToken";
+const REFRESH_KEY = "Veluntra.refreshToken";
 
 export const tokenStorage = {
   getAccessToken: () => localStorage.getItem(ACCESS_KEY),
@@ -20,7 +20,7 @@ export const tokenStorage = {
 };
 
 /** Guest cart session id — a client-generated UUID persisted so an anonymous cart survives a refresh. */
-const SESSION_KEY = "ventura.guestSessionId";
+const SESSION_KEY = "Veluntra.guestSessionId";
 
 export function getGuestSessionId() {
   let id = localStorage.getItem(SESSION_KEY);
