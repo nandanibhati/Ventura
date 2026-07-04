@@ -43,7 +43,7 @@ const MEGA_MENU = {
 };
 
 const LANGUAGES = ["English", "Français", "Deutsch", "Español", "日本語"];
-const CURRENCIES = ["USD", "EUR", "GBP", "JPY", "INR"];
+const CURRENCIES = ["£", "EUR", "GBP", "JPY", "INR"];
 
 const NOTIFICATIONS = [
   { title: "Order Shipped", desc: "Your order #V4021 is on the way", time: "2h ago" },
@@ -148,7 +148,7 @@ function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(false);
   const [language, setLanguage] = useState("English");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("£");
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return false;
     const stored = localStorage.getItem("ventura-theme");

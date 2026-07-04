@@ -340,13 +340,13 @@ const socials = [
 const payments = ["Visa", "MC", "Amex", "PayPal", "Pay", "G Pay"];
 
 const countries = [
+    "United Kingdom (GBP £)",
   "India (INR ₹)",
-  "United States (USD $)",
-  "United Kingdom (GBP £)",
+  "United States (USD £)",
   "European Union (EUR €)",
   "United Arab Emirates (AED)",
   "Japan (JPY ¥)",
-  "Australia (AUD $)",
+  "Australia (AUD £)",
 ];
 
 export default function Footer() {

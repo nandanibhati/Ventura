@@ -151,7 +151,7 @@ function RatingStars({ rating, size = "h-3.5 w-3.5" }) {
       {Array.from({ length: 5 }).map((_, i) => (
         <Star
           key={i}
-          className={`${size} ${
+          className={`£{size} £{
             i < Math.round(rating)
               ? "fill-amber-400 text-amber-400"
               : "fill-neutral-200 text-neutral-200 dark:fill-neutral-700 dark:text-neutral-700"
@@ -170,7 +170,7 @@ function ZoomGallery({ images, icon: Icon, activeIndex, onSelect }) {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setOrigin(`${x}% ${y}%`);
+    setOrigin(`£{x}% £{y}%`);
   };
 
   return (
@@ -188,7 +188,7 @@ function ZoomGallery({ images, icon: Icon, activeIndex, onSelect }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${images[activeIndex].gradient}`}
+            className={`flex h-full w-full items-center justify-center bg-gradient-to-br £{images[activeIndex].gradient}`}
             style={{ transform: isZoomed ? "scale(1.7)" : "scale(1)", transformOrigin: origin, transition: "transform 0.2s ease-out" }}
           >
             <Icon className="h-28 w-28 text-white/30 md:h-36 md:w-36" strokeWidth={0.75} />
@@ -203,9 +203,9 @@ function ZoomGallery({ images, icon: Icon, activeIndex, onSelect }) {
           <button
             key={i}
             onClick={() => onSelect(i)}
-            className={`flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br transition-all ${
+            className={`flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br transition-all £{
               image.gradient
-            } ${i === activeIndex ? "ring-2 ring-neutral-900 ring-offset-2 dark:ring-white dark:ring-offset-neutral-950" : "opacity-60 hover:opacity-100"}`}
+            } £{i === activeIndex ? "ring-2 ring-neutral-900 ring-offset-2 dark:ring-white dark:ring-offset-neutral-950" : "opacity-60 hover:opacity-100"}`}
           >
             <Icon className="h-7 w-7 text-white/40" strokeWidth={1} />
           </button>
@@ -227,7 +227,7 @@ function ColorSelector({ colors, selected, onSelect }) {
             key={color.name}
             onClick={() => onSelect(i)}
             aria-label={color.name}
-            className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 ${color.swatch} ${
+            className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 £{color.swatch} £{
               i === selected ? "border-neutral-900 dark:border-white" : "border-transparent"
             }`}
           />
@@ -252,7 +252,7 @@ function SizeSelector({ sizes, selected, onSelect }) {
             key={size.label}
             disabled={!size.inStock}
             onClick={() => onSelect(size.label)}
-            className={`flex h-11 min-w-11 items-center justify-center rounded-xl border px-3 text-sm font-medium transition-colors ${
+            className={`flex h-11 min-w-11 items-center justify-center rounded-xl border px-3 text-sm font-medium transition-colors £{
               !size.inStock
                 ? "cursor-not-allowed border-black/5 text-neutral-300 line-through dark:border-white/10 dark:text-neutral-700"
                 : selected === size.label
@@ -332,7 +332,7 @@ function ShareMenu() {
               {copied ? "Link copied!" : "Copy link"}
             </button>
             <a
-              href={`mailto:?subject=${encodeURIComponent(PRODUCT.name)}&body=${encodeURIComponent(window.location.href)}`}
+              href={`mailto:?subject=£{encodeURIComponent(PRODUCT.name)}&body=£{encodeURIComponent(window.location.href)}`}
               className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-neutral-700 transition-colors hover:bg-black/5 dark:text-neutral-200 dark:hover:bg-white/10"
             >
               <Mail className="h-4 w-4" /> Share via email
@@ -359,7 +359,7 @@ function RatingBreakdown({ rating, reviewCount, breakdown }) {
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-white/10">
               <motion.div
                 initial={{ width: 0 }}
-                whileInView={{ width: `${row.percent}%` }}
+                whileInView={{ width: `£{row.percent}%` }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
                 className="h-full rounded-full bg-amber-400"
@@ -407,7 +407,7 @@ function RelatedProductCard({ product }) {
   return (
     <div className="w-[190px] shrink-0 rounded-2xl border border-black/5 bg-white p-4 dark:border-white/10 dark:bg-neutral-900 sm:w-[220px]">
       <div
-        className={`relative mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${product.gradient}`}
+        className={`relative mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br £{product.gradient}`}
       >
         <product.icon className="h-10 w-10 text-white/40" strokeWidth={1} />
       </div>
@@ -419,9 +419,9 @@ function RelatedProductCard({ product }) {
         <RatingStars rating={product.rating} size="h-3 w-3" />
       </div>
       <div className="mt-2 flex items-center justify-between">
-        <span className="text-sm font-bold text-neutral-900 dark:text-white">${product.price}</span>
+        <span className="text-sm font-bold text-neutral-900 dark:text-white">£{product.price}</span>
         <button
-          aria-label={`Add ${product.name} to cart`}
+          aria-label={`Add £{product.name} to cart`}
           className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-900 text-white transition-transform hover:scale-110 dark:bg-white dark:text-neutral-900"
         >
           <Plus className="h-4 w-4" />
@@ -494,11 +494,11 @@ function ProductDetails() {
             </div>
 
             <div className="mt-5 flex items-baseline gap-3">
-              <span className="text-3xl font-bold text-neutral-900 dark:text-white">${PRODUCT.price}</span>
-              {PRODUCT.oldPrice && <span className="text-lg text-neutral-400 line-through">${PRODUCT.oldPrice}</span>}
+              <span className="text-3xl font-bold text-neutral-900 dark:text-white">£{PRODUCT.price}</span>
+              {PRODUCT.oldPrice && <span className="text-lg text-neutral-400 line-through">£{PRODUCT.oldPrice}</span>}
               {PRODUCT.oldPrice && (
                 <span className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
-                  Save ${(PRODUCT.oldPrice - PRODUCT.price).toFixed(0)}
+                  Save £{(PRODUCT.oldPrice - PRODUCT.price).toFixed(0)}
                 </span>
               )}
             </div>
@@ -551,7 +551,7 @@ function ProductDetails() {
               <button
                 onClick={() => setIsWishlisted((w) => !w)}
                 aria-label="Add to wishlist"
-                className={`flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border transition-colors ${
+                className={`flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border transition-colors £{
                   isWishlisted
                     ? "border-rose-500 bg-rose-50 text-rose-500 dark:bg-rose-500/10"
                     : "border-black/10 text-neutral-600 hover:bg-black/5 dark:border-white/15 dark:text-neutral-300 dark:hover:bg-white/10"
@@ -565,7 +565,7 @@ function ProductDetails() {
 
             <div className="mt-7 grid grid-cols-2 gap-3 border-t border-black/5 pt-6 dark:border-white/10">
               <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
-                <Truck className="h-4 w-4 shrink-0 text-amber-500" /> Free shipping over $150
+                <Truck className="h-4 w-4 shrink-0 text-amber-500" /> Free shipping over £150
               </div>
               <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
                 <RotateCcw className="h-4 w-4 shrink-0 text-amber-500" /> 30-day free returns
@@ -586,7 +586,7 @@ function ProductDetails() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-4 text-sm font-medium transition-colors ${
+                className={`relative flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-4 text-sm font-medium transition-colors £{
                   activeTab === tab.id
                     ? "text-neutral-900 dark:text-white"
                     : "text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
@@ -649,7 +649,7 @@ function ProductDetails() {
                     <div>
                       <p className="text-sm font-semibold text-neutral-900 dark:text-white">Complimentary Standard Shipping</p>
                       <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                        Free on all orders over $150. Delivered within 5-7 business days. Express and overnight options available at
+                        Free on all orders over £150. Delivered within 5-7 business days. Express and overnight options available at
                         checkout.
                       </p>
                     </div>
@@ -721,7 +721,7 @@ function ProductDetails() {
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-neutral-900 dark:text-white">{PRODUCT.name}</p>
-                <p className="text-sm font-bold text-neutral-900 dark:text-white">${PRODUCT.price}</p>
+                <p className="text-sm font-bold text-neutral-900 dark:text-white">£{PRODUCT.price}</p>
               </div>
               <button
                 onClick={handleAddToCart}

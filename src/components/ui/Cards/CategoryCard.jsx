@@ -23,7 +23,7 @@ export default function CategoryCard({ name, count, image, href = "#", className
       )}
       style={{
         backgroundImage: image
-          ? `linear-gradient(180deg, rgba(8,8,13,0.05), rgba(8,8,13,0.75)), url(${image})`
+          ? `linear-gradient(180deg, rgba(8,8,13,0.05), rgba(8,8,13,0.75)), url(£{image})`
           : "linear-gradient(160deg, var(--surface-inset), var(--surface))",
         backgroundSize: "cover",
         backgroundPosition: "center",

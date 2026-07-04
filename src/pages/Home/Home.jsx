@@ -73,7 +73,7 @@ const TILE_GRADIENTS = [
 ];
 
 const FEATURES = [
-  { icon: Truck, title: "Free Worldwide Shipping", desc: "Complimentary delivery on all orders over $150, everywhere we ship." },
+  { icon: Truck, title: "Free Worldwide Shipping", desc: "Complimentary delivery on all orders over £150, everywhere we ship." },
   { icon: ShieldCheck, title: "Secure Payments", desc: "Bank-grade encryption keeps every transaction fully protected." },
   { icon: RotateCcw, title: "Easy 30-Day Returns", desc: "Changed your mind? Send it back, no questions asked." },
   { icon: Headphones, title: "24/7 Concierge Support", desc: "Our style concierge team is on hand around the clock." },
@@ -181,9 +181,9 @@ const FAQS = [
 ];
 
 function formatCompact(n) {
-  if (n >= 1000000) return `${(n / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
-  if (n >= 1000) return `${Math.floor(n / 1000)}K`;
-  return `${Math.floor(n)}`;
+  if (n >= 1000000) return `£{(n / 1000000).toFixed(1).replace(/\.0£/, "")}M`;
+  if (n >= 1000) return `£{Math.floor(n / 1000)}K`;
+  return `£{Math.floor(n)}`;
 }
 
 function useCountdown(initialSeconds) {
@@ -204,7 +204,7 @@ function FloatingBlob({ className }) {
     <motion.div
       animate={{ y: [0, -25, 0], x: [0, 15, 0] }}
       transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-      className={`pointer-events-none absolute rounded-full blur-3xl ${className}`}
+      className={`pointer-events-none absolute rounded-full blur-3xl £{className}`}
     />
   );
 }
@@ -215,7 +215,7 @@ function StarRating({ rating, size = "h-3.5 w-3.5" }) {
       {Array.from({ length: 5 }).map((_, i) => (
         <Star
           key={i}
-          className={`${size} ${
+          className={`£{size} £{
             i < Math.round(rating)
               ? "fill-amber-400 text-amber-400"
               : "fill-neutral-200 text-neutral-200 dark:fill-neutral-700 dark:text-neutral-700"
@@ -233,7 +233,7 @@ function SectionHeading({ eyebrow, title, subtitle, align = "center" }) {
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.4 }}
-      className={`mx-auto mb-14 max-w-2xl ${align === "center" ? "text-center" : "text-left"}`}
+      className={`mx-auto mb-14 max-w-2xl £{align === "center" ? "text-center" : "text-left"}`}
     >
       <span className="mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400">
         <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
@@ -252,7 +252,7 @@ function ProductCard({ product }) {
       variants={fadeUp}
       className="group relative flex flex-col overflow-hidden rounded-2xl border border-black/5 bg-white transition-shadow duration-300 hover:shadow-2xl hover:shadow-black/10 dark:border-white/10 dark:bg-neutral-900"
     >
-      <div className={`relative aspect-[4/5] overflow-hidden bg-gradient-to-br ${product.gradient}`}>
+      <div className={`relative aspect-[4/5] overflow-hidden bg-gradient-to-br £{product.gradient}`}>
         {product.badge && (
           <span className="absolute left-3 top-3 z-10 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-900 backdrop-blur">
             {product.badge}
@@ -270,7 +270,7 @@ function ProductCard({ product }) {
           <button
             onClick={() => setWishlisted((w) => !w)}
             aria-label="Add to wishlist"
-            className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+            className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors £{
               wishlisted ? "bg-rose-500 text-white" : "bg-white text-neutral-900 hover:bg-neutral-100"
             }`}
           >
@@ -294,13 +294,13 @@ function ProductCard({ product }) {
           <span className="text-xs text-neutral-400">({product.reviews})</span>
         </div>
         <div className="mt-1 flex items-center gap-2">
-          <span className="text-base font-bold text-neutral-900 dark:text-white">${product.price}</span>
-          {product.oldPrice && <span className="text-sm text-neutral-400 line-through">${product.oldPrice}</span>}
+          <span className="text-base font-bold text-neutral-900 dark:text-white">£{product.price}</span>
+          {product.oldPrice && <span className="text-sm text-neutral-400 line-through">£{product.oldPrice}</span>}
         </div>
         {product.colors && (
           <div className="mt-1.5 flex items-center gap-1.5">
             {product.colors.map((color, i) => (
-              <span key={i} className={`h-3 w-3 rounded-full border border-black/10 dark:border-white/20 ${color}`} />
+              <span key={i} className={`h-3 w-3 rounded-full border border-black/10 dark:border-white/20 £{color}`} />
             ))}
           </div>
         )}
@@ -360,7 +360,7 @@ function FAQItem({ faq, isOpen, onToggle }) {
       <button onClick={onToggle} className="flex w-full items-center justify-between gap-4 py-5 text-left">
         <span className="text-base font-medium text-neutral-900 dark:text-white md:text-lg">{faq.question}</span>
         <span
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-black/10 transition-transform duration-300 dark:border-white/15 ${
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-black/10 transition-transform duration-300 dark:border-white/15 £{
             isOpen ? "rotate-45 border-transparent bg-neutral-900 text-white dark:bg-white dark:text-neutral-900" : "text-neutral-500"
           }`}
         >
@@ -547,7 +547,7 @@ function CategoriesSection() {
               whileHover={{ y: -6 }}
               className="group relative cursor-pointer overflow-hidden rounded-2xl border border-black/5 bg-neutral-50 p-6 transition-shadow duration-300 hover:shadow-xl hover:shadow-black/5 dark:border-white/10 dark:bg-neutral-900"
             >
-              <div className={`mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${cat.gradient}`}>
+              <div className={`mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br £{cat.gradient}`}>
                 <cat.icon className="h-6 w-6 text-white" strokeWidth={1.75} />
               </div>
               <h3 className="text-base font-semibold text-neutral-900 dark:text-white">{cat.name}</h3>
@@ -696,19 +696,19 @@ function FlashSaleSection() {
                 -{product.discount}%
               </span>
               <div
-                className={`relative mb-4 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${product.gradient}`}
+                className={`relative mb-4 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br £{product.gradient}`}
               >
                 <product.icon className="h-10 w-10 text-white/40 transition-transform duration-500 group-hover:scale-110" strokeWidth={1} />
               </div>
               <h4 className="truncate text-sm font-semibold text-white">{product.name}</h4>
               <div className="mt-1.5 flex items-center gap-2">
-                <span className="text-sm font-bold text-white">${product.price}</span>
-                <span className="text-xs text-white/40 line-through">${product.oldPrice}</span>
+                <span className="text-sm font-bold text-white">£{product.price}</span>
+                <span className="text-xs text-white/40 line-through">£{product.oldPrice}</span>
               </div>
               <div className="mt-2.5 h-1 w-full overflow-hidden rounded-full bg-white/10">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-rose-500 to-amber-400"
-                  style={{ width: `${product.claimed}%` }}
+                  style={{ width: `£{product.claimed}%` }}
                 />
               </div>
               <p className="mt-1.5 text-[11px] text-white/40">{product.claimed}% claimed</p>
@@ -754,7 +754,7 @@ function BestSellersSection() {
               <span className="absolute left-3 top-3 z-10 text-4xl font-bold text-black/10 dark:text-white/10">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <div className={`relative flex aspect-square items-center justify-center bg-gradient-to-br ${product.gradient}`}>
+              <div className={`relative flex aspect-square items-center justify-center bg-gradient-to-br £{product.gradient}`}>
                 <product.icon
                   className="h-14 w-14 text-white/40 transition-transform duration-500 group-hover:scale-110"
                   strokeWidth={1}
@@ -767,7 +767,7 @@ function BestSellersSection() {
                   <span className="text-[11px] text-neutral-400">{product.rating}</span>
                 </div>
                 <div className="mt-1.5 flex items-center justify-between">
-                  <span className="text-sm font-bold text-neutral-900 dark:text-white">${product.price}</span>
+                  <span className="text-sm font-bold text-neutral-900 dark:text-white">£{product.price}</span>
                   <span className="flex items-center gap-1 text-[11px] text-neutral-400">
                     <ThumbsUp className="h-3 w-3" /> {product.sold} sold
                   </span>
@@ -810,7 +810,7 @@ function CollectionsSection() {
               key={collection.id}
               variants={fadeUp}
               whileHover={{ scale: 1.01 }}
-              className={`group relative flex min-h-[280px] flex-col justify-end overflow-hidden rounded-3xl bg-gradient-to-br ${collection.gradient} p-8`}
+              className={`group relative flex min-h-[280px] flex-col justify-end overflow-hidden rounded-3xl bg-gradient-to-br £{collection.gradient} p-8`}
             >
               <collection.icon
                 className="absolute right-6 top-6 h-16 w-16 text-white/10 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6"
@@ -944,8 +944,8 @@ function TestimonialsSection() {
                 <button
                   key={t.id}
                   onClick={() => setIndex(i)}
-                  aria-label={`Go to testimonial ${i + 1}`}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                  aria-label={`Go to testimonial £{i + 1}`}
+                  className={`h-1.5 rounded-full transition-all duration-300 £{
                     i === index ? "w-6 bg-neutral-900 dark:bg-white" : "w-1.5 bg-neutral-300 dark:bg-neutral-700"
                   }`}
                 />
@@ -985,7 +985,7 @@ function InstagramSection() {
             <motion.div
               key={post.id}
               variants={fadeUp}
-              className={`group relative aspect-square overflow-hidden rounded-2xl bg-gradient-to-br ${post.gradient}`}
+              className={`group relative aspect-square overflow-hidden rounded-2xl bg-gradient-to-br £{post.gradient}`}
             >
               <div className="absolute inset-0 flex items-center justify-center">
                 <Camera className="h-8 w-8 text-white/30" strokeWidth={1.5} />

@@ -13,5 +13,5 @@ export function cn(...inputs) {
 let idCounter = 0;
 export function useId(prefix = "ventura") {
   idCounter += 1;
-  return `${prefix}-${idCounter}`;
+  return `£{prefix}-£{idCounter}`;
 }

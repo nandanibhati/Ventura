@@ -154,7 +154,7 @@ function generateSeries(days, base, volatility, trend) {
     const date = new Date(start);
     date.setDate(start.getDate() + i);
     data.push({
-      label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+     label: date.toLocaleDateString("en-GB", {month: "short", day: "numeric",}),
       revenue: Math.round(value),
       orders: Math.max(1, Math.round(value / 34 + (Math.random() - 0.5) * 6)),
     });
@@ -189,13 +189,13 @@ function stockStatus(stock) {
 }
 
 function formatCurrency(value) {
-  return `$${Math.round(value).toLocaleString()}`;
+  return `££{Math.round(value).toLocaleString()}`;
 }
 
 function formatCompact(value) {
-  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
-  if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
-  return `${Math.round(value)}`;
+  if (value >= 1000000) return `£{(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `£{(value / 1000).toFixed(1)}K`;
+  return `£{Math.round(value)}`;
 }
 
 function ChartTooltip({ active, payload, label, tokens, valuePrefix = "", valueSuffix = "" }) {
@@ -223,7 +223,7 @@ function ChartTooltip({ active, payload, label, tokens, valuePrefix = "", valueS
 }
 
 function Sparkline({ data, dataKey, color }) {
-  const gradientId = `spark-${dataKey}`;
+  const gradientId = `spark-£{dataKey}`;
   return (
     <div className="h-10 w-24">
       <ResponsiveContainer width="100%" height="100%">
@@ -239,7 +239,7 @@ function Sparkline({ data, dataKey, color }) {
             dataKey={dataKey}
             stroke={color}
             strokeWidth={2}
-            fill={`url(#${gradientId})`}
+            fill={`url(#£{gradientId})`}
             dot={false}
             isAnimationActive={false}
           />
@@ -263,7 +263,7 @@ function StatTile({ icon: Icon, label, value, delta, sparkData, sparkKey, color 
       <div className="mt-1 flex items-end justify-between">
         <span className="text-2xl font-bold text-neutral-900 dark:text-white">{value}</span>
         <span
-          className={`flex items-center gap-0.5 text-xs font-semibold ${
+          className={`flex items-center gap-0.5 text-xs font-semibold £{
             isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"
           }`}
         >
@@ -295,7 +295,7 @@ function StockMeter({ stock, max = 60 }) {
   return (
     <div className="flex items-center gap-2">
       <div className="h-1.5 w-20 overflow-hidden rounded-full" style={{ backgroundColor: trackColor }}>
-        <div className="h-full rounded-full" style={{ width: `${percent}%`, backgroundColor: fillColor }} />
+        <div className="h-full rounded-full" style={{ width: `£{percent}%`, backgroundColor: fillColor }} />
       </div>
       <span className="text-xs text-neutral-500 dark:text-neutral-400">{stock} left</span>
     </div>
@@ -337,7 +337,7 @@ function RevenueChart({ data, tokens, range, onRangeChange }) {
             <button
               key={opt.id}
               onClick={() => onRangeChange(opt.id)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors £{
                 range === opt.id
                   ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
                   : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
@@ -369,10 +369,10 @@ function RevenueChart({ data, tokens, range, onRangeChange }) {
               tick={{ fill: tokens.muted, fontSize: 11 }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v) => `$${formatCompact(v)}`}
+              tickFormatter={(v) => `££{formatCompact(v)}`}
               width={48}
             />
-            <Tooltip content={<ChartTooltip tokens={tokens} valuePrefix="$" />} />
+            <Tooltip content={<ChartTooltip tokens={tokens} valuePrefix="£" />} />
             <Area
               type="monotone"
               dataKey="revenue"
@@ -430,7 +430,7 @@ function CategorySalesChart({ data, tokens, categoryColors }) {
               tick={{ fill: tokens.muted, fontSize: 11 }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v) => `$${formatCompact(v)}`}
+              tickFormatter={(v) => `££{formatCompact(v)}`}
             />
             <YAxis
               type="category"
@@ -440,12 +440,12 @@ function CategorySalesChart({ data, tokens, categoryColors }) {
               tickLine={false}
               width={90}
             />
-            <Tooltip content={<ChartTooltip tokens={tokens} valuePrefix="$" />} cursor={{ fill: tokens.grid, opacity: 0.4 }} />
+            <Tooltip content={<ChartTooltip tokens={tokens} valuePrefix="£" />} cursor={{ fill: tokens.grid, opacity: 0.4 }} />
             <Bar dataKey="revenue" radius={[0, 4, 4, 0]} maxBarSize={22}>
               {sorted.map((entry) => (
                 <Cell key={entry.category} fill={categoryColors[entry.category]} />
               ))}
-              <LabelList dataKey="revenue" position="right" formatter={(v) => `$${formatCompact(v)}`} fill={tokens.secondary} fontSize={11} />
+              <LabelList dataKey="revenue" position="right" formatter={(v) => `££{formatCompact(v)}`} fill={tokens.secondary} fontSize={11} />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -492,7 +492,7 @@ function OverviewTab({ tokens, categoryColors, range, onRangeChange, revenueData
         <StatTile
           icon={Percent}
           label="Conversion Rate"
-          value={`${conversion.value}%`}
+          value={`£{conversion.value}%`}
           delta={conversion.delta}
           sparkData={conversionPoints}
           sparkKey="v"
@@ -553,7 +553,7 @@ function OrdersTab() {
                   </td>
                   <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{order.date}</td>
                   <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{order.items}</td>
-                  <td className="px-5 py-4 font-semibold text-neutral-900 dark:text-white">${order.amount.toFixed(2)}</td>
+                  <td className="px-5 py-4 font-semibold text-neutral-900 dark:text-white">£{order.amount.toFixed(2)}</td>
                   <td className="px-5 py-4">
                     <Pill config={{ ...ORDER_STATUS_CONFIG[order.status], label: order.status }} />
                   </td>
@@ -600,9 +600,9 @@ function ProductsTab({ tokens, categoryColors }) {
                     </div>
                   </td>
                   <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{product.category}</td>
-                  <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">${product.price}</td>
+                  <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">£{product.price}</td>
                   <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{product.sold}</td>
-                  <td className="px-5 py-4 font-semibold text-neutral-900 dark:text-white">${product.revenue.toLocaleString()}</td>
+                  <td className="px-5 py-4 font-semibold text-neutral-900 dark:text-white">£{product.revenue.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -721,7 +721,7 @@ function CustomersTab() {
                   </td>
                   <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{customer.location}</td>
                   <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{customer.orders}</td>
-                  <td className="px-5 py-4 font-semibold text-neutral-900 dark:text-white">${customer.spent.toLocaleString()}</td>
+                  <td className="px-5 py-4 font-semibold text-neutral-900 dark:text-white">£{customer.spent.toLocaleString()}</td>
                   <td className="px-5 py-4">
                     <SegmentBadge segment={customer.segment} />
                   </td>
@@ -750,7 +750,7 @@ function Sidebar({ activeTab, onSelect, isOpen, onClose }) {
         )}
       </AnimatePresence>
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-white/10 bg-neutral-950 transition-transform duration-300 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-white/10 bg-neutral-950 transition-transform duration-300 lg:static lg:translate-x-0 £{
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -766,7 +766,7 @@ function Sidebar({ activeTab, onSelect, isOpen, onClose }) {
                 onSelect(item.id);
                 onClose();
               }}
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors £{
                 activeTab === item.id ? "bg-white/10 text-white" : "text-neutral-400 hover:bg-white/5 hover:text-white"
               }`}
             >

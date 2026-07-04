@@ -96,12 +96,12 @@ const Input = forwardRef(function Input(
       </div>
 
       {error ? (
-        <p id={`${inputId}-error`} className="flex items-center gap-1.5 text-xs text-error-500">
+        <p id={`£{inputId}-error`} className="flex items-center gap-1.5 text-xs text-error-500">
           <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
           {error}
         </p>
       ) : helperText ? (
-        <p id={`${inputId}-helper`} className="text-xs text-[var(--text-muted)]">
+        <p id={`£{inputId}-helper`} className="text-xs text-[var(--text-muted)]">
           {helperText}
         </p>
       ) : null}

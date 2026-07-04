@@ -46,12 +46,12 @@ const SHIPPING_OPTIONS = [
 const COUPONS = {
   VENTURA10: { label: "10% off your entire order", type: "percent", value: 10 },
   FREESHIP: { label: "Free shipping, any method", type: "shipping" },
-  WELCOME20: { label: "$20 off orders over $150", type: "flat", value: 20, minSubtotal: 150 },
+  WELCOME20: { label: "£20 off orders over £150", type: "flat", value: 20, minSubtotal: 150 },
 };
 
 function AnimatedNumber({ value, decimals = 2, className = "" }) {
   const spring = useSpring(value, { stiffness: 150, damping: 22, mass: 0.6 });
-  const display = useTransform(spring, (v) => `$${v.toFixed(decimals)}`);
+  const display = useTransform(spring, (v) => `££{v.toFixed(decimals)}`);
 
   useEffect(() => {
     spring.set(value);
@@ -94,7 +94,7 @@ function CartLineItem({ item, onIncrease, onDecrease, onRemove }) {
       className="flex gap-4 rounded-2xl border border-black/5 bg-white p-4 dark:border-white/10 dark:bg-neutral-900 sm:gap-5 sm:p-5"
     >
       <div
-        className={`relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${item.gradient} sm:h-28 sm:w-28`}
+        className={`relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br £{item.gradient} sm:h-28 sm:w-28`}
       >
         <item.icon className="h-10 w-10 text-white/40" strokeWidth={1} />
       </div>
@@ -110,7 +110,7 @@ function CartLineItem({ item, onIncrease, onDecrease, onRemove }) {
             </p>
           </div>
           <span className="shrink-0 text-sm font-bold text-neutral-900 dark:text-white sm:text-base">
-            ${(item.price * item.quantity).toFixed(2)}
+            £{(item.price * item.quantity).toFixed(2)}
           </span>
         </div>
         <div className="mt-3 flex items-center justify-between">
@@ -199,7 +199,7 @@ function ShippingBox({ options, selectedId, onSelect }) {
           <button
             key={option.id}
             onClick={() => onSelect(option.id)}
-            className={`flex w-full items-center justify-between rounded-xl border px-4 py-3.5 text-left transition-colors ${
+            className={`flex w-full items-center justify-between rounded-xl border px-4 py-3.5 text-left transition-colors £{
               selectedId === option.id
                 ? "border-neutral-900 bg-neutral-50 dark:border-white dark:bg-white/5"
                 : "border-black/10 hover:border-neutral-300 dark:border-white/15 dark:hover:border-white/30"
@@ -207,7 +207,7 @@ function ShippingBox({ options, selectedId, onSelect }) {
           >
             <div className="flex items-center gap-3">
               <span
-                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 £{
                   selectedId === option.id ? "border-neutral-900 dark:border-white" : "border-neutral-300 dark:border-neutral-600"
                 }`}
               >
@@ -219,7 +219,7 @@ function ShippingBox({ options, selectedId, onSelect }) {
               </div>
             </div>
             <span className="shrink-0 text-sm font-semibold text-neutral-900 dark:text-white">
-              {option.price === 0 ? "Free" : `$${option.price.toFixed(2)}`}
+              {option.price === 0 ? "Free" : `££{option.price.toFixed(2)}`}
             </span>
           </button>
         ))}
@@ -251,7 +251,7 @@ function OrderSummary({ subtotal, discount, shippingCost, tax, total, appliedCou
               className="flex items-center justify-between overflow-hidden text-sm"
             >
               <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                <Sparkles className="h-3.5 w-3.5" /> Discount {appliedCoupon && `(${appliedCoupon.code})`}
+                <Sparkles className="h-3.5 w-3.5" /> Discount {appliedCoupon && `(£{appliedCoupon.code})`}
               </span>
               <span className="flex items-center font-medium text-emerald-600 dark:text-emerald-400">
                 -<AnimatedNumber value={discount} />
@@ -302,7 +302,7 @@ function RecommendationCard({ product, onAdd }) {
   return (
     <div className="w-[190px] shrink-0 rounded-2xl border border-black/5 bg-white p-4 dark:border-white/10 dark:bg-neutral-900 sm:w-[220px]">
       <div
-        className={`relative mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${product.gradient}`}
+        className={`relative mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br £{product.gradient}`}
       >
         <product.icon className="h-10 w-10 text-white/40" strokeWidth={1} />
       </div>
@@ -314,7 +314,7 @@ function RecommendationCard({ product, onAdd }) {
         {Array.from({ length: 5 }).map((_, i) => (
           <Star
             key={i}
-            className={`h-3 w-3 ${
+            className={`h-3 w-3 £{
               i < Math.round(product.rating)
                 ? "fill-amber-400 text-amber-400"
                 : "fill-neutral-200 text-neutral-200 dark:fill-neutral-700 dark:text-neutral-700"
@@ -323,10 +323,10 @@ function RecommendationCard({ product, onAdd }) {
         ))}
       </div>
       <div className="mt-2 flex items-center justify-between">
-        <span className="text-sm font-bold text-neutral-900 dark:text-white">${product.price}</span>
+        <span className="text-sm font-bold text-neutral-900 dark:text-white">£{product.price}</span>
         <button
           onClick={() => onAdd(product)}
-          aria-label={`Add ${product.name} to cart`}
+          aria-label={`Add £{product.name} to cart`}
           className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-900 text-white transition-transform hover:scale-110 dark:bg-white dark:text-neutral-900"
         >
           <Plus className="h-4 w-4" />
@@ -406,7 +406,7 @@ function Cart() {
       return;
     }
     if (coupon.minSubtotal && subtotal < coupon.minSubtotal) {
-      setCouponError(`This code requires a subtotal of $${coupon.minSubtotal}+.`);
+      setCouponError(`This code requires a subtotal of ££{coupon.minSubtotal}+.`);
       return;
     }
     setAppliedCoupon({ code, ...coupon });
