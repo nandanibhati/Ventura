@@ -43,6 +43,8 @@ import {
   Tablet,
   Smartphone,
   GripVertical,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -1482,27 +1484,30 @@ function SortableSectionRow({ section: s, onMoveUp, onMoveDown, onEdit, onToggle
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-soft-sm"
+      className="group flex cursor-pointer items-center justify-between gap-3 bg-[var(--surface)] px-3 py-2.5 transition-colors hover:bg-gold-400/5"
+      onClick={onEdit}
     >
-      <div className="flex items-center gap-3">
-        <button type="button" className="cursor-grab text-[var(--text-muted)] active:cursor-grabbing" aria-label="Drag to reorder" {...attributes} {...listeners}>
-          <GripVertical className="size-4.5" />
+      <div className="flex min-w-0 items-center gap-2">
+        <button
+          type="button"
+          className="shrink-0 cursor-grab text-[var(--text-muted)] opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 active:cursor-grabbing"
+          aria-label="Drag to reorder"
+          onClick={(e) => e.stopPropagation()}
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="size-4" />
         </button>
-        <span className="grid size-10 place-items-center rounded-[var(--radius-sm)] bg-gold-400/12 text-gold-500">
-          <Layout className="size-4.5" />
+        <Layout className="size-4 shrink-0 text-[var(--text-muted)]" />
+        <span className={cn("truncate text-sm", s.enabled ? "text-[var(--text-primary)]" : "text-[var(--text-muted)] line-through")}>
+          {s.title || s.type.replace(/_/g, " ")}
         </span>
-        <div>
-          <p className="text-sm font-medium text-[var(--text-primary)]">{s.title || s.type.replace(/_/g, " ")}</p>
-          <p className="text-xs text-[var(--text-muted)]">{s.type.replace(/_/g, " ")}</p>
-        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <Badge variant={s.enabled ? "success" : "neutral"}>{s.enabled ? "Enabled" : "Disabled"}</Badge>
-        <IconButton icon={ArrowUp} size="sm" aria-label="Move up" onClick={onMoveUp} />
-        <IconButton icon={ArrowDown} size="sm" aria-label="Move down" onClick={onMoveDown} />
-        <IconButton icon={Pencil} size="sm" aria-label="Edit" onClick={onEdit} />
-        <IconButton icon={s.enabled ? Ban : CheckCircle2} size="sm" aria-label="Toggle" onClick={onToggle} />
-        <IconButton icon={Trash2} size="sm" aria-label="Remove" onClick={onRemove} />
+      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        <IconButton icon={ArrowUp} size="sm" aria-label="Move up" onClick={(e) => { e.stopPropagation(); onMoveUp(); }} />
+        <IconButton icon={ArrowDown} size="sm" aria-label="Move down" onClick={(e) => { e.stopPropagation(); onMoveDown(); }} />
+        <IconButton icon={s.enabled ? Eye : EyeOff} size="sm" aria-label={s.enabled ? "Hide" : "Show"} onClick={(e) => { e.stopPropagation(); onToggle(); }} />
+        <IconButton icon={Trash2} size="sm" aria-label="Remove" onClick={(e) => { e.stopPropagation(); onRemove(); }} />
       </div>
     </div>
   );
@@ -1635,7 +1640,6 @@ function HomepageCmsSection() {
         eyebrow="Manage"
         title="Homepage CMS"
         description="Control which merchandising sections appear on the homepage, their order, visibility, and content."
-        action={<PrimaryButton leftIcon={Plus} onClick={openCreate}>Add section</PrimaryButton>}
       />
 
       {isLoading ? (
@@ -1643,11 +1647,16 @@ function HomepageCmsSection() {
       ) : isError ? (
         <ErrorNotice onRetry={refetch} />
       ) : sections.length === 0 ? (
-        <EmptyState icon={Layout} title="No sections configured" description="Add a section to control the homepage." />
+        <EmptyState
+          icon={Layout}
+          title="No sections configured"
+          description="Add a section to control the homepage."
+          action={<PrimaryButton leftIcon={Plus} onClick={openCreate}>Add section</PrimaryButton>}
+        />
       ) : (
         <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-            <div className="flex flex-col gap-3">
+            <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] divide-y divide-[var(--border)]">
               {sections.map((s, i) => (
                 <SortableSectionRow
                   key={s.id}
@@ -1659,6 +1668,13 @@ function HomepageCmsSection() {
                   onRemove={() => removeMutation.mutate(s.id)}
                 />
               ))}
+              <button
+                type="button"
+                onClick={openCreate}
+                className="flex w-full items-center gap-2 bg-[var(--surface)] px-3 py-2.5 text-left text-sm text-gold-600 transition-colors hover:bg-gold-400/5"
+              >
+                <Plus className="size-4" /> Add section
+              </button>
             </div>
           </SortableContext>
         </DndContext>
@@ -2120,12 +2136,13 @@ function SettingsSection() {
         </div>
 
         <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-soft-sm lg:col-span-2">
-          <h3 className="mb-1 text-[15px] font-medium">Theme</h3>
+          <h3 className="mb-1 text-[15px] font-medium">Theme &amp; Design</h3>
           <p className="mb-4 text-xs text-[var(--text-muted)]">
-            The storefront's brand colors and typography, applied site-wide immediately as a live preview —
-            click "Save settings" below to make it permanent for every visitor.
+            Brand colors, typography, buttons, and card/animation presets — applied site-wide immediately as a
+            live preview. Click "Save settings" below to make it permanent for every visitor.
           </p>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Primary color</label>
               <input type="color" value={currentTheme.primary} onChange={(e) => setTheme("primary", e.target.value)} className="h-10 w-full cursor-pointer rounded-[var(--radius-sm)] border border-[var(--border)]" />
@@ -2133,6 +2150,10 @@ function SettingsSection() {
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Accent color</label>
               <input type="color" value={currentTheme.accent} onChange={(e) => setTheme("accent", e.target.value)} className="h-10 w-full cursor-pointer rounded-[var(--radius-sm)] border border-[var(--border)]" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Secondary color</label>
+              <input type="color" value={currentTheme.secondary} onChange={(e) => setTheme("secondary", e.target.value)} className="h-10 w-full cursor-pointer rounded-[var(--radius-sm)] border border-[var(--border)]" />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Light surface</label>
@@ -2143,20 +2164,30 @@ function SettingsSection() {
               <input type="color" value={currentTheme.surfaceDark} onChange={(e) => setTheme("surfaceDark", e.target.value)} className="h-10 w-full cursor-pointer rounded-[var(--radius-sm)] border border-[var(--border)]" />
             </div>
           </div>
-          <div className="mt-4 max-w-xs">
+
+          <div className="mt-4 grid grid-cols-2 gap-4 sm:max-w-md">
             <Select
               label="Font pairing"
               value={currentTheme.font}
               onChange={(e) => setTheme("font", e.target.value)}
               options={Object.entries(FONT_PRESETS).map(([value, p]) => ({ value, label: p.label }))}
             />
+            <Select
+              label="Button style"
+              value={currentTheme.buttonStyle}
+              onChange={(e) => setTheme("buttonStyle", e.target.value)}
+              options={[
+                { value: "rounded", label: "Rounded" },
+                { value: "pill", label: "Pill" },
+                { value: "square", label: "Square" },
+              ]}
+            />
           </div>
-        </div>
 
-        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-soft-sm lg:col-span-2">
-          <h3 className="mb-1 text-[15px] font-medium">Animation &amp; Design</h3>
+          <div className="my-6 border-t border-[var(--border)]" />
+
           <p className="mb-4 text-xs text-[var(--text-muted)]">
-            Controls the premium animation preset applied to every product and category card storefront-wide.
+            Card &amp; animation presets applied to every product and category card storefront-wide.
             Individual products can still override this from their own edit form.
           </p>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_260px]">
@@ -2242,6 +2273,7 @@ function SettingsSection() {
                   <p className="text-xs text-[var(--text-muted)]">Hover to preview</p>
                 </div>
               </AnimatedCard>
+              <PrimaryButton size="sm" className="mt-2 w-full">Button preview</PrimaryButton>
             </div>
           </div>
         </div>

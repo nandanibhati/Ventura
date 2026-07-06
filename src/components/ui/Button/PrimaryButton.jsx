@@ -49,7 +49,7 @@ const PrimaryButton = forwardRef(function PrimaryButton(
       whileTap={!isDisabled ? { scale: 0.98 } : undefined}
       transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "relative inline-flex items-center justify-center rounded-[var(--radius-md)] font-medium",
+        "relative inline-flex items-center justify-center rounded-[var(--radius-btn,var(--radius-md))] font-medium",
         "bg-gradient-to-r from-gold-400 via-gold-100 to-gold-400 bg-[length:200%_auto] bg-[position:0%_0]",
         "text-ink-950 shadow-soft-sm",
         "transition-[background-position,box-shadow] duration-500",

@@ -42,11 +42,11 @@ const OutlineButton = forwardRef(function OutlineButton(
       whileTap={!isDisabled ? { scale: 0.98 } : undefined}
       transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "relative inline-flex items-center justify-center rounded-[var(--radius-md)] font-medium",
+        "relative inline-flex items-center justify-center rounded-[var(--radius-btn,var(--radius-md))] font-medium",
         "bg-transparent text-[var(--text-primary)]",
         "border border-[var(--border)]",
         "transition-colors duration-300",
-        "hover:border-gold-400 hover:text-gold-600 dark:hover:text-gold-300",
+        "hover:border-[var(--color-secondary,var(--color-gold-400))] hover:text-[var(--color-secondary,var(--color-gold-400))]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]",
         "disabled:opacity-40 disabled:cursor-not-allowed",
         SIZES[size],

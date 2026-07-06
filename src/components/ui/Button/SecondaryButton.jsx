@@ -42,7 +42,7 @@ const SecondaryButton = forwardRef(function SecondaryButton(
       whileTap={!isDisabled ? { scale: 0.98 } : undefined}
       transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "relative inline-flex items-center justify-center rounded-[var(--radius-md)] font-medium",
+        "relative inline-flex items-center justify-center rounded-[var(--radius-btn,var(--radius-md))] font-medium",
         "bg-[var(--surface-inset)] text-[var(--text-primary)]",
         "border border-[var(--border)] shadow-soft-sm",
         "transition-colors duration-300",
