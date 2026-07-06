@@ -33,6 +33,8 @@ import {
   Copy,
   KeyRound,
   X,
+  UserPlus,
+  ShieldOff,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -267,12 +269,55 @@ function ErrorNotice({ onRetry }) {
 
 const USER_ROLES = ["all", "customer", "seller", "admin", "superadmin"];
 
+function AddAdminModal({ open, onClose, onCreate, isPending }) {
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Add admin account"
+      footer={
+        <>
+          <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
+          <PrimaryButton
+            loading={isPending}
+            onClick={() => onCreate(form, () => setForm({ name: "", email: "", password: "" }))}
+          >
+            Create admin
+          </PrimaryButton>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <Input label="Full name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+        <Input
+          label="Email"
+          type="email"
+          value={form.email}
+          onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+        />
+        <Input
+          label="Password"
+          type="password"
+          helperText="At least 12 characters."
+          value={form.password}
+          onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+        />
+      </div>
+    </Modal>
+  );
+}
+
 function UsersSection() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [page, setPage] = useState(1);
+  const [addAdminOpen, setAddAdminOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { role } = useAuth();
+  const isSuperAdmin = role === "superadmin";
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-users", { search, roleFilter, page }],
@@ -294,13 +339,42 @@ function UsersSection() {
     onSuccess: () => toast({ title: "Password reset email sent", variant: "success" }),
     onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't send reset email", variant: "error" }),
   });
+  const roleMutation = useMutation({
+    mutationFn: ({ id, role: newRole }) => adminApi.setUserRole(id, newRole),
+    onSuccess: () => {
+      invalidate();
+      toast({ title: "Role updated", variant: "success" });
+    },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't update role", variant: "error" }),
+  });
+  const createAdminMutation = useMutation({
+    mutationFn: (payload) => adminApi.createAdmin(payload),
+    onSuccess: () => {
+      invalidate();
+      setAddAdminOpen(false);
+      toast({ title: "Admin account created", variant: "success" });
+    },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't create admin", variant: "error" }),
+  });
+  const handleCreateAdmin = (payload, resetForm) => createAdminMutation.mutate(payload, { onSuccess: resetForm });
 
   const users = data?.items || [];
   const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
 
   return (
     <div>
-      <SectionTitle eyebrow="Manage" title="Users" description="Everyone with an account on the platform." />
+      <SectionTitle
+        eyebrow="Manage"
+        title="Users"
+        description="Everyone with an account on the platform."
+        action={
+          isSuperAdmin && (
+            <PrimaryButton leftIcon={UserPlus} onClick={() => setAddAdminOpen(true)}>
+              Add admin
+            </PrimaryButton>
+          )
+        }
+      />
 
       <Toolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }}>
         {USER_ROLES.map((r) => (
@@ -349,6 +423,14 @@ function UsersSection() {
                     >
                       {u.status === "active" ? "Suspend" : "Reactivate"}
                     </Dropdown.Item>
+                    {isSuperAdmin && (u.role === "customer" || u.role === "admin") && (
+                      <Dropdown.Item
+                        icon={u.role === "admin" ? ShieldOff : ShieldCheck}
+                        onClick={() => roleMutation.mutate({ id: u.id, role: u.role === "admin" ? "customer" : "admin" })}
+                      >
+                        {u.role === "admin" ? "Remove admin access" : "Make admin"}
+                      </Dropdown.Item>
+                    )}
                     <Dropdown.Separator />
                     <Dropdown.Item icon={Trash2} destructive onClick={() => deleteMutation.mutate(u.id)}>Delete</Dropdown.Item>
                   </Dropdown>
@@ -360,6 +442,15 @@ function UsersSection() {
       )}
 
       <div className="mt-6"><Pagination page={page} totalPages={totalPages} onChange={setPage} /></div>
+
+      {isSuperAdmin && (
+        <AddAdminModal
+          open={addAdminOpen}
+          onClose={() => setAddAdminOpen(false)}
+          onCreate={handleCreateAdmin}
+          isPending={createAdminMutation.isPending}
+        />
+      )}
     </div>
   );
 }

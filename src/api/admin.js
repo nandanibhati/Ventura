@@ -4,6 +4,8 @@ export const adminApi = {
   listUsers: (params) => api.get("/admin/users", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
   getCustomerDetail: (id) => api.get(`/admin/users/${id}`).then(unwrap),
   setUserStatus: (id, status) => api.patch(`/admin/users/${id}/status`, { status }).then(unwrap),
+  setUserRole: (id, role) => api.patch(`/admin/users/${id}/role`, { role }).then(unwrap),
+  createAdmin: (payload) => api.post("/admin/users/admins", payload).then(unwrap),
   deleteUser: (id) => api.delete(`/admin/users/${id}`).then(unwrap),
 
   listOrders: (params) => api.get("/admin/orders", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
