@@ -40,4 +40,16 @@ export function applyTheme(theme) {
   const preset = FONT_PRESETS[t.font] || FONT_PRESETS.classic;
   root.setProperty("--font-display", preset.display);
   root.setProperty("--font-sans", preset.sans);
+
+  // Custom favicon (Settings > Theme & Design) — falls back to index.html's static /favicon.svg
+  // when unset, so this only ever swaps the icon, never removes it.
+  if (t.faviconUrl) {
+    let link = document.querySelector('link[rel="icon"]');
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.href = t.faviconUrl;
+  }
 }

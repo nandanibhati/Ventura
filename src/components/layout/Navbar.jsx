@@ -24,6 +24,8 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { wishlistApi, notificationsApi } from "../../api/orders";
+import { settingsApi } from "../../api/catalog";
+import { resolveMediaUrl } from "../../lib/api";
 
 const NAV_LINKS = [
   { label: "New Arrivals", to: "/new-arrivals" },
@@ -171,6 +173,8 @@ function Navbar() {
   const { itemCount } = useCart();
   const queryClient = useQueryClient();
 
+  const { data: storeSettings } = useQuery({ queryKey: ["settings", "public"], queryFn: settingsApi.getPublic, staleTime: 5 * 60 * 1000 });
+
   const { data: wishlist = [] } = useQuery({
     queryKey: ["wishlist"],
     queryFn: wishlistApi.list,
@@ -291,9 +295,13 @@ function Navbar() {
           }`}
         >
           <Link to="/" className="shrink-0">
-            <span className="text-[1.6rem] font-bold uppercase tracking-[0.15em] text-neutral-900 dark:text-white">
-              Veluntra
-            </span>
+            {storeSettings?.logoUrl ? (
+              <img src={resolveMediaUrl(storeSettings.logoUrl)} alt={storeSettings.storeName || "Store logo"} className="h-9 w-auto object-contain" />
+            ) : (
+              <span className="text-[1.6rem] font-bold uppercase tracking-[0.15em] text-neutral-900 dark:text-white">
+                {storeSettings?.storeName || "Veluntra"}
+              </span>
+            )}
           </Link>
 
           <div className="hidden items-center gap-9 lg:flex">
@@ -598,9 +606,13 @@ function Navbar() {
               className="fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col overflow-y-auto bg-white shadow-2xl dark:bg-neutral-950 lg:hidden"
             >
               <div className="flex items-center justify-between border-b border-black/5 px-5 py-4 dark:border-white/10">
-                <span className="text-xl font-bold uppercase tracking-[0.15em] text-neutral-900 dark:text-white">
-                  Veluntra
-                </span>
+                {storeSettings?.logoUrl ? (
+                  <img src={resolveMediaUrl(storeSettings.logoUrl)} alt={storeSettings.storeName || "Store logo"} className="h-7 w-auto object-contain" />
+                ) : (
+                  <span className="text-xl font-bold uppercase tracking-[0.15em] text-neutral-900 dark:text-white">
+                    {storeSettings?.storeName || "Veluntra"}
+                  </span>
+                )}
                 <button
                   onClick={() => setMobileOpen(false)}
                   aria-label="Close menu"

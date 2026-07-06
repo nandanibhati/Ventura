@@ -2124,6 +2124,8 @@ function SettingsSection() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [form, setForm] = useState(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [faviconUploading, setFaviconUploading] = useState(false);
 
   const { data: settings, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-settings"],
@@ -2159,6 +2161,32 @@ function SettingsSection() {
     applyTheme(next); // live-preview immediately; only persisted once "Save settings" is clicked
   };
 
+  const handleLogoUpload = async (files) => {
+    if (!files.length) return;
+    setLogoUploading(true);
+    try {
+      const { urls } = await uploadsApi.uploadImages(Array.from(files));
+      set("logoUrl", resolveMediaUrl(urls[0]));
+    } catch {
+      toast({ title: "Logo upload failed", variant: "error" });
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  const handleFaviconUpload = async (files) => {
+    if (!files.length) return;
+    setFaviconUploading(true);
+    try {
+      const { urls } = await uploadsApi.uploadImages(Array.from(files));
+      setTheme("faviconUrl", resolveMediaUrl(urls[0]));
+    } catch {
+      toast({ title: "Favicon upload failed", variant: "error" });
+    } finally {
+      setFaviconUploading(false);
+    }
+  };
+
   return (
     <div>
       <SectionTitle eyebrow="System" title="Store Settings" description="Everything here is editable without a code change." />
@@ -2168,6 +2196,20 @@ function SettingsSection() {
           <h3 className="mb-4 text-[15px] font-medium">Store info</h3>
           <div className="flex flex-col gap-4">
             <Input label="Store name" value={current.storeName || ""} onChange={(e) => set("storeName", e.target.value)} />
+            <div className="flex flex-col gap-2">
+              <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Store logo</span>
+              <div className="flex items-center gap-3">
+                {current.logoUrl ? (
+                  <img src={resolveMediaUrl(current.logoUrl)} alt="Logo" className="h-10 w-auto max-w-[160px] rounded-[var(--radius-sm)] border border-[var(--border)] object-contain p-1" />
+                ) : (
+                  <span className="text-xs text-[var(--text-muted)]">No logo uploaded — the store name is shown instead.</span>
+                )}
+                <label className="inline-flex w-fit shrink-0 cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-xs font-medium">
+                  {logoUploading ? "Uploading…" : current.logoUrl ? "Replace" : "Upload logo"}
+                  <input type="file" accept="image/*" hidden disabled={logoUploading} onChange={(e) => handleLogoUpload(e.target.files)} />
+                </label>
+              </div>
+            </div>
             <Input label="Currency" value={current.currency || ""} onChange={(e) => set("currency", e.target.value)} />
             <Input label="Contact email" value={current.contactEmail || ""} onChange={(e) => set("contactEmail", e.target.value)} />
             <Input label="Contact phone" value={current.contactPhone || ""} onChange={(e) => set("contactPhone", e.target.value)} />
@@ -2258,6 +2300,21 @@ function SettingsSection() {
               onChange={(e) => setTheme("cardTemplate", e.target.value)}
               options={Object.entries(CARD_TEMPLATES).map(([value, t]) => ({ value, label: t.label }))}
             />
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Favicon</span>
+            <div className="flex items-center gap-3">
+              {currentTheme.faviconUrl ? (
+                <img src={resolveMediaUrl(currentTheme.faviconUrl)} alt="Favicon" className="size-8 rounded-[var(--radius-sm)] border border-[var(--border)] object-contain p-1" />
+              ) : (
+                <span className="text-xs text-[var(--text-muted)]">Using the default site favicon.</span>
+              )}
+              <label className="inline-flex w-fit shrink-0 cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-xs font-medium">
+                {faviconUploading ? "Uploading…" : currentTheme.faviconUrl ? "Replace" : "Upload favicon"}
+                <input type="file" accept="image/*" hidden disabled={faviconUploading} onChange={(e) => handleFaviconUpload(e.target.files)} />
+              </label>
+            </div>
           </div>
 
           <div className="my-6 border-t border-[var(--border)]" />
