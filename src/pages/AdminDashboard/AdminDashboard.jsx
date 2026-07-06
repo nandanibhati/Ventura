@@ -65,6 +65,7 @@ import { SectionTitle } from "../../components/ui/Typography";
 import { StatCard } from "../../components/ui/Cards";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { AnimatedCard, ANIMATION_PRESETS, DEFAULT_ANIMATION_CONFIG } from "../../lib/animations";
+import { DEFAULT_THEME, FONT_PRESETS, applyTheme } from "../../lib/themePresets";
 import { cn } from "../../lib/utils";
 import { useAuth } from "../../context/AuthContext";
 import { adminApi } from "../../api/admin";
@@ -1801,6 +1802,13 @@ function SettingsSection() {
   const applyPreset = (presetName) =>
     setForm((f) => ({ ...f, animationConfig: { preset: presetName, ...ANIMATION_PRESETS[presetName] } }));
 
+  const currentTheme = { ...DEFAULT_THEME, ...(current.themeColors || {}) };
+  const setTheme = (key, value) => {
+    const next = { ...DEFAULT_THEME, ...form.themeColors, [key]: value };
+    setForm((f) => ({ ...f, themeColors: next }));
+    applyTheme(next); // live-preview immediately; only persisted once "Save settings" is clicked
+  };
+
   return (
     <div>
       <SectionTitle eyebrow="System" title="Store Settings" description="Everything here is editable without a code change." />
@@ -1844,6 +1852,40 @@ function SettingsSection() {
                 onChange={(e) => setFlag(key, e.target.checked)}
               />
             ))}
+          </div>
+        </div>
+
+        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-soft-sm lg:col-span-2">
+          <h3 className="mb-1 text-[15px] font-medium">Theme</h3>
+          <p className="mb-4 text-xs text-[var(--text-muted)]">
+            The storefront's brand colors and typography, applied site-wide immediately as a live preview —
+            click "Save settings" below to make it permanent for every visitor.
+          </p>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Primary color</label>
+              <input type="color" value={currentTheme.primary} onChange={(e) => setTheme("primary", e.target.value)} className="h-10 w-full cursor-pointer rounded-[var(--radius-sm)] border border-[var(--border)]" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Accent color</label>
+              <input type="color" value={currentTheme.accent} onChange={(e) => setTheme("accent", e.target.value)} className="h-10 w-full cursor-pointer rounded-[var(--radius-sm)] border border-[var(--border)]" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Light surface</label>
+              <input type="color" value={currentTheme.surfaceLight} onChange={(e) => setTheme("surfaceLight", e.target.value)} className="h-10 w-full cursor-pointer rounded-[var(--radius-sm)] border border-[var(--border)]" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Dark surface</label>
+              <input type="color" value={currentTheme.surfaceDark} onChange={(e) => setTheme("surfaceDark", e.target.value)} className="h-10 w-full cursor-pointer rounded-[var(--radius-sm)] border border-[var(--border)]" />
+            </div>
+          </div>
+          <div className="mt-4 max-w-xs">
+            <Select
+              label="Font pairing"
+              value={currentTheme.font}
+              onChange={(e) => setTheme("font", e.target.value)}
+              options={Object.entries(FONT_PRESETS).map(([value, p]) => ({ value, label: p.label }))}
+            />
           </div>
         </div>
 
