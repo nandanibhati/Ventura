@@ -45,6 +45,9 @@ import {
   GripVertical,
   Eye,
   EyeOff,
+  Upload,
+  Undo2,
+  Redo2,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -1525,6 +1528,40 @@ function HomepageCmsSection() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ type: "announcement", title: "", config: {}, startsAt: "", endsAt: "" });
   const [heroUploading, setHeroUploading] = useState(false);
+
+  // Undo/redo for the editor panel: rather than rewiring every individual field's onChange,
+  // this just observes `form` and snapshots the previous value whenever it changes (skipping
+  // the change caused by undo/redo itself, tracked via the ref flag below).
+  const [past, setPast] = useState([]);
+  const [future, setFuture] = useState([]);
+  const isUndoRedoRef = useRef(false);
+  const prevFormRef = useRef(form);
+  useEffect(() => {
+    if (isUndoRedoRef.current) {
+      isUndoRedoRef.current = false;
+      prevFormRef.current = form;
+      return;
+    }
+    if (modalOpen && prevFormRef.current !== form) {
+      setPast((p) => [...p, prevFormRef.current]);
+      setFuture([]);
+    }
+    prevFormRef.current = form;
+  }, [form, modalOpen]);
+  const undo = () => {
+    if (past.length === 0) return;
+    isUndoRedoRef.current = true;
+    setFuture((f) => [form, ...f]);
+    setForm(past[past.length - 1]);
+    setPast((p) => p.slice(0, -1));
+  };
+  const redo = () => {
+    if (future.length === 0) return;
+    isUndoRedoRef.current = true;
+    setPast((p) => [...p, form]);
+    setForm(future[0]);
+    setFuture((f) => f.slice(1));
+  };
   const [previewViewport, setPreviewViewport] = useState("desktop");
   const [previewReady, setPreviewReady] = useState(false);
   const previewFrameRef = useRef(null);
@@ -1608,16 +1645,82 @@ function HomepageCmsSection() {
     reorderMutation.mutate(next.map((s, i) => ({ id: s.id, position: i })));
   };
 
-  const openCreate = () => { setEditing(null); setForm({ type: "announcement", title: "", config: {}, startsAt: "", endsAt: "" }); setModalOpen(true); };
+  /** Downloads every current section as a JSON file — portable across environments (e.g.
+   * staging -> production) since it only carries type/title/config/enabled/schedule, not ids. */
+  const handleExport = () => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      sections: sections.map((s) => ({
+        type: s.type,
+        title: s.title,
+        config: s.config,
+        enabled: s.enabled,
+        startsAt: s.startsAt,
+        endsAt: s.endsAt,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `homepage-sections-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  /** Imports sections from a previously exported JSON file. Always ADDS them as new sections
+   * (never overwrites or deletes existing ones) — the safe default; unwanted ones can be
+   * removed individually afterwards the same way any section is removed. */
+  const handleImportFile = async (files) => {
+    const file = files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const importedSections = Array.isArray(parsed) ? parsed : parsed.sections;
+      if (!Array.isArray(importedSections) || importedSections.length === 0) {
+        throw new Error("No sections found in this file.");
+      }
+      for (const s of importedSections) {
+        if (!s.type) continue;
+        await homepageApi.create({
+          type: s.type,
+          title: s.title ?? null,
+          config: s.config ?? {},
+          enabled: s.enabled !== false,
+          startsAt: s.startsAt ?? null,
+          endsAt: s.endsAt ?? null,
+        });
+      }
+      invalidate();
+      toast({ title: `Imported ${importedSections.length} section(s)`, variant: "success" });
+    } catch (err) {
+      toast({ title: err.message || "Couldn't import that file", variant: "error" });
+    }
+  };
+
+  const openCreate = () => {
+    setEditing(null);
+    const initial = { type: "announcement", title: "", config: {}, startsAt: "", endsAt: "" };
+    setForm(initial);
+    prevFormRef.current = initial;
+    setPast([]);
+    setFuture([]);
+    setModalOpen(true);
+  };
   const openEdit = (s) => {
     setEditing(s);
-    setForm({
+    const initial = {
       type: s.type,
       title: s.title || "",
       config: s.config || {},
       startsAt: toDatetimeLocal(s.startsAt),
       endsAt: toDatetimeLocal(s.endsAt),
-    });
+    };
+    setForm(initial);
+    prevFormRef.current = initial;
+    setPast([]);
+    setFuture([]);
     setModalOpen(true);
   };
   const submitForm = () => {
@@ -1657,6 +1760,15 @@ function HomepageCmsSection() {
         eyebrow="Manage"
         title="Homepage CMS"
         description="Control which merchandising sections appear on the homepage, their order, visibility, and content."
+        action={
+          <div className="flex items-center gap-2">
+            <SecondaryButton size="sm" leftIcon={Download} onClick={handleExport}>Export</SecondaryButton>
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-btn,999px)] border border-[var(--border)] px-4 py-2 text-xs font-medium">
+              <Upload className="size-3.5" /> Import
+              <input type="file" accept="application/json" hidden onChange={(e) => handleImportFile(e.target.files)} />
+            </label>
+          </div>
+        }
       />
 
       <div className="mb-4 flex gap-1 rounded-full bg-[var(--surface-inset)] p-1 w-fit">
@@ -1747,7 +1859,11 @@ function HomepageCmsSection() {
       <div className="mt-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-soft-sm">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">{editing ? "Edit section" : "Add homepage section"}</h3>
-          <IconButton icon={X} size="sm" aria-label="Close" onClick={() => setModalOpen(false)} />
+          <div className="flex items-center gap-1">
+            <IconButton icon={Undo2} size="sm" aria-label="Undo" disabled={past.length === 0} onClick={undo} />
+            <IconButton icon={Redo2} size="sm" aria-label="Redo" disabled={future.length === 0} onClick={redo} />
+            <IconButton icon={X} size="sm" aria-label="Close" onClick={() => setModalOpen(false)} />
+          </div>
         </div>
         <div className="flex flex-col gap-4">
           {!editing && (
