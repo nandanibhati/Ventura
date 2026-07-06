@@ -25,6 +25,11 @@ export const adminApi = {
   listActivityLogs: (params) => api.get("/admin/activity-logs", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
   analytics: (params) => api.get("/admin/analytics", { params }).then(unwrap),
 
+  resetUserPassword: (id) => api.post(`/admin/users/${id}/reset-password`).then(unwrap),
+  listStores: (params) => api.get("/admin/sellers", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
+  setStoreStatus: (id, status) => api.patch(`/admin/sellers/${id}/status`, { status }).then(unwrap),
+  setStoreCommission: (id, commissionPercent) => api.patch(`/admin/sellers/${id}/commission`, { commissionPercent }).then(unwrap),
+
   listReviews: (params) => api.get("/admin/reviews", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
   approveReview: (id) => api.post(`/admin/reviews/${id}/approve`).then(unwrap),
   rejectReview: (id) => api.post(`/admin/reviews/${id}/reject`).then(unwrap),

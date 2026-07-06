@@ -1,0 +1,95 @@
+/* Shared, GPU-accelerated animation utilities for AnimatedCard/AnimatedTile.
+   Kept as plain CSS (not Tailwind arbitrary values) because keyframes and
+   ::before/::after pseudo-elements aren't expressible as utility classes. */
+
+@keyframes veluntra-shine {
+  0% { transform: translateX(-120%) skewX(-15deg); }
+  100% { transform: translateX(220%) skewX(-15deg); }
+}
+
+@keyframes veluntra-gradient-motion {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.anim-card {
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.anim-card--glow {
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.15), 0 8px 30px -8px rgba(212, 175, 55, 0.25);
+}
+
+.anim-card--glow:hover {
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.35), 0 12px 40px -6px rgba(212, 175, 55, 0.4);
+}
+
+.anim-card__shine {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.anim-card__shine::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: 0;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  transform: translateX(-120%) skewX(-15deg);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.anim-card:hover .anim-card__shine::before {
+  opacity: 1;
+  animation: veluntra-shine 1.1s ease forwards;
+}
+
+.anim-card__reflection {
+  pointer-events: none;
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -1.5rem;
+  height: 1.5rem;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.08), transparent);
+  filter: blur(4px);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.anim-card:hover .anim-card__reflection {
+  opacity: 1;
+}
+
+.anim-card__badge-float {
+  animation: veluntra-float 2.6s ease-in-out infinite;
+}
+
+@keyframes veluntra-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.anim-gradient-border {
+  background: linear-gradient(120deg, rgba(212, 175, 55, 0.6), rgba(255, 255, 255, 0.1), rgba(212, 175, 55, 0.6));
+  background-size: 200% 200%;
+  animation: veluntra-gradient-motion 4s ease infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-card, .anim-card__shine::before, .anim-card__badge-float, .anim-gradient-border {
+    animation: none !important;
+    transition: none !important;
+  }
+}

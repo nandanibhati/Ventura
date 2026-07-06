@@ -4,6 +4,9 @@ export const ordersApi = {
   create: (payload) => api.post("/orders", payload).then(unwrap),
   list: (params) => api.get("/orders", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
   getById: (id) => api.get(`/orders/${id}`).then(unwrap),
+  cancel: (id, reason) => api.post(`/orders/${id}/cancel`, { reason }).then(unwrap),
+  requestReturn: (id, reason) => api.post(`/orders/${id}/return`, { reason }).then(unwrap),
+  requestExchange: (id, reason) => api.post(`/orders/${id}/exchange`, { reason }).then(unwrap),
   /** Downloads the invoice PDF (auth header required, so this can't just be a plain <a href>). */
   downloadInvoice: async (id, orderNumber) => {
     const response = await api.get(`/orders/${id}/invoice`, { responseType: "blob" });

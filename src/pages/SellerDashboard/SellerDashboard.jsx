@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
+import { sellerApi } from "../../api/seller";
+import { productsApi } from "../../api/products";
+import { categoriesApi, brandsApi } from "../../api/catalog";
+import { uploadsApi } from "../../api/products";
+import { resolveMediaUrl } from "../../lib/api";
+import { useToast } from "../../components/ui/Feedback";
+import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -20,7 +28,6 @@ import {
   Package,
   Boxes,
   Users,
-  Settings,
   Store,
   Menu,
   Search,
@@ -32,19 +39,25 @@ import {
   Percent,
   TrendingUp,
   TrendingDown,
-  Download,
   AlertTriangle,
   CheckCircle2,
   Clock,
   XCircle,
   Crown,
   UserPlus,
-  Watch,
-  Keyboard,
-  Headphones,
-  Laptop,
-  Lamp,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  Copy,
+  Plus,
+  History,
+  X,
 } from "lucide-react";
+import { PrimaryButton, SecondaryButton, OutlineButton, IconButton } from "../../components/ui/Button";
+import { Input, Select, Checkbox } from "../../components/ui/Input";
+import { EmptyState } from "../../components/ui/Feedback";
+import { Modal, Drawer, Dropdown } from "../../components/ui/Overlay";
+import { Pagination } from "../../components/ui/Navigation";
 
 const CHART_TOKENS = {
   light: {
@@ -83,60 +96,25 @@ const NAV_ITEMS = [
 ];
 
 const RANGE_OPTIONS = [
-  { id: "7d", label: "Last 7 days", days: 7, base: 3400, volatility: 850, trend: 55 },
-  { id: "30d", label: "Last 30 days", days: 30, base: 2600, volatility: 700, trend: 22 },
-  { id: "90d", label: "Last 90 days", days: 90, base: 1900, volatility: 620, trend: 9 },
-];
-
-const CONVERSION_BY_RANGE = {
-  "7d": { value: 3.8, delta: 0.6, trend: [3.1, 3.3, 3.0, 3.5, 3.6, 3.4, 3.8] },
-  "30d": { value: 3.4, delta: 0.3, trend: [3.0, 3.1, 2.9, 3.2, 3.3, 3.1, 3.4] },
-  "90d": { value: 3.1, delta: -0.2, trend: [3.3, 3.2, 3.0, 3.1, 2.9, 3.0, 3.1] },
-};
-
-const CATEGORY_SALES = [
-  { category: "Audio", revenue: 48200 },
-  { category: "Computing", revenue: 31500 },
-  { category: "Wearables", revenue: 27800 },
-  { category: "Smart Home", revenue: 19600 },
-  { category: "Home & Kitchen", revenue: 14300 },
-];
-
-const TOP_PRODUCTS = [
-  { id: "p1", name: "Aurora Pro Wireless Earbuds", sku: "VNT-APE-2041", category: "Audio", icon: Headphones, price: 178, sold: 214, revenue: 38092, stock: 18 },
-  { id: "p2", name: "Nova Titanium Smartwatch", sku: "VNT-NTS-1187", category: "Wearables", icon: Watch, price: 890, sold: 98, revenue: 87220, stock: 6 },
-  { id: "p3", name: "Meridian Mechanical Keyboard", sku: "VNT-MMK-0742", category: "Computing", icon: Keyboard, price: 145, sold: 156, revenue: 22620, stock: 0 },
-  { id: "p4", name: "Zenith Noise-Cancel Headphones", sku: "VNT-ZNH-3390", category: "Audio", icon: Headphones, price: 349, sold: 312, revenue: 108888, stock: 42 },
-  { id: "p5", name: "Onyx 14\" Ultrabook", sku: "VNT-OUB-2205", category: "Computing", icon: Laptop, price: 1340, sold: 47, revenue: 62980, stock: 24 },
-  { id: "p6", name: "Lumen Smart Desk Lamp", sku: "VNT-LSD-0899", category: "Smart Home", icon: Lamp, price: 65, sold: 76, revenue: 4940, stock: 3 },
-];
-
-const RECENT_ORDERS = [
-  { id: "VNT-10486", customer: "Priya Sharma", initials: "PS", date: "Jul 4, 2026", items: 2, amount: 963.0, status: "Pending" },
-  { id: "VNT-10485", customer: "David Lin", initials: "DL", date: "Jul 4, 2026", items: 1, amount: 210.0, status: "Shipped" },
-  { id: "VNT-10484", customer: "Marcus Thompson", initials: "MT", date: "Jul 3, 2026", items: 3, amount: 684.0, status: "Delivered" },
-  { id: "VNT-10483", customer: "Sarah Mitchell", initials: "SM", date: "Jul 3, 2026", items: 1, amount: 428.0, status: "Delivered" },
-  { id: "VNT-10482", customer: "James Rodriguez", initials: "JR", date: "Jul 3, 2026", items: 1, amount: 265.0, status: "Shipped" },
-  { id: "VNT-10481", customer: "Elena Kowalski", initials: "EK", date: "Jul 2, 2026", items: 2, amount: 563.0, status: "Cancelled" },
-  { id: "VNT-10480", customer: "Grace Whitfield", initials: "GW", date: "Jul 2, 2026", items: 4, amount: 1240.0, status: "Delivered" },
-  { id: "VNT-10479", customer: "Naomi Chen", initials: "NC", date: "Jul 1, 2026", items: 1, amount: 349.0, status: "Pending" },
-];
-
-const CUSTOMERS = [
-  { id: "cu1", name: "Sarah Mitchell", email: "sarah.m@example.com", initials: "SM", location: "New York, US", orders: 14, spent: 5240, segment: "VIP" },
-  { id: "cu2", name: "James Rodriguez", email: "james.r@example.com", initials: "JR", location: "Los Angeles, US", orders: 6, spent: 1890, segment: "Returning" },
-  { id: "cu3", name: "Elena Kowalski", email: "elena.k@example.com", initials: "EK", location: "Berlin, DE", orders: 2, spent: 642, segment: "New" },
-  { id: "cu4", name: "Marcus Thompson", email: "marcus.t@example.com", initials: "MT", location: "Toronto, CA", orders: 9, spent: 3120, segment: "Returning" },
-  { id: "cu5", name: "Priya Sharma", email: "priya.s@example.com", initials: "PS", location: "Mumbai, IN", orders: 17, spent: 6870, segment: "VIP" },
-  { id: "cu6", name: "David Lin", email: "david.l@example.com", initials: "DL", location: "Singapore, SG", orders: 1, spent: 210, segment: "New" },
+  { id: "day", label: "Daily" },
+  { id: "week", label: "Weekly" },
+  { id: "month", label: "Monthly" },
 ];
 
 const ORDER_STATUS_CONFIG = {
-  Delivered: { color: "#0ca30c", bg: "rgba(12,163,12,0.1)", icon: CheckCircle2 },
-  Shipped: { color: "#52514e", bg: "rgba(82,81,78,0.08)", icon: Package },
-  Pending: { color: "#fab219", bg: "rgba(250,178,25,0.14)", icon: Clock },
-  Cancelled: { color: "#d03b3b", bg: "rgba(208,59,59,0.1)", icon: XCircle },
+  pending: { color: "#52514e", bg: "rgba(82,81,78,0.08)", icon: Clock, label: "Pending" },
+  processing: { color: "#fab219", bg: "rgba(250,178,25,0.14)", icon: Clock, label: "Processing" },
+  shipped: { color: "#2a78d6", bg: "rgba(42,120,214,0.1)", icon: Package, label: "Shipped" },
+  delivered: { color: "#0ca30c", bg: "rgba(12,163,12,0.1)", icon: CheckCircle2, label: "Delivered" },
+  cancelled: { color: "#d03b3b", bg: "rgba(208,59,59,0.1)", icon: XCircle, label: "Cancelled" },
+  return_requested: { color: "#fab219", bg: "rgba(250,178,25,0.14)", icon: AlertTriangle, label: "Return requested" },
+  returned: { color: "#d03b3b", bg: "rgba(208,59,59,0.1)", icon: XCircle, label: "Returned" },
+  exchange_requested: { color: "#fab219", bg: "rgba(250,178,25,0.14)", icon: AlertTriangle, label: "Exchange requested" },
+  exchanged: { color: "#2a78d6", bg: "rgba(42,120,214,0.1)", icon: CheckCircle2, label: "Exchanged" },
 };
+const ORDER_STATUSES = Object.keys(ORDER_STATUS_CONFIG);
+const PRODUCT_STATUSES = ["draft", "published", "archived", "hidden", "upcoming", "discontinued"];
+const PAGE_SIZE = 10;
 
 const STOCK_STATUS_CONFIG = {
   in: { label: "In Stock", color: "#0ca30c", bg: "rgba(12,163,12,0.1)", icon: CheckCircle2 },
@@ -144,42 +122,21 @@ const STOCK_STATUS_CONFIG = {
   out: { label: "Out of Stock", color: "#d03b3b", bg: "rgba(208,59,59,0.1)", icon: XCircle },
 };
 
-function generateSeries(days, base, volatility, trend) {
-  const data = [];
-  let value = base;
-  const start = new Date();
-  start.setDate(start.getDate() - (days - 1));
-  for (let i = 0; i < days; i++) {
-    value = Math.max(200, value + (Math.random() - 0.42) * volatility + trend);
-    const date = new Date(start);
-    date.setDate(start.getDate() + i);
-    data.push({
-     label: date.toLocaleDateString("en-GB", {month: "short", day: "numeric",}),
-      revenue: Math.round(value),
-      orders: Math.max(1, Math.round(value / 34 + (Math.random() - 0.5) * 6)),
-    });
-  }
-  return data;
-}
-
-const SERIES_BY_RANGE = Object.fromEntries(
-  RANGE_OPTIONS.map((opt) => [opt.id, generateSeries(opt.days, opt.base, opt.volatility, opt.trend)])
-);
-
 function average(list, key) {
-  return list.reduce((sum, item) => sum + item[key], 0) / (list.length || 1);
+  return list.reduce((sum, item) => sum + Number(item[key] || 0), 0) / (list.length || 1);
 }
 
-function summarize(data) {
-  const totalRevenue = data.reduce((sum, d) => sum + d.revenue, 0);
-  const totalOrders = data.reduce((sum, d) => sum + d.orders, 0);
-  const avgOrderValue = totalOrders ? totalRevenue / totalOrders : 0;
+/** Trend deltas (this period's second half vs first half) computed from the real revenue-trend series. */
+function summarizeTrend(data) {
+  if (!data.length) return { revenueDelta: 0, ordersDelta: 0 };
   const mid = Math.max(1, Math.floor(data.length / 2));
   const firstHalf = data.slice(0, mid);
   const secondHalf = data.slice(mid);
-  const revenueDelta = ((average(secondHalf, "revenue") - average(firstHalf, "revenue")) / average(firstHalf, "revenue")) * 100;
-  const ordersDelta = ((average(secondHalf, "orders") - average(firstHalf, "orders")) / average(firstHalf, "orders")) * 100;
-  return { totalRevenue, totalOrders, avgOrderValue, revenueDelta, ordersDelta };
+  const firstRevenue = average(firstHalf, "revenue");
+  const firstOrders = average(firstHalf, "orders");
+  const revenueDelta = firstRevenue ? ((average(secondHalf, "revenue") - firstRevenue) / firstRevenue) * 100 : 0;
+  const ordersDelta = firstOrders ? ((average(secondHalf, "orders") - firstOrders) / firstOrders) * 100 : 0;
+  return { revenueDelta, ordersDelta };
 }
 
 function stockStatus(stock) {
@@ -343,7 +300,7 @@ function RevenueChart({ data, tokens, range, onRangeChange }) {
                   : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
               }`}
             >
-              {opt.id.toUpperCase()}
+              {opt.label}
             </button>
           ))}
         </div>
@@ -454,10 +411,19 @@ function CategorySalesChart({ data, tokens, categoryColors }) {
   );
 }
 
-function OverviewTab({ tokens, categoryColors, range, onRangeChange, revenueData, summary, conversion }) {
-  const recentPoints = revenueData.slice(-12);
+function OverviewTab({ tokens, categoryColors, range, onRangeChange }) {
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["seller-overview", range],
+    queryFn: () => sellerApi.overview({ period: range }),
+  });
+
+  if (isLoading) return <div className="py-16 text-center text-sm text-neutral-400">Loading overview…</div>;
+  if (isError) return <ErrorNotice onRetry={refetch} />;
+
+  const { stats, revenueTrend, categorySales } = data;
+  const recentPoints = revenueTrend.slice(-12);
   const aovPoints = recentPoints.map((d) => ({ ...d, aov: d.orders ? d.revenue / d.orders : 0 }));
-  const conversionPoints = conversion.trend.map((v, i) => ({ i, v }));
+  const trend = summarizeTrend(revenueTrend);
 
   return (
     <div className="space-y-6">
@@ -465,8 +431,8 @@ function OverviewTab({ tokens, categoryColors, range, onRangeChange, revenueData
         <StatTile
           icon={DollarSign}
           label="Total Revenue"
-          value={formatCurrency(summary.totalRevenue)}
-          delta={summary.revenueDelta}
+          value={formatCurrency(stats.totalRevenue)}
+          delta={trend.revenueDelta}
           sparkData={recentPoints}
           sparkKey="revenue"
           color={tokens.blue}
@@ -474,8 +440,8 @@ function OverviewTab({ tokens, categoryColors, range, onRangeChange, revenueData
         <StatTile
           icon={ShoppingBag}
           label="Total Orders"
-          value={summary.totalOrders.toLocaleString()}
-          delta={summary.ordersDelta}
+          value={stats.totalOrders.toLocaleString()}
+          delta={trend.ordersDelta}
           sparkData={recentPoints}
           sparkKey="orders"
           color={tokens.blue}
@@ -483,144 +449,461 @@ function OverviewTab({ tokens, categoryColors, range, onRangeChange, revenueData
         <StatTile
           icon={Package}
           label="Avg. Order Value"
-          value={formatCurrency(summary.avgOrderValue)}
-          delta={summary.revenueDelta - summary.ordersDelta}
+          value={formatCurrency(stats.avgOrderValue)}
+          delta={trend.revenueDelta - trend.ordersDelta}
           sparkData={aovPoints}
           sparkKey="aov"
           color={tokens.blue}
         />
         <StatTile
           icon={Percent}
-          label="Conversion Rate"
-          value={`${conversion.value}%`}
-          delta={conversion.delta}
-          sparkData={conversionPoints}
-          sparkKey="v"
+          label="Refund Rate"
+          value={`${stats.refundRate}%`}
+          delta={-stats.refundRate}
+          sparkData={recentPoints}
+          sparkKey="orders"
           color={tokens.blue}
         />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-5">
         <div className="xl:col-span-3">
-          <RevenueChart data={revenueData} tokens={tokens} range={range} onRangeChange={onRangeChange} />
+          <RevenueChart data={revenueTrend} tokens={tokens} range={range} onRangeChange={onRangeChange} />
         </div>
         <div className="xl:col-span-2">
-          <CategorySalesChart data={CATEGORY_SALES} tokens={tokens} categoryColors={categoryColors} />
+          <CategorySalesChart data={categorySales} tokens={tokens} categoryColors={categoryColors} />
         </div>
       </div>
 
-      <OrdersChart data={revenueData} tokens={tokens} />
+      <OrdersChart data={revenueTrend} tokens={tokens} />
+    </div>
+  );
+}
+
+function ErrorNotice({ onRetry }) {
+  return (
+    <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center dark:border-rose-400/20 dark:bg-rose-400/10">
+      <p className="text-sm text-rose-600 dark:text-rose-400">Something went wrong loading this section.</p>
+      <button onClick={onRetry} className="mt-2 text-sm font-medium text-amber-600 hover:underline">Try again</button>
     </div>
   );
 }
 
 function OrdersTab() {
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["seller-orders", { page, statusFilter }],
+    queryFn: () => sellerApi.listOrders({ page, limit: PAGE_SIZE, status: statusFilter }),
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }) => sellerApi.updateOrderStatus(id, { status }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["seller-orders"] }),
+  });
+
+  const orders = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-black/5 bg-white dark:border-white/10 dark:bg-neutral-900">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-black/5 p-5 dark:border-white/10">
           <div>
-            <h3 className="text-base font-bold text-neutral-900 dark:text-white">Recent Orders</h3>
-            <p className="text-xs text-neutral-400">{RECENT_ORDERS.length} orders this period</p>
+            <h3 className="text-base font-bold text-neutral-900 dark:text-white">Orders</h3>
+            <p className="text-xs text-neutral-400">{data?.meta?.total ?? 0} orders total</p>
           </div>
-          <button className="flex items-center gap-2 rounded-full border border-black/10 px-4 py-2 text-xs font-semibold text-neutral-700 transition-colors hover:bg-black/5 dark:border-white/15 dark:text-neutral-200 dark:hover:bg-white/10">
-            <Download className="h-3.5 w-3.5" /> Export
-          </button>
+          <div className="flex flex-wrap gap-1.5">
+            {["all", ...ORDER_STATUSES].map((s) => (
+              <button
+                key={s}
+                onClick={() => { setStatusFilter(s); setPage(1); }}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  statusFilter === s
+                    ? "border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900"
+                    : "border-black/10 text-neutral-500 hover:border-neutral-400 dark:border-white/15 dark:text-neutral-400"
+                }`}
+              >
+                {s === "all" ? "All" : ORDER_STATUS_CONFIG[s].label}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-black/5 text-xs uppercase tracking-wider text-neutral-400 dark:border-white/10">
-                <th className="px-5 py-3 font-medium">Order</th>
-                <th className="px-5 py-3 font-medium">Customer</th>
-                <th className="px-5 py-3 font-medium">Date</th>
-                <th className="px-5 py-3 font-medium">Items</th>
-                <th className="px-5 py-3 font-medium">Amount</th>
-                <th className="px-5 py-3 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {RECENT_ORDERS.map((order) => (
-                <tr key={order.id} className="border-b border-black/5 last:border-b-0 dark:border-white/10">
-                  <td className="px-5 py-4 font-medium text-neutral-900 dark:text-white">{order.id}</td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-rose-400 text-[10px] font-bold text-white">
-                        {order.initials}
-                      </div>
-                      <span className="text-neutral-700 dark:text-neutral-200">{order.customer}</span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{order.date}</td>
-                  <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{order.items}</td>
-                  <td className="px-5 py-4 font-semibold text-neutral-900 dark:text-white">£{order.amount.toFixed(2)}</td>
-                  <td className="px-5 py-4">
-                    <Pill config={{ ...ORDER_STATUS_CONFIG[order.status], label: order.status }} />
-                  </td>
+        {isLoading ? (
+          <div className="p-10 text-center text-sm text-neutral-400">Loading orders…</div>
+        ) : isError ? (
+          <div className="p-6"><ErrorNotice onRetry={refetch} /></div>
+        ) : orders.length === 0 ? (
+          <EmptyState icon={ShoppingCart} title="No orders found" description="Try a different filter." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-black/5 text-xs uppercase tracking-wider text-neutral-400 dark:border-white/10">
+                  <th className="px-5 py-3 font-medium">Order</th>
+                  <th className="px-5 py-3 font-medium">Customer</th>
+                  <th className="px-5 py-3 font-medium">Date</th>
+                  <th className="px-5 py-3 font-medium">Items</th>
+                  <th className="px-5 py-3 font-medium">Amount</th>
+                  <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {orders.map((order) => (
+                  <tr key={order.id} className="border-b border-black/5 last:border-b-0 dark:border-white/10">
+                    <td className="px-5 py-4 font-medium text-neutral-900 dark:text-white">{order.orderNumber}</td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-rose-400 text-[10px] font-bold text-white">
+                          {order.customer?.slice(0, 2)?.toUpperCase()}
+                        </div>
+                        <span className="text-neutral-700 dark:text-neutral-200">{order.customer}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{new Date(order.placedAt).toLocaleDateString()}</td>
+                    <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{order.itemCount}</td>
+                    <td className="px-5 py-4 font-semibold text-neutral-900 dark:text-white">£{Number(order.total).toFixed(2)}</td>
+                    <td className="px-5 py-4">
+                      <Pill config={ORDER_STATUS_CONFIG[order.status]} />
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
+                        {ORDER_STATUSES.filter((s) => s !== order.status).map((s) => (
+                          <Dropdown.Item key={s} icon={CheckCircle2} onClick={() => statusMutation.mutate({ id: order.id, status: s })}>
+                            Mark as {ORDER_STATUS_CONFIG[s].label}
+                          </Dropdown.Item>
+                        ))}
+                      </Dropdown>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
     </div>
   );
 }
 
 function ProductsTab({ tokens, categoryColors }) {
-  const sorted = [...TOP_PRODUCTS].sort((a, b) => b.revenue - a.revenue);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({});
+  const [uploading, setUploading] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["seller-products", { search, page }],
+    queryFn: () => sellerApi.listProducts({ search: search || undefined, page, limit: PAGE_SIZE }),
+  });
+  const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: categoriesApi.list });
+  const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: brandsApi.list });
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["seller-products"] });
+  const createMutation = useMutation({
+    mutationFn: (payload) => productsApi.create(payload),
+    onSuccess: () => { invalidate(); setModalOpen(false); toast({ title: "Product created", variant: "success" }); },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't create product", variant: "error" }),
+  });
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }) => productsApi.update(id, payload),
+    onSuccess: () => { invalidate(); setModalOpen(false); toast({ title: "Product updated", variant: "success" }); },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't update product", variant: "error" }),
+  });
+  const removeMutation = useMutation({ mutationFn: (id) => productsApi.remove(id), onSuccess: invalidate });
+  const duplicateMutation = useMutation({ mutationFn: (id) => productsApi.duplicate(id), onSuccess: invalidate });
+
+  const products = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm({
+      name: "", description: "", categoryId: categories[0]?.id, brandId: brands[0]?.id, price: "", stock: 0, status: "draft", images: [],
+      isFeatured: false, isTrending: false, isBestSeller: false, isNew: false, badge: "",
+      animationOverride: null,
+    });
+    setModalOpen(true);
+  };
+  const openEdit = (p) => {
+    setEditing(p);
+    setForm({
+      name: p.name, price: p.price, stock: p.stock, status: p.status, images: p.images?.map((i) => resolveMediaUrl(i.url)) || [],
+      isFeatured: !!p.isFeatured, isTrending: !!p.isTrending, isBestSeller: !!p.isBestSeller, isNew: !!p.isNew,
+      badge: p.badge || "",
+      animationOverride: p.animationOverride || null,
+    });
+    setModalOpen(true);
+  };
+  const handleImageUpload = async (files) => {
+    if (!files.length) return;
+    setUploading(true);
+    try {
+      const { urls } = await uploadsApi.uploadImages(Array.from(files));
+      setForm((f) => ({ ...f, images: [...(f.images || []), ...urls.map(resolveMediaUrl)] }));
+    } catch {
+      toast({ title: "Image upload failed", variant: "error" });
+    } finally {
+      setUploading(false);
+    }
+  };
+  const submitForm = () => {
+    const merchandising = {
+      isFeatured: form.isFeatured, isTrending: form.isTrending, isBestSeller: form.isBestSeller, isNew: form.isNew,
+      badge: form.badge || null,
+      animationOverride: form.animationOverride,
+    };
+    if (editing) {
+      updateMutation.mutate({
+        id: editing.id,
+        payload: { name: form.name, price: Number(form.price), stock: Number(form.stock), status: form.status, images: form.images, ...merchandising },
+      });
+    } else {
+      createMutation.mutate({ ...form, ...merchandising, price: Number(form.price), stock: Number(form.stock) });
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <CategorySalesChart data={CATEGORY_SALES} tokens={tokens} categoryColors={categoryColors} />
       <div className="rounded-2xl border border-black/5 bg-white dark:border-white/10 dark:bg-neutral-900">
-        <div className="border-b border-black/5 p-5 dark:border-white/10">
-          <h3 className="text-base font-bold text-neutral-900 dark:text-white">Top Products</h3>
-          <p className="text-xs text-neutral-400">Ranked by revenue this period</p>
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-black/5 p-5 dark:border-white/10">
+          <div>
+            <h3 className="text-base font-bold text-neutral-900 dark:text-white">My Products</h3>
+            <p className="text-xs text-neutral-400">{data?.meta?.total ?? 0} products</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Search products…"
+              className="rounded-full border border-black/10 bg-transparent px-4 py-2 text-xs dark:border-white/15 dark:text-white"
+            />
+            <PrimaryButton size="sm" leftIcon={Plus} onClick={openCreate}>Add product</PrimaryButton>
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-black/5 text-xs uppercase tracking-wider text-neutral-400 dark:border-white/10">
-                <th className="px-5 py-3 font-medium">Product</th>
-                <th className="px-5 py-3 font-medium">Category</th>
-                <th className="px-5 py-3 font-medium">Price</th>
-                <th className="px-5 py-3 font-medium">Units Sold</th>
-                <th className="px-5 py-3 font-medium">Revenue</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((product) => (
-                <tr key={product.id} className="border-b border-black/5 last:border-b-0 dark:border-white/10">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-950">
-                        <product.icon className="h-4 w-4 text-white/60" />
-                      </div>
-                      <span className="font-medium text-neutral-900 dark:text-white">{product.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{product.category}</td>
-                  <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">£{product.price}</td>
-                  <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{product.sold}</td>
-                  <td className="px-5 py-4 font-semibold text-neutral-900 dark:text-white">£{product.revenue.toLocaleString()}</td>
+        {isLoading ? (
+          <div className="p-10 text-center text-sm text-neutral-400">Loading products…</div>
+        ) : isError ? (
+          <div className="p-6"><ErrorNotice onRetry={refetch} /></div>
+        ) : products.length === 0 ? (
+          <EmptyState icon={Package} title="No products yet" description="Add your first product to start selling." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-black/5 text-xs uppercase tracking-wider text-neutral-400 dark:border-white/10">
+                  <th className="px-5 py-3 font-medium">Product</th>
+                  <th className="px-5 py-3 font-medium">Category</th>
+                  <th className="px-5 py-3 font-medium">Price</th>
+                  <th className="px-5 py-3 font-medium">Stock</th>
+                  <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {products.map((product) => (
+                  <tr key={product.id} className="border-b border-black/5 last:border-b-0 dark:border-white/10">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-950">
+                          {product.images?.[0]?.url ? (
+                            <img src={resolveMediaUrl(product.images[0].url)} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <Package className="h-4 w-4 text-white/60" />
+                          )}
+                        </div>
+                        <span className="font-medium text-neutral-900 dark:text-white">{product.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{product.category?.name}</td>
+                    <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">£{Number(product.price)}</td>
+                    <td className="px-5 py-4">
+                      <StockMeter stock={product.stock} />
+                    </td>
+                    <td className="px-5 py-4">
+                      <Pill config={{ ...STOCK_STATUS_CONFIG[stockStatus(product.stock)], label: product.status }} />
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
+                        <Dropdown.Item icon={Pencil} onClick={() => openEdit(product)}>Edit</Dropdown.Item>
+                        <Dropdown.Item icon={Copy} onClick={() => duplicateMutation.mutate(product.id)}>Duplicate</Dropdown.Item>
+                        <Dropdown.Item
+                          icon={CheckCircle2}
+                          onClick={() => updateMutation.mutate({ id: product.id, payload: { status: product.status === "published" ? "archived" : "published" } })}
+                        >
+                          {product.status === "published" ? "Archive" : "Publish"}
+                        </Dropdown.Item>
+                        <Dropdown.Separator />
+                        <Dropdown.Item icon={Trash2} destructive onClick={() => removeMutation.mutate(product.id)}>Delete</Dropdown.Item>
+                      </Dropdown>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit product" : "Add product"} footer={
+        <>
+          <SecondaryButton onClick={() => setModalOpen(false)}>Cancel</SecondaryButton>
+          <PrimaryButton onClick={submitForm} loading={createMutation.isPending || updateMutation.isPending}>
+            {editing ? "Save changes" : "Save product"}
+          </PrimaryButton>
+        </>
+      }>
+        <div className="flex flex-col gap-4">
+          <Input label="Product name" value={form.name || ""} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          {!editing && (
+            <textarea
+              placeholder="Description"
+              value={form.description || ""}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              className="w-full rounded-[var(--radius-md)] border border-black/10 bg-transparent px-4 py-2.5 text-sm dark:border-white/15"
+              rows={3}
+            />
+          )}
+          {!editing && (
+            <div className="grid grid-cols-2 gap-4">
+              <Select label="Category" value={form.categoryId} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))} options={categories.map((c) => ({ value: c.id, label: c.name }))} />
+              <Select label="Brand" value={form.brandId} onChange={(e) => setForm((f) => ({ ...f, brandId: e.target.value }))} options={brands.map((b) => ({ value: b.id, label: b.name }))} />
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Price" type="number" leftIcon={DollarSign} value={form.price ?? ""} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} />
+            <Input label="Stock quantity" type="number" value={form.stock ?? ""} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))} />
+          </div>
+          <Select label="Status" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))} options={PRODUCT_STATUSES.map((s) => ({ value: s, label: s }))} />
+
+          <div>
+            <p className="mb-2 text-sm font-medium text-neutral-900 dark:text-white">Homepage merchandising</p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Checkbox label="Featured" checked={!!form.isFeatured} onChange={(e) => setForm((f) => ({ ...f, isFeatured: e.target.checked }))} />
+              <Checkbox label="Trending" checked={!!form.isTrending} onChange={(e) => setForm((f) => ({ ...f, isTrending: e.target.checked }))} />
+              <Checkbox label="Best Seller" checked={!!form.isBestSeller} onChange={(e) => setForm((f) => ({ ...f, isBestSeller: e.target.checked }))} />
+              <Checkbox label="New" checked={!!form.isNew} onChange={(e) => setForm((f) => ({ ...f, isNew: e.target.checked }))} />
+            </div>
+            <div className="mt-3">
+              <Input label="Badge text (optional)" placeholder="e.g. Limited Edition" value={form.badge || ""} onChange={(e) => setForm((f) => ({ ...f, badge: e.target.value }))} />
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-sm font-medium text-neutral-900 dark:text-white">Animation</p>
+            <Checkbox
+              label="Enable animation for this product"
+              checked={form.animationOverride?.enabled !== false}
+              onChange={(e) => setForm((f) => ({ ...f, animationOverride: { ...f.animationOverride, enabled: e.target.checked } }))}
+            />
+            {form.animationOverride?.enabled !== false && (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <Select
+                  label="Type override (optional)"
+                  value={form.animationOverride?.type || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, animationOverride: { ...f.animationOverride, type: e.target.value || undefined } }))}
+                  options={[{ value: "", label: "Inherit global" }, ...["float", "breathe", "tilt", "glow", "shine", "pulse", "none"].map((v) => ({ value: v, label: v }))]}
+                />
+                <Select
+                  label="Intensity override (optional)"
+                  value={form.animationOverride?.intensity || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, animationOverride: { ...f.animationOverride, intensity: e.target.value || undefined } }))}
+                  options={[{ value: "", label: "Inherit global" }, ...["subtle", "normal", "strong"].map((v) => ({ value: v, label: v }))]}
+                />
+                <Checkbox
+                  label="Highlight in Hero"
+                  checked={!!form.animationOverride?.heroHighlight}
+                  onChange={(e) => setForm((f) => ({ ...f, animationOverride: { ...f.animationOverride, heroHighlight: e.target.checked } }))}
+                />
+                <Checkbox
+                  label="Highlight on Homepage"
+                  checked={!!form.animationOverride?.homepageHighlight}
+                  onChange={(e) => setForm((f) => ({ ...f, animationOverride: { ...f.animationOverride, homepageHighlight: e.target.checked } }))}
+                />
+              </div>
+            )}
+          </div>
+
+          <div>
+            <p className="mb-2 text-sm font-medium text-neutral-900 dark:text-white">Images</p>
+            <div className="flex flex-wrap gap-2">
+              {(form.images || []).map((url) => (
+                <div key={url} className="relative h-16 w-16 overflow-hidden rounded-lg border border-black/10 dark:border-white/15">
+                  <img src={url} alt="" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, images: f.images.filter((u) => u !== url) }))}
+                    className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-lg border border-dashed border-black/20 text-xs text-neutral-400 dark:border-white/20">
+                {uploading ? "…" : <Plus className="h-4 w-4" />}
+                <input type="file" accept="image/*" multiple hidden onChange={(e) => handleImageUpload(e.target.files)} />
+              </label>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
 
 function InventoryTab() {
-  const counts = TOP_PRODUCTS.reduce(
-    (acc, product) => {
-      acc[stockStatus(product.stock)] += 1;
-      return acc;
+  const [page, setPage] = useState(1);
+  const [historyProduct, setHistoryProduct] = useState(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["seller-inventory", page],
+    queryFn: () => sellerApi.listProducts({ page, limit: PAGE_SIZE }),
+  });
+
+  const { data: historyData } = useQuery({
+    queryKey: ["product-inventory-history", historyProduct?.id],
+    queryFn: () => productsApi.inventoryHistory(historyProduct.id),
+    enabled: Boolean(historyProduct),
+  });
+
+  const adjustMutation = useMutation({
+    mutationFn: ({ id, quantity, reason }) => productsApi.adjustStock(id, { quantity, reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seller-inventory"] });
+      toast({ title: "Stock adjusted", variant: "success" });
     },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't adjust stock", variant: "error" }),
+  });
+
+  const products = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+  const counts = products.reduce(
+    (acc, product) => { acc[stockStatus(product.stock)] += 1; return acc; },
     { in: 0, low: 0, out: 0 }
   );
+
+  const handleAdjust = (product) => {
+    const input = window.prompt(`Adjust stock for "${product.name}" — enter a signed amount (e.g. -5 for damaged stock, 10 for a restock):`);
+    if (input === null || input.trim() === "") return;
+    const quantity = Number(input);
+    if (Number.isNaN(quantity)) return;
+    const reason = window.prompt("Reason for this adjustment:") || "Manual adjustment";
+    adjustMutation.mutate({ id: product.id, quantity, reason });
+  };
+
+  if (isLoading) return <div className="py-16 text-center text-sm text-neutral-400">Loading inventory…</div>;
+  if (isError) return <ErrorNotice onRetry={refetch} />;
 
   return (
     <div className="space-y-6">
@@ -649,87 +932,132 @@ function InventoryTab() {
         <div className="border-b border-black/5 p-5 dark:border-white/10">
           <h3 className="text-base font-bold text-neutral-900 dark:text-white">Inventory</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-black/5 text-xs uppercase tracking-wider text-neutral-400 dark:border-white/10">
-                <th className="px-5 py-3 font-medium">Product</th>
-                <th className="px-5 py-3 font-medium">SKU</th>
-                <th className="px-5 py-3 font-medium">Category</th>
-                <th className="px-5 py-3 font-medium">Stock Level</th>
-                <th className="px-5 py-3 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {TOP_PRODUCTS.map((product) => (
-                <tr key={product.id} className="border-b border-black/5 last:border-b-0 dark:border-white/10">
-                  <td className="px-5 py-4 font-medium text-neutral-900 dark:text-white">{product.name}</td>
-                  <td className="px-5 py-4 text-neutral-400">{product.sku}</td>
-                  <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{product.category}</td>
-                  <td className="px-5 py-4">
-                    <StockMeter stock={product.stock} />
-                  </td>
-                  <td className="px-5 py-4">
-                    <Pill config={STOCK_STATUS_CONFIG[stockStatus(product.stock)]} />
-                  </td>
+        {products.length === 0 ? (
+          <EmptyState icon={Boxes} title="No products yet" description="Add products to track inventory." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-black/5 text-xs uppercase tracking-wider text-neutral-400 dark:border-white/10">
+                  <th className="px-5 py-3 font-medium">Product</th>
+                  <th className="px-5 py-3 font-medium">SKU</th>
+                  <th className="px-5 py-3 font-medium">Category</th>
+                  <th className="px-5 py-3 font-medium">Stock Level</th>
+                  <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {products.map((product) => (
+                  <tr key={product.id} className="border-b border-black/5 last:border-b-0 dark:border-white/10">
+                    <td className="px-5 py-4 font-medium text-neutral-900 dark:text-white">{product.name}</td>
+                    <td className="px-5 py-4 text-neutral-400">{product.sku}</td>
+                    <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{product.category?.name}</td>
+                    <td className="px-5 py-4">
+                      <StockMeter stock={product.stock} />
+                    </td>
+                    <td className="px-5 py-4">
+                      <Pill config={STOCK_STATUS_CONFIG[stockStatus(product.stock)]} />
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <OutlineButton size="sm" leftIcon={History} onClick={() => setHistoryProduct(product)}>History</OutlineButton>
+                        <OutlineButton size="sm" onClick={() => handleAdjust(product)}>Adjust</OutlineButton>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+
+      <Drawer open={Boolean(historyProduct)} onClose={() => setHistoryProduct(null)} title={`Inventory history — ${historyProduct?.name || ""}`}>
+        <div className="flex flex-col gap-3">
+          {(historyData?.items || []).length === 0 ? (
+            <p className="text-sm text-neutral-400">No stock changes recorded yet.</p>
+          ) : (
+            historyData.items.map((entry) => (
+              <div key={entry.id} className="rounded-xl border border-black/5 p-3 text-sm dark:border-white/10">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{entry.type.replace(/_/g, " ")}</span>
+                  <span className={entry.delta >= 0 ? "text-emerald-600" : "text-rose-500"}>
+                    {entry.delta >= 0 ? "+" : ""}{entry.delta}
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-400">{entry.quantityBefore} → {entry.quantityAfter} · {entry.actorName}</p>
+                {entry.reason && <p className="mt-1 text-xs text-neutral-500">{entry.reason}</p>}
+                <p className="mt-1 text-[11px] text-neutral-400">{new Date(entry.createdAt).toLocaleString()}</p>
+              </div>
+            ))
+          )}
+        </div>
+      </Drawer>
     </div>
   );
 }
 
 function CustomersTab() {
+  const { data: customers = [], isLoading, isError, refetch } = useQuery({ queryKey: ["seller-customers"], queryFn: sellerApi.listCustomers });
+
+  if (isLoading) return <div className="py-16 text-center text-sm text-neutral-400">Loading customers…</div>;
+  if (isError) return <ErrorNotice onRetry={refetch} />;
+
+  const newCount = customers.filter((c) => c.segment === "New").length;
+  const returningCount = customers.filter((c) => c.segment !== "New").length;
+  const returningRate = customers.length ? Math.round((returningCount / customers.length) * 1000) / 10 : 0;
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatTile icon={Users} label="Total Customers" value="12,480" delta={8.2} />
-        <StatTile icon={UserPlus} label="New This Period" value="284" delta={14.6} />
-        <StatTile icon={Crown} label="Returning Rate" value="64.2%" delta={2.1} />
+        <StatTile icon={Users} label="Total Customers" value={customers.length.toLocaleString()} delta={0} />
+        <StatTile icon={UserPlus} label="New Customers" value={newCount.toLocaleString()} delta={0} />
+        <StatTile icon={Crown} label="Returning Rate" value={`${returningRate}%`} delta={0} />
       </div>
       <div className="rounded-2xl border border-black/5 bg-white dark:border-white/10 dark:bg-neutral-900">
         <div className="border-b border-black/5 p-5 dark:border-white/10">
-          <h3 className="text-base font-bold text-neutral-900 dark:text-white">Top Customers</h3>
+          <h3 className="text-base font-bold text-neutral-900 dark:text-white">Customers</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-black/5 text-xs uppercase tracking-wider text-neutral-400 dark:border-white/10">
-                <th className="px-5 py-3 font-medium">Customer</th>
-                <th className="px-5 py-3 font-medium">Location</th>
-                <th className="px-5 py-3 font-medium">Orders</th>
-                <th className="px-5 py-3 font-medium">Total Spent</th>
-                <th className="px-5 py-3 font-medium">Segment</th>
-              </tr>
-            </thead>
-            <tbody>
-              {CUSTOMERS.map((customer) => (
-                <tr key={customer.id} className="border-b border-black/5 last:border-b-0 dark:border-white/10">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-rose-400 text-xs font-bold text-white">
-                        {customer.initials}
-                      </div>
-                      <div>
-                        <p className="font-medium text-neutral-900 dark:text-white">{customer.name}</p>
-                        <p className="text-xs text-neutral-400">{customer.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{customer.location}</td>
-                  <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{customer.orders}</td>
-                  <td className="px-5 py-4 font-semibold text-neutral-900 dark:text-white">£{customer.spent.toLocaleString()}</td>
-                  <td className="px-5 py-4">
-                    <SegmentBadge segment={customer.segment} />
-                  </td>
+        {customers.length === 0 ? (
+          <EmptyState icon={Users} title="No customers yet" description="Customers will appear here once they order from your store." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-black/5 text-xs uppercase tracking-wider text-neutral-400 dark:border-white/10">
+                  <th className="px-5 py-3 font-medium">Customer</th>
+                  <th className="px-5 py-3 font-medium">Orders</th>
+                  <th className="px-5 py-3 font-medium">Total Spent</th>
+                  <th className="px-5 py-3 font-medium">Segment</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {customers.map((customer) => (
+                  <tr key={customer.id} className="border-b border-black/5 last:border-b-0 dark:border-white/10">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-rose-400 text-xs font-bold text-white">
+                          {customer.name?.slice(0, 2)?.toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium text-neutral-900 dark:text-white">{customer.name}</p>
+                          <p className="text-xs text-neutral-400">{customer.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{customer.orders}</td>
+                    <td className="px-5 py-4 font-semibold text-neutral-900 dark:text-white">£{Number(customer.spent).toLocaleString()}</td>
+                    <td className="px-5 py-4">
+                      <SegmentBadge segment={customer.segment} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -775,9 +1103,6 @@ function Sidebar({ activeTab, onSelect, isOpen, onClose }) {
           ))}
         </nav>
         <div className="space-y-1 border-t border-white/10 px-3 py-4">
-          <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-neutral-400 transition-colors hover:bg-white/5 hover:text-white">
-            <Settings className="h-4 w-4" /> Settings
-          </button>
           <Link
             to="/"
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-neutral-400 transition-colors hover:bg-white/5 hover:text-white"
@@ -831,9 +1156,10 @@ function Topbar({ title, onMenuClick, isDark, onToggleDark }) {
 }
 
 function SellerDashboard() {
+  useDocumentTitle("Seller Dashboard");
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [range, setRange] = useState("30d");
+  const [range, setRange] = useState("month");
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return false;
     const stored = localStorage.getItem("Veluntra-theme");
@@ -849,9 +1175,6 @@ function SellerDashboard() {
 
   const tokens = isDark ? CHART_TOKENS.dark : CHART_TOKENS.light;
   const categoryColors = isDark ? CATEGORY_COLORS.dark : CATEGORY_COLORS.light;
-  const revenueData = SERIES_BY_RANGE[range];
-  const summary = summarize(revenueData);
-  const conversion = CONVERSION_BY_RANGE[range];
   const activeNavItem = NAV_ITEMS.find((item) => item.id === activeTab);
 
   return (
@@ -866,15 +1189,7 @@ function SellerDashboard() {
         />
         <main className="flex-1 p-4 sm:p-6">
           {activeTab === "overview" && (
-            <OverviewTab
-              tokens={tokens}
-              categoryColors={categoryColors}
-              range={range}
-              onRangeChange={setRange}
-              revenueData={revenueData}
-              summary={summary}
-              conversion={conversion}
-            />
+            <OverviewTab tokens={tokens} categoryColors={categoryColors} range={range} onRangeChange={setRange} />
           )}
           {activeTab === "orders" && <OrdersTab />}
           {activeTab === "products" && <ProductsTab tokens={tokens} categoryColors={categoryColors} />}

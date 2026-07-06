@@ -57,8 +57,9 @@ const Input = forwardRef(function Input(
       <div
         className={cn(
           "relative flex items-center rounded-[var(--radius-md)] border bg-[var(--surface)] transition-all duration-200",
-          "border-[var(--border)] focus-within:border-gold-400 focus-within:shadow-[var(--shadow-gold-glow)]",
-          error && "border-error-500 focus-within:border-error-500 focus-within:shadow-[0_0_0_3px_rgb(224_100_95_/_0.14)]"
+          "border-[var(--border)] focus-within:border-gold-400 focus-within:shadow-[var(--shadow-gold-glow)] focus-within:ring-2 focus-within:ring-gold-400/60 focus-within:ring-offset-2 focus-within:ring-offset-[var(--surface)]",
+          error &&
+            "border-error-500 focus-within:border-error-500 focus-within:ring-error-500/60 focus-within:shadow-[0_0_0_3px_rgb(224_100_95_/_0.14)]"
         )}
       >
         {LeftIcon && (

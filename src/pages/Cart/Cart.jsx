@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion, useSpring, useTransform } from "framer-motion";
 import {
   ShoppingBag,
@@ -11,45 +12,20 @@ import {
   ShieldCheck,
   ArrowRight,
   ChevronRight,
-  Star,
   Check,
   Sparkles,
   Lock,
   Info,
-  Watch,
-  Keyboard,
-  Lamp,
-  Mouse,
-  Speaker,
-  Laptop,
-  Headphones,
+  Package,
 } from "lucide-react";
-
-const INITIAL_CART_ITEMS = [
-  { id: "c1", name: "Aurora Pro Wireless Earbuds", category: "Audio", size: "Standard", color: "Black", price: 178, quantity: 1, icon: Headphones, gradient: "from-rose-600 to-neutral-900" },
-  { id: "c2", name: "Nova Titanium Smartwatch", category: "Wearables", size: "44mm", color: "Titanium", price: 890, quantity: 1, icon: Watch, gradient: "from-slate-600 to-neutral-900" },
-  { id: "c3", name: "Meridian Mechanical Keyboard", category: "Computing", size: "Full-size", color: "Charcoal", price: 145, quantity: 2, icon: Keyboard, gradient: "from-amber-700 to-neutral-900" },
-];
-
-const RECOMMENDATIONS = [
-  { id: "r1", name: "Onyx 14\" Ultrabook", category: "Computing", price: 1340, rating: 4.7, icon: Laptop, gradient: "from-neutral-700 to-neutral-950" },
-  { id: "r2", name: "Lumen Smart Desk Lamp", category: "Smart Home", price: 65, rating: 4.6, icon: Lamp, gradient: "from-fuchsia-600 to-neutral-900" },
-  { id: "r3", name: "Zenith Noise-Cancel Headphones", category: "Audio", price: 349, rating: 4.8, icon: Headphones, gradient: "from-indigo-700 to-neutral-900" },
-  { id: "r4", name: "Atlas Mechanical Mouse", category: "Computing", price: 55, rating: 4.7, icon: Mouse, gradient: "from-amber-600 to-neutral-900" },
-  { id: "r5", name: "Halo Portable Bluetooth Speaker", category: "Audio", price: 96, rating: 4.7, icon: Speaker, gradient: "from-teal-700 to-neutral-900" },
-];
-
-const SHIPPING_OPTIONS = [
-  { id: "standard", label: "Standard Shipping", detail: "5-7 business days", price: 0 },
-  { id: "express", label: "Express Shipping", detail: "2-3 business days", price: 15 },
-  { id: "overnight", label: "Overnight Shipping", detail: "Next business day", price: 35 },
-];
-
-const COUPONS = {
-  Veluntra10: { label: "10% off your entire order", type: "percent", value: 10 },
-  FREESHIP: { label: "Free shipping, any method", type: "shipping" },
-  WELCOME20: { label: "£20 off orders over £150", type: "flat", value: 20, minSubtotal: 150 },
-};
+import { useCart } from "../../context/CartContext";
+import { shippingApi, settingsApi } from "../../api/catalog";
+import { productsApi } from "../../api/products";
+import { resolveMediaUrl } from "../../lib/api";
+import { gradientClassFor as gradientFor } from "../../lib/gradientFor";
+import { LoadingSpinner } from "../../components/ui/Feedback";
+import { useDocumentTitle } from "../../lib/useDocumentTitle";
+import ProductCard from "../../components/ui/Cards/ProductCard";
 
 function AnimatedNumber({ value, decimals = 2, className = "" }) {
   const spring = useSpring(value, { stiffness: 150, damping: 22, mass: 0.6 });
@@ -62,12 +38,12 @@ function AnimatedNumber({ value, decimals = 2, className = "" }) {
   return <motion.span className={className}>{display}</motion.span>;
 }
 
-function QuantityStepper({ quantity, onDecrease, onIncrease }) {
+function QuantityStepper({ quantity, onDecrease, onIncrease, disabled }) {
   return (
     <div className="flex items-center gap-3 rounded-full border border-black/10 px-1 py-1 dark:border-white/15">
       <button
         onClick={onDecrease}
-        disabled={quantity <= 1}
+        disabled={disabled || quantity <= 1}
         aria-label="Decrease quantity"
         className="flex h-7 w-7 items-center justify-center rounded-full text-neutral-600 transition-colors hover:bg-black/5 disabled:opacity-30 dark:text-neutral-300 dark:hover:bg-white/10"
       >
@@ -76,7 +52,7 @@ function QuantityStepper({ quantity, onDecrease, onIncrease }) {
       <span className="w-4 text-center text-sm font-semibold text-neutral-900 dark:text-white">{quantity}</span>
       <button
         onClick={onIncrease}
-        disabled={quantity >= 9}
+        disabled={disabled || quantity >= 9}
         aria-label="Increase quantity"
         className="flex h-7 w-7 items-center justify-center rounded-full text-neutral-600 transition-colors hover:bg-black/5 disabled:opacity-30 dark:text-neutral-300 dark:hover:bg-white/10"
       >
@@ -86,7 +62,11 @@ function QuantityStepper({ quantity, onDecrease, onIncrease }) {
   );
 }
 
-function CartLineItem({ item, onIncrease, onDecrease, onRemove }) {
+function CartLineItem({ item, onIncrease, onDecrease, onRemove, isMutating }) {
+  const variantLabel = item.variant && Object.keys(item.variant).length
+    ? Object.entries(item.variant).map(([k, v]) => `${v}`).join(" · ")
+    : null;
+
   return (
     <motion.div
       layout
@@ -95,32 +75,42 @@ function CartLineItem({ item, onIncrease, onDecrease, onRemove }) {
       exit={{ opacity: 0, x: -40, transition: { duration: 0.2 } }}
       className="flex gap-4 rounded-2xl border border-black/5 bg-white p-4 dark:border-white/10 dark:bg-neutral-900 sm:gap-5 sm:p-5"
     >
-      <div
-        className={`relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${item.gradient} sm:h-28 sm:w-28`}
+      <Link
+        to={`/product/${item.productId}`}
+        className={`relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl sm:h-28 sm:w-28 ${
+          item.image ? "" : `bg-gradient-to-br ${gradientFor(item.productId)}`
+        }`}
       >
-        <item.icon className="h-10 w-10 text-white/40" strokeWidth={1} />
-      </div>
+        {item.image ? (
+          <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+        ) : (
+          <Package className="h-10 w-10 text-white/40" strokeWidth={1} />
+        )}
+      </Link>
       <div className="flex flex-1 flex-col justify-between">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-              {item.category}
-            </span>
-            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white sm:text-base">{item.name}</h3>
-            <p className="mt-0.5 text-xs text-neutral-400">
-              {item.color} · Size {item.size}
-            </p>
+            <Link to={`/product/${item.productId}`}>
+              <h3 className="text-sm font-semibold text-neutral-900 dark:text-white sm:text-base">{item.name}</h3>
+            </Link>
+            {variantLabel && <p className="mt-0.5 text-xs text-neutral-400">{variantLabel}</p>}
           </div>
           <span className="shrink-0 text-sm font-bold text-neutral-900 dark:text-white sm:text-base">
             £{(item.price * item.quantity).toFixed(2)}
           </span>
         </div>
         <div className="mt-3 flex items-center justify-between">
-          <QuantityStepper quantity={item.quantity} onIncrease={() => onIncrease(item.id)} onDecrease={() => onDecrease(item.id)} />
+          <QuantityStepper
+            quantity={item.quantity}
+            disabled={isMutating}
+            onIncrease={() => onIncrease(item)}
+            onDecrease={() => onDecrease(item)}
+          />
           <button
             onClick={() => onRemove(item.id)}
+            disabled={isMutating}
             aria-label="Remove item"
-            className="flex items-center gap-1.5 text-xs font-medium text-neutral-400 transition-colors hover:text-rose-500"
+            className="flex items-center gap-1.5 text-xs font-medium text-neutral-400 transition-colors hover:text-rose-500 disabled:opacity-40"
           >
             <Trash2 className="h-3.5 w-3.5" /> Remove
           </button>
@@ -284,9 +274,12 @@ function OrderSummary({ subtotal, discount, shippingCost, tax, total, appliedCou
         </span>
       </div>
 
-      <button className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-neutral-900 py-4 text-sm font-semibold text-white transition-transform hover:scale-[1.02] dark:bg-white dark:text-neutral-900">
+      <Link
+        to="/checkout"
+        className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-neutral-900 py-4 text-sm font-semibold text-white transition-transform hover:scale-[1.02] dark:bg-white dark:text-neutral-900"
+      >
         <Lock className="h-4 w-4" /> Proceed to Checkout
-      </button>
+      </Link>
 
       <div className="mt-4 flex items-center justify-center gap-4 text-[11px] text-neutral-400">
         <span className="flex items-center gap-1">
@@ -300,43 +293,6 @@ function OrderSummary({ subtotal, discount, shippingCost, tax, total, appliedCou
   );
 }
 
-function RecommendationCard({ product, onAdd }) {
-  return (
-    <div className="w-[190px] shrink-0 rounded-2xl border border-black/5 bg-white p-4 dark:border-white/10 dark:bg-neutral-900 sm:w-[220px]">
-      <div
-        className={`relative mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${product.gradient}`}
-      >
-        <product.icon className="h-10 w-10 text-white/40" strokeWidth={1} />
-      </div>
-      <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-        {product.category}
-      </span>
-      <h4 className="truncate text-sm font-semibold text-neutral-900 dark:text-white">{product.name}</h4>
-      <div className="mt-1 flex items-center gap-0.5">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Star
-            key={i}
-            className={`h-3 w-3 ${
-              i < Math.round(product.rating)
-                ? "fill-amber-400 text-amber-400"
-                : "fill-neutral-200 text-neutral-200 dark:fill-neutral-700 dark:text-neutral-700"
-            }`}
-          />
-        ))}
-      </div>
-      <div className="mt-2 flex items-center justify-between">
-        <span className="text-sm font-bold text-neutral-900 dark:text-white">£{product.price}</span>
-        <button
-          onClick={() => onAdd(product)}
-          aria-label={`Add ${product.name} to cart`}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-900 text-white transition-transform hover:scale-110 dark:bg-white dark:text-neutral-900"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
 
 function EmptyCart() {
   return (
@@ -366,73 +322,87 @@ function EmptyCart() {
   );
 }
 
+function couponLabel(coupon) {
+  if (!coupon) return "";
+  if (coupon.type === "percent") return `${Number(coupon.value)}% off your order`;
+  if (coupon.type === "fixed") return `£${Number(coupon.value)} off your order`;
+  if (coupon.type === "free_shipping") return "Free shipping, any method";
+  return "Discount applied";
+}
+
 function Cart() {
-  const [cartItems, setCartItems] = useState(INITIAL_CART_ITEMS);
-  const [shippingId, setShippingId] = useState("standard");
+  useDocumentTitle("Your Cart");
+  const { cart, isLoading, addItem, updateItem, removeItem, applyCoupon, removeCoupon, isMutating, couponError } = useCart();
+  const [shippingId, setShippingId] = useState(null);
   const [couponInput, setCouponInput] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [couponError, setCouponError] = useState("");
 
-  const increaseQuantity = (id) =>
-    setCartItems((items) => items.map((item) => (item.id === id ? { ...item, quantity: Math.min(9, item.quantity + 1) } : item)));
+  const { data: shippingMethods = [] } = useQuery({ queryKey: ["shipping-methods"], queryFn: shippingApi.list });
+  const { data: settings } = useQuery({ queryKey: ["settings-public"], queryFn: settingsApi.getPublic });
 
-  const decreaseQuantity = (id) =>
-    setCartItems((items) => items.map((item) => (item.id === id ? { ...item, quantity: Math.max(1, item.quantity - 1) } : item)));
+  useEffect(() => {
+    if (!shippingId && shippingMethods.length) setShippingId(shippingMethods[0].id);
+  }, [shippingMethods, shippingId]);
 
-  const removeItem = (id) => setCartItems((items) => items.filter((item) => item.id !== id));
+  const cartProductIds = useMemo(() => new Set(cart.items.map((i) => i.productId)), [cart.items]);
+  const { data: recsResult } = useQuery({
+    queryKey: ["products", "cart-recommendations"],
+    queryFn: () => productsApi.list({ sort: "best-selling", limit: 8 }),
+  });
+  const recommendations = useMemo(
+    () =>
+      (recsResult?.items || [])
+        .filter((p) => !cartProductIds.has(p.id))
+        .slice(0, 5)
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          brand: p.brand?.name,
+          category: p.category?.name,
+          price: Number(p.price),
+          oldPrice: p.oldPrice ? Number(p.oldPrice) : null,
+          rating: Number(p.ratingAvg) || 0,
+          reviews: p.ratingCount,
+          isNew: p.isNew,
+          isTrending: p.isTrending,
+          isBestSeller: p.isBestSeller,
+          badge: p.badge,
+          stock: p.stock,
+          lowStockThreshold: p.lowStockThreshold,
+          animationOverride: p.animationOverride,
+          image: resolveMediaUrl(p.images?.[0]?.url) || null,
+        })),
+    [recsResult, cartProductIds]
+  );
 
-  const addRecommendation = (product) => {
-    setCartItems((items) => {
-      const existing = items.find((item) => item.id === product.id);
-      if (existing) {
-        return items.map((item) => (item.id === product.id ? { ...item, quantity: Math.min(9, item.quantity + 1) } : item));
-      }
-      return [...items, { ...product, quantity: 1, size: "M", color: "Standard" }];
-    });
-  };
+  const handleCouponInputChange = (value) => setCouponInput(value);
 
-  const handleCouponInputChange = (value) => {
-    setCouponInput(value);
-    if (couponError) setCouponError("");
-  };
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-  const applyCoupon = (e) => {
+  const handleApplyCoupon = (e) => {
     e.preventDefault();
-    const code = couponInput.trim().toUpperCase();
-    const coupon = COUPONS[code];
-    if (!code) return;
-    if (!coupon) {
-      setCouponError("Invalid or expired coupon code.");
-      return;
-    }
-    if (coupon.minSubtotal && subtotal < coupon.minSubtotal) {
-      setCouponError(`This code requires a subtotal of £${coupon.minSubtotal}+.`);
-      return;
-    }
-    setAppliedCoupon({ code, ...coupon });
-    setCouponError("");
-    setCouponInput("");
+    if (!couponInput.trim()) return;
+    applyCoupon(couponInput.trim()).then(() => setCouponInput(""));
   };
 
-  const removeCoupon = () => setAppliedCoupon(null);
+  const selectedShipping = shippingMethods.find((option) => option.id === shippingId) ?? shippingMethods[0];
+  const shippingPrice = selectedShipping ? Number(selectedShipping.price) : 0;
 
-  const selectedShipping = SHIPPING_OPTIONS.find((option) => option.id === shippingId) ?? SHIPPING_OPTIONS[0];
-
-  const discount = !appliedCoupon
-    ? 0
-    : appliedCoupon.type === "percent"
-    ? subtotal * (appliedCoupon.value / 100)
-    : appliedCoupon.type === "flat"
-    ? Math.min(appliedCoupon.value, subtotal)
-    : 0;
-
-  const shippingCost = appliedCoupon?.type === "shipping" ? 0 : selectedShipping.price;
+  const subtotal = cart.subtotal;
+  const discount = cart.discount + (cart.promotionDiscount || 0);
+  const shippingCost = cart.coupon?.type === "free_shipping" ? 0 : shippingPrice;
+  const taxPercent = settings ? Number(settings.taxPercent) : 0;
   const taxableAmount = Math.max(subtotal - discount, 0);
-  const tax = taxableAmount * 0.08;
+  const tax = Math.round(taxableAmount * (taxPercent / 100) * 100) / 100;
   const total = taxableAmount + shippingCost + tax;
-  const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const itemCount = cart.itemCount;
+
+  const appliedCouponDisplay = cart.coupon ? { code: cart.coupon.code, label: couponLabel(cart.coupon) } : null;
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-neutral-950">
+        <LoadingSpinner size="lg" label="Loading your cart..." />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-neutral-950">
@@ -446,25 +416,26 @@ function Cart() {
         </div>
         <div className="mb-10 flex items-end justify-between">
           <h1 className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-white md:text-4xl">Shopping Cart</h1>
-          {cartItems.length > 0 && (
+          {cart.items.length > 0 && (
             <span className="text-sm text-neutral-400">
               {itemCount} {itemCount === 1 ? "item" : "items"}
             </span>
           )}
         </div>
 
-        {cartItems.length === 0 ? (
+        {cart.items.length === 0 ? (
           <EmptyCart />
         ) : (
           <div className="grid gap-10 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
               <AnimatePresence mode="popLayout">
-                {cartItems.map((item) => (
+                {cart.items.map((item) => (
                   <CartLineItem
                     key={item.id}
                     item={item}
-                    onIncrease={increaseQuantity}
-                    onDecrease={decreaseQuantity}
+                    isMutating={isMutating}
+                    onIncrease={(i) => updateItem(i.id, Math.min(9, i.quantity + 1))}
+                    onDecrease={(i) => updateItem(i.id, Math.max(1, i.quantity - 1))}
                     onRemove={removeItem}
                   />
                 ))}
@@ -474,12 +445,18 @@ function Cart() {
                 <CouponBox
                   couponInput={couponInput}
                   onInputChange={handleCouponInputChange}
-                  onApply={applyCoupon}
-                  appliedCoupon={appliedCoupon}
+                  onApply={handleApplyCoupon}
+                  appliedCoupon={appliedCouponDisplay}
                   onRemove={removeCoupon}
                   error={couponError}
                 />
-                <ShippingBox options={SHIPPING_OPTIONS} selectedId={shippingId} onSelect={setShippingId} />
+                {shippingMethods.length > 0 && (
+                  <ShippingBox
+                    options={shippingMethods.map((m) => ({ id: m.id, label: m.name, detail: `${m.etaDays} days`, price: Number(m.price) }))}
+                    selectedId={shippingId}
+                    onSelect={setShippingId}
+                  />
+                )}
               </div>
             </div>
 
@@ -490,23 +467,31 @@ function Cart() {
                 shippingCost={shippingCost}
                 tax={tax}
                 total={total}
-                appliedCoupon={appliedCoupon}
+                appliedCoupon={appliedCouponDisplay}
                 itemCount={itemCount}
               />
             </div>
           </div>
         )}
 
-        <div className="mt-16 md:mt-24">
-          <div className="mb-8 flex items-center justify-between">
-            <h2 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white md:text-2xl">You Might Also Like</h2>
+        {recommendations.length > 0 && (
+          <div className="mt-16 md:mt-24">
+            <div className="mb-8 flex items-center justify-between">
+              <h2 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white md:text-2xl">You Might Also Like</h2>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {recommendations.map((product, i) => (
+                <div key={product.id} className="w-[190px] shrink-0 sm:w-[220px]">
+                  <ProductCard
+                    product={product}
+                    index={i}
+                    onAdd={() => addItem({ productId: product.id, quantity: 1 })}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {RECOMMENDATIONS.map((product) => (
-              <RecommendationCard key={product.id} product={product} onAdd={addRecommendation} />
-            ))}
-          </div>
-        </div>
+        )}
 
         <div className="h-10 md:h-16" />
       </div>

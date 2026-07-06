@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Package, ChevronDown, Download } from "lucide-react";
 import { ordersApi } from "../../api/orders";
-import { Badge, LoadingSpinner, EmptyState, ErrorState } from "../../components/ui/Feedback";
+import { Badge, LoadingSpinner, EmptyState, ErrorState, useToast } from "../../components/ui/Feedback";
 import { Breadcrumb, Pagination } from "../../components/ui/Navigation";
 import { OutlineButton } from "../../components/ui/Button";
 import { cn } from "../../lib/utils";
+import { useDocumentTitle } from "../../lib/useDocumentTitle";
 
 const STATUS_VARIANT = {
   pending: "warning",
@@ -13,11 +14,50 @@ const STATUS_VARIANT = {
   shipped: "gold",
   delivered: "success",
   cancelled: "error",
+  return_requested: "warning",
   returned: "neutral",
+  exchange_requested: "warning",
+  exchanged: "gold",
 };
+
+const CANCELLABLE_STATUSES = new Set(["pending", "processing"]);
 
 function OrderRow({ order }) {
   const [open, setOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["orders"] });
+  const cancelMutation = useMutation({
+    mutationFn: (reason) => ordersApi.cancel(order.id, reason),
+    onSuccess: () => { invalidate(); toast({ title: "Order cancelled", variant: "success" }); },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't cancel this order", variant: "error" }),
+  });
+  const returnMutation = useMutation({
+    mutationFn: (reason) => ordersApi.requestReturn(order.id, reason),
+    onSuccess: () => { invalidate(); toast({ title: "Return requested", variant: "success" }); },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't request a return", variant: "error" }),
+  });
+  const exchangeMutation = useMutation({
+    mutationFn: (reason) => ordersApi.requestExchange(order.id, reason),
+    onSuccess: () => { invalidate(); toast({ title: "Exchange requested", variant: "success" }); },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't request an exchange", variant: "error" }),
+  });
+
+  const handleCancel = () => {
+    const reason = window.prompt("Why are you cancelling this order? (optional)") || undefined;
+    cancelMutation.mutate(reason);
+  };
+  const handleReturn = () => {
+    const reason = window.prompt("Why are you returning this order?");
+    if (reason === null) return;
+    returnMutation.mutate(reason);
+  };
+  const handleExchange = () => {
+    const reason = window.prompt("What would you like to exchange, and why?");
+    if (reason === null) return;
+    exchangeMutation.mutate(reason);
+  };
 
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] shadow-soft-sm">
@@ -61,7 +101,7 @@ function OrderRow({ order }) {
               {order.trackingCarrier && ` (${order.trackingCarrier})`}
             </p>
           )}
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-2">
             <OutlineButton
               size="sm"
               leftIcon={Download}
@@ -69,6 +109,21 @@ function OrderRow({ order }) {
             >
               Download invoice
             </OutlineButton>
+            {CANCELLABLE_STATUSES.has(order.status) && (
+              <OutlineButton size="sm" onClick={handleCancel} loading={cancelMutation.isPending}>
+                Cancel order
+              </OutlineButton>
+            )}
+            {order.status === "delivered" && (
+              <>
+                <OutlineButton size="sm" onClick={handleReturn} loading={returnMutation.isPending}>
+                  Request return
+                </OutlineButton>
+                <OutlineButton size="sm" onClick={handleExchange} loading={exchangeMutation.isPending}>
+                  Request exchange
+                </OutlineButton>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -77,6 +132,7 @@ function OrderRow({ order }) {
 }
 
 export default function Orders() {
+  useDocumentTitle("My Orders");
   const [page, setPage] = useState(1);
 
   const { data, isLoading, isError, refetch } = useQuery({

@@ -9,6 +9,7 @@ import { PrimaryButton, SecondaryButton, IconButton } from "../../components/ui/
 import { Modal, Dropdown } from "../../components/ui/Overlay";
 import { LoadingSpinner, EmptyState, ErrorState } from "../../components/ui/Feedback";
 import { Breadcrumb } from "../../components/ui/Navigation";
+import { useDocumentTitle } from "../../lib/useDocumentTitle";
 
 const EMPTY_ADDRESS = {
   firstName: "",
@@ -68,6 +69,7 @@ function AddressForm({ initial, onSubmit, onCancel, submitting }) {
 }
 
 export default function Account() {
+  useDocumentTitle("My Account");
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();

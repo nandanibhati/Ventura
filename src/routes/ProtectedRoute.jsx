@@ -22,7 +22,8 @@ export default function ProtectedRoute({ children, role }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (role && userRole !== role) {
+  // "superadmin" is a wildcard — it satisfies any role-gated route, mirroring the backend's requireRole.
+  if (role && userRole !== role && userRole !== "superadmin") {
     return <Navigate to="/" replace />;
   }
 

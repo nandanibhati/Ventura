@@ -1,4 +1,15 @@
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { categoriesApi, brandsApi } from "../../api/catalog";
+import { productsApi } from "../../api/products";
+import { wishlistApi } from "../../api/orders";
+import { resolveMediaUrl } from "../../lib/api";
+import ProductCard from "../../components/ui/Cards/ProductCard";
+import { useAuth } from "../../context/AuthContext";
+import { useCart } from "../../context/CartContext";
+import { useToast } from "../../components/ui/Feedback";
+import { useDocumentTitle } from "../../lib/useDocumentTitle";
 
 /* -----------------------------------------------------------
    Veluntra — Products
@@ -186,77 +197,6 @@ const css = `
 .vp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px; }
 .vp-grid.list { grid-template-columns: 1fr; gap: 16px; }
 
-.vp-card {
-  position: relative;
-  border: 1px solid var(--line-soft);
-  border-radius: 14px;
-  background: linear-gradient(165deg, var(--ink-1), var(--ink-0));
-  overflow: hidden;
-  opacity: 0;
-  transform: translateY(16px);
-  animation: vp-rise 0.6s cubic-bezier(0.22,1,0.36,1) forwards;
-  transition: border-color 0.35s ease, transform 0.35s ease, box-shadow 0.35s ease;
-}
-.vp-card:hover {
-  border-color: var(--line);
-  transform: translateY(-4px);
-  box-shadow: 0 24px 48px -24px rgba(0,0,0,0.55);
-}
-@keyframes vp-rise { to { opacity: 1; transform: translateY(0); } }
-
-.vp-grid:not(.list) .vp-card { display: flex; flex-direction: column; }
-.vp-grid.list .vp-card { display: grid; grid-template-columns: 220px 1fr; align-items: stretch; }
-.vp-grid.list .vp-card:hover { transform: translateY(-2px); }
-
-.vp-media {
-  position: relative;
-  aspect-ratio: 4 / 5;
-  display: grid; place-items: center;
-  overflow: hidden;
-}
-.vp-grid.list .vp-media { aspect-ratio: auto; }
-.vp-media-mono {
-  font-family: 'Cormorant Garamond', serif;
-  font-weight: 600;
-  font-size: 92px;
-  color: rgba(255,255,255,0.14);
-  user-select: none;
-  transition: transform 0.5s cubic-bezier(0.22,1,0.36,1);
-}
-.vp-card:hover .vp-media-mono { transform: scale(1.08) rotate(-2deg); }
-
-.vp-wish {
-  position: absolute; top: 12px; right: 12px; z-index: 2;
-  width: 34px; height: 34px; border-radius: 50%;
-  display: grid; place-items: center;
-  background: rgba(8,8,13,0.55);
-  border: 1px solid rgba(236,233,224,0.16);
-  cursor: pointer; color: var(--text);
-  transition: border-color 0.25s ease, color 0.25s ease, background 0.25s ease, transform 0.2s ease;
-}
-.vp-wish:hover { transform: scale(1.08); border-color: var(--gold-0); }
-.vp-wish.on { color: var(--gold-0); border-color: var(--gold-0); background: rgba(216,179,106,0.12); }
-.vp-wish svg { width: 15px; height: 15px; }
-
-.vp-badge {
-  position: absolute; top: 12px; left: 12px; z-index: 2;
-  font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
-  padding: 5px 10px; border-radius: 999px;
-  background: rgba(8,8,13,0.55); border: 1px solid var(--line); color: var(--gold-1);
-}
-
-.vp-body { padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
-.vp-cat { font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold-0); }
-.vp-name { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 19px; margin: 0; color: var(--text); }
-.vp-brand { font-size: 12.5px; color: var(--muted); margin: -4px 0 0; }
-.vp-rating-row { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
-.vp-rating-row .stars { display: flex; gap: 1px; }
-.vp-rating-row svg { width: 12px; height: 12px; }
-.vp-rating-row span { font-size: 12px; color: var(--muted); }
-
-.vp-price-row { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 12px; }
-.vp-price { font-size: 17px; color: var(--gold-1); letter-spacing: 0.02em; }
-.vp-price s { color: var(--muted); font-size: 13px; margin-right: 6px; font-weight: 300; }
 .vp-add {
   border: 1px solid var(--line); background: transparent; color: var(--text);
   height: 36px; padding: 0 16px; border-radius: 999px; cursor: pointer;
@@ -320,8 +260,6 @@ const css = `
 }
 @media (max-width: 640px) {
   .vp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-  .vp-grid.list .vp-card { grid-template-columns: 1fr; }
-  .vp-grid.list .vp-media { aspect-ratio: 4/3; }
   .vp-toolbar { gap: 10px; }
   .vp-search { order: -1; width: 100%; flex: 1 1 100%; }
 }
@@ -331,7 +269,6 @@ const css = `
 
 @media (prefers-reduced-motion: reduce) {
   .vp-root * { animation: none !important; transition: none !important; }
-  .vp-card { opacity: 1; transform: none; }
 }
 `;
 
@@ -342,53 +279,36 @@ const IconGrid = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const IconList = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" {...p}><path d="M8 6h13M8 12h13M8 18h13" /><circle cx="3.5" cy="6" r="1.2" fill="currentColor" stroke="none" /><circle cx="3.5" cy="12" r="1.2" fill="currentColor" stroke="none" /><circle cx="3.5" cy="18" r="1.2" fill="currentColor" stroke="none" /></svg>);
 const IconFilter = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" {...p}><path d="M4 6h16M7 12h10M10 18h4" /></svg>);
 const IconCheck = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" {...p}><path d="M4 12l5.5 5.5L20 6" /></svg>);
-const IconHeart = (p) => (<svg viewBox="0 0 24 24" fill={p.filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.7" {...p}><path d="M12 20s-7.5-4.6-10-9.3C0.4 7 2 3.6 5.4 3c2-.4 4 .5 5 2.3.9-1.8 3-2.7 5-2.3C18.9 3.6 20.5 7 19 10.7 16.5 15.4 12 20 12 20z" /></svg>);
 const IconStar = (p) => (<svg viewBox="0 0 24 24" fill={p.filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.4" {...p}><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.6 6.1 20.5l1.2-6.5-4.8-4.6 6.6-.9z" /></svg>);
 const IconX = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M5 5l14 14M19 5L5 19" /></svg>);
 const IconArrowLeft = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M14 6l-6 6 6 6" /></svg>);
 const IconArrowRight = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M10 6l6 6-6 6" /></svg>);
 
-/* Data */
-const CATEGORIES = ["Audio", "Wearables", "Computing", "Smart Home", "Home & Kitchen", "Mobile & Tablets"];
-const BRANDS = ["Veluntra", "Nexora", "Meridian", "Nordline", "Circuit & Co.", "Orbital"];
-const CAT_GRADIENT = {
-  "Audio": "linear-gradient(160deg, #2a2118, #17130f)",
-  "Wearables": "linear-gradient(160deg, #1c2230, #10131c)",
-  "Computing": "linear-gradient(160deg, #2b2233, #17131e)",
-  "Smart Home": "linear-gradient(160deg, #232a24, #12160f)",
-  "Home & Kitchen": "linear-gradient(160deg, #2a1f22, #150f11)",
-  "Mobile & Tablets": "linear-gradient(160deg, #22242f, #12131b)",
-};
-
-const PRODUCTS = [
-  { id: 1, name: "Aurora Pro Wireless Earbuds", brand: "Veluntra", category: "Audio", price: 178, oldPrice: 220, rating: 4.9, reviews: 214, isNew: true },
-  { id: 2, name: "Zenith Noise-Cancel Headphones", brand: "Circuit & Co.", category: "Audio", price: 349, oldPrice: 420, rating: 4.8, reviews: 312 },
-  { id: 3, name: "Halo Portable Bluetooth Speaker", brand: "Veluntra", category: "Audio", price: 96, rating: 4.7, reviews: 129 },
-  { id: 4, name: "Ember Bluetooth Mini Speaker", brand: "Nordline", category: "Audio", price: 58, rating: 4.6, reviews: 142 },
-  { id: 5, name: "Nova Titanium Smartwatch", brand: "Nexora", category: "Wearables", price: 890, oldPrice: 1050, rating: 5.0, reviews: 98 },
-  { id: 6, name: "Halo Smart Fitness Ring", brand: "Nexora", category: "Wearables", price: 199, rating: 4.9, reviews: 88 },
-  { id: 7, name: "Minimalist Fitness Watch", brand: "Meridian", category: "Wearables", price: 130, rating: 4.8, reviews: 110 },
-  { id: 8, name: "Atlas Fitness Band", brand: "Orbital", category: "Wearables", price: 65, rating: 4.4, reviews: 58 },
-  { id: 9, name: "Meridian Mechanical Keyboard", brand: "Meridian", category: "Computing", price: 145, rating: 4.8, reviews: 156 },
-  { id: 10, name: "Onyx 14\" Ultrabook", brand: "Veluntra", category: "Computing", price: 1340, rating: 4.7, reviews: 187, isNew: true },
-  { id: 11, name: "Atlas Mechanical Mouse", brand: "Nordline", category: "Computing", price: 55, rating: 4.7, reviews: 110 },
-  { id: 12, name: "Ridge Laptop Backpack", brand: "Circuit & Co.", category: "Computing", price: 89, rating: 4.6, reviews: 167 },
-  { id: 13, name: "Lumen Smart Desk Lamp", brand: "Nordline", category: "Smart Home", price: 65, oldPrice: 90, rating: 4.6, reviews: 76 },
-  { id: 14, name: "Quartz Smart Table Lamp", brand: "Veluntra", category: "Smart Home", price: 150, oldPrice: 200, rating: 4.5, reviews: 46 },
-  { id: 15, name: "Sable Smart Thermostat", brand: "Orbital", category: "Smart Home", price: 89, oldPrice: 149, rating: 4.4, reviews: 83 },
-  { id: 16, name: "Nimbus Smart Air Purifier", brand: "Circuit & Co.", category: "Smart Home", price: 165, rating: 4.8, reviews: 198, isNew: true },
-  { id: 17, name: "Terra Ceramic Cookware Set", brand: "Veluntra", category: "Home & Kitchen", price: 210, rating: 4.9, reviews: 240 },
-  { id: 18, name: "Marble Ceramic Mug Set", brand: "Nordline", category: "Home & Kitchen", price: 40, oldPrice: 80, rating: 4.6, reviews: 91 },
-  { id: 19, name: "Everyday Insulated Water Bottle", brand: "Meridian", category: "Home & Kitchen", price: 28, rating: 4.8, reviews: 76 },
-  { id: 20, name: "Glacier Cordless Handheld Vacuum", brand: "Orbital", category: "Home & Kitchen", price: 120, rating: 4.8, reviews: 176 },
-  { id: 21, name: "Drift Fast Wireless Charging Pad", brand: "Veluntra", category: "Mobile & Tablets", price: 45, rating: 4.7, reviews: 203 },
-  { id: 22, name: "Cobalt Portable SSD 1TB", brand: "Circuit & Co.", category: "Mobile & Tablets", price: 130, oldPrice: 200, rating: 4.6, reviews: 58 },
-  { id: 23, name: "Essential USB-C Hub", brand: "Nexora", category: "Mobile & Tablets", price: 29, rating: 4.8, reviews: 220, isNew: true },
-  { id: 24, name: "Vertex Smart Audio Glasses", brand: "Meridian", category: "Mobile & Tablets", price: 89, oldPrice: 162, rating: 4.5, reviews: 72 },
-];
-
 const MAX_PRICE = 1500;
 const PAGE_SIZE = 9;
+
+function toCardProduct(p) {
+  return {
+    id: p.id,
+    name: p.name,
+    brand: p.brand?.name || "",
+    brandSlug: p.brand?.slug || "",
+    category: p.category?.name || "",
+    categorySlug: p.category?.slug || "",
+    price: Number(p.price),
+    oldPrice: p.oldPrice ? Number(p.oldPrice) : null,
+    rating: Number(p.ratingAvg) || 0,
+    reviews: p.ratingCount || 0,
+    isNew: Boolean(p.isNew),
+    isTrending: Boolean(p.isTrending),
+    isBestSeller: Boolean(p.isBestSeller),
+    badge: p.badge,
+    stock: p.stock,
+    lowStockThreshold: p.lowStockThreshold,
+    animationOverride: p.animationOverride,
+    image: resolveMediaUrl(p.images?.[0]?.url) || null,
+  };
+}
 
 function StarRow({ rating, size = 12 }) {
   return (
@@ -405,6 +325,7 @@ function StarRow({ rating, size = 12 }) {
 }
 
 export default function Products() {
+  useDocumentTitle("Shop");
   const [search, setSearch] = useState("");
   const [cats, setCats] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -413,33 +334,94 @@ export default function Products() {
   const [sortBy, setSortBy] = useState("featured");
   const [view, setView] = useState("grid");
   const [page, setPage] = useState(1);
-  const [wishlist, setWishlist] = useState([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [openSections, setOpenSections] = useState({ category: true, brand: true, price: true, rating: true });
+
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { isAuthenticated } = useAuth();
+  const { addItem } = useCart();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Sync the initial search term from the navbar's search redirect (/shop?search=...).
+  useEffect(() => {
+    const q = searchParams.get("search");
+    if (q) setSearch(q);
+  }, [searchParams]);
+
+  const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: categoriesApi.list });
+  const { data: brandsList = [] } = useQuery({ queryKey: ["brands"], queryFn: brandsApi.list });
+
+  const {
+    data: productsResult,
+    isLoading: productsLoading,
+    isError: productsError,
+    refetch: refetchProducts,
+  } = useQuery({
+    queryKey: ["products", { search, price, minRating, sortBy }],
+    queryFn: () =>
+      productsApi.list({
+        search: search || undefined,
+        minPrice: price[0] > 0 ? price[0] : undefined,
+        maxPrice: price[1] < MAX_PRICE ? price[1] : undefined,
+        minRating: minRating || undefined,
+        sort: sortBy,
+        limit: 60,
+      }),
+  });
+
+  const allProducts = useMemo(() => (productsResult?.items || []).map(toCardProduct), [productsResult]);
+
+  const { data: wishlistItems = [] } = useQuery({
+    queryKey: ["wishlist"],
+    queryFn: wishlistApi.list,
+    enabled: isAuthenticated,
+  });
+  const wishedIds = useMemo(() => new Set(wishlistItems.map((w) => w.product.id)), [wishlistItems]);
+
+  const wishlistAddMutation = useMutation({
+    mutationFn: (productId) => wishlistApi.add(productId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["wishlist"] }),
+  });
+  const wishlistRemoveMutation = useMutation({
+    mutationFn: (productId) => wishlistApi.remove(productId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["wishlist"] }),
+  });
+
+  const toggleWish = (productId) => {
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: { pathname: "/shop" } } });
+      return;
+    }
+    if (wishedIds.has(productId)) wishlistRemoveMutation.mutate(productId);
+    else wishlistAddMutation.mutate(productId);
+  };
+
+  const handleAddToBag = async (productId) => {
+    try {
+      await addItem({ productId, quantity: 1 });
+      toast({ title: "Added to bag", variant: "success" });
+    } catch (err) {
+      toast({ title: err.response?.data?.error?.message || "Couldn't add to bag", variant: "error" });
+    }
+  };
 
   const toggleSection = (key) => setOpenSections((s) => ({ ...s, [key]: !s[key] }));
   const toggleIn = (arr, setArr, val) =>
     setArr(arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
-  const toggleWish = (id) => toggleIn(wishlist, setWishlist, id);
 
+  // Category/brand are multi-select in this UI, which the backend's single-value filters don't
+  // support directly — so those two are applied client-side over the (search/price/rating-filtered,
+  // server-sorted) batch above. Fine for a catalogue of this size; would need a backend `categories[]`
+  // param to scale past a few hundred products.
   const filtered = useMemo(() => {
-    let list = PRODUCTS.filter((p) => {
-      if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.brand.toLowerCase().includes(search.toLowerCase())) return false;
-      if (cats.length && !cats.includes(p.category)) return false;
-      if (brands.length && !brands.includes(p.brand)) return false;
-      if (p.price < price[0] || p.price > price[1]) return false;
-      if (minRating && p.rating < minRating) return false;
+    return allProducts.filter((p) => {
+      if (cats.length && !cats.includes(p.categorySlug)) return false;
+      if (brands.length && !brands.includes(p.brandSlug)) return false;
       return true;
     });
-    switch (sortBy) {
-      case "price-asc": list = [...list].sort((a, b) => a.price - b.price); break;
-      case "price-desc": list = [...list].sort((a, b) => b.price - a.price); break;
-      case "rating": list = [...list].sort((a, b) => b.rating - a.rating); break;
-      case "newest": list = [...list].sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0)); break;
-      default: break;
-    }
-    return list;
-  }, [search, cats, brands, price, minRating, sortBy]);
+  }, [allProducts, cats, brands]);
 
   useEffect(() => { setPage(1); }, [search, cats, brands, price, minRating, sortBy]);
 
@@ -448,9 +430,12 @@ export default function Products() {
 
   const clearAll = () => { setSearch(""); setCats([]); setBrands([]); setPrice([0, MAX_PRICE]); setMinRating(0); };
 
+  const catLabel = (slug) => categories.find((c) => c.slug === slug)?.name || slug;
+  const brandLabel = (slug) => brandsList.find((b) => b.slug === slug)?.name || slug;
+
   const activeChips = [
-    ...cats.map((c) => ({ key: `c-${c}`, label: c, clear: () => toggleIn(cats, setCats, c) })),
-    ...brands.map((b) => ({ key: `b-${b}`, label: b, clear: () => toggleIn(brands, setBrands, b) })),
+    ...cats.map((c) => ({ key: `c-${c}`, label: catLabel(c), clear: () => toggleIn(cats, setCats, c) })),
+    ...brands.map((b) => ({ key: `b-${b}`, label: brandLabel(b), clear: () => toggleIn(brands, setBrands, b) })),
     ...(minRating ? [{ key: "r", label: `${minRating}+ & up`, clear: () => setMinRating(0) }] : []),
     ...(price[0] > 0 || price[1] < MAX_PRICE ? [{ key: "p", label: `£${price[0]} - £${price[1]}`, clear: () => setPrice([0, MAX_PRICE]) }] : []),
   ];
@@ -477,16 +462,15 @@ export default function Products() {
         </button>
         {openSections.category && (
           <div className="vp-acc-body">
-            {CATEGORIES.map((c) => {
-              const on = cats.includes(c);
-              const count = PRODUCTS.filter((p) => p.category === c).length;
+            {categories.map((c) => {
+              const on = cats.includes(c.slug);
               return (
-                <label key={c} className="vp-check-row" onClick={() => toggleIn(cats, setCats, c)}>
+                <label key={c.slug} className="vp-check-row" onClick={() => toggleIn(cats, setCats, c.slug)}>
                   <span className="vp-check-left">
                     <span className={`vp-checkbox ${on ? "on" : ""}`}><IconCheck /></span>
-                    <span className="lbl">{c}</span>
+                    <span className="lbl">{c.name}</span>
                   </span>
-                  <span className="count">{count}</span>
+                  <span className="count">{c.productCount}</span>
                 </label>
               );
             })}
@@ -500,16 +484,15 @@ export default function Products() {
         </button>
         {openSections.brand && (
           <div className="vp-acc-body">
-            {BRANDS.map((b) => {
-              const on = brands.includes(b);
-              const count = PRODUCTS.filter((p) => p.brand === b).length;
+            {brandsList.map((b) => {
+              const on = brands.includes(b.slug);
               return (
-                <label key={b} className="vp-check-row" onClick={() => toggleIn(brands, setBrands, b)}>
+                <label key={b.slug} className="vp-check-row" onClick={() => toggleIn(brands, setBrands, b.slug)}>
                   <span className="vp-check-left">
                     <span className={`vp-checkbox ${on ? "on" : ""}`}><IconCheck /></span>
-                    <span className="lbl">{b}</span>
+                    <span className="lbl">{b.name}</span>
                   </span>
-                  <span className="count">{count}</span>
+                  <span className="count">{b.productCount}</span>
                 </label>
               );
             })}
@@ -660,50 +643,39 @@ export default function Products() {
               )}
             </div>
 
-            <div className={`vp-grid ${view === "list" ? "list" : ""}`}>
-              {pageItems.length === 0 ? (
-                <div className="vp-empty">
-                  <h3>No products match your filters</h3>
-                  <p>Try widening your price range or clearing a filter.</p>
-                </div>
-              ) : (
-                pageItems.map((p, i) => {
-                  const wished = wishlist.includes(p.id);
-                  return (
-                    <article className="vp-card" key={p.id} style={{ animationDelay: `${i * 45}ms` }}>
-                      <div className="vp-media" style={{ background: CAT_GRADIENT[p.category] }}>
-                        {p.isNew && <span className="vp-badge">New</span>}
-                        <button
-                          className={`vp-wish ${wished ? "on" : ""}`}
-                          onClick={() => toggleWish(p.id)}
-                          aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
-                          aria-pressed={wished}
-                        >
-                          <IconHeart filled={wished} />
-                        </button>
-                        <span className="vp-media-mono">{p.name.charAt(0)}</span>
-                      </div>
-                      <div className="vp-body">
-                        <span className="vp-cat">{p.category}</span>
-                        <h3 className="vp-name">{p.name}</h3>
-                        <p className="vp-brand">{p.brand}</p>
-                        <div className="vp-rating-row">
-                          <StarRow rating={p.rating} />
-                          <span>{p.rating.toFixed(1)} ({p.reviews})</span>
-                        </div>
-                        <div className="vp-price-row">
-                          <span className="vp-price">
-                            {p.oldPrice && <s>£{p.oldPrice.toLocaleString()}</s>}
-                            £{p.price.toLocaleString()}
-                          </span>
-                          <button className="vp-add">Add to bag</button>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })
-              )}
-            </div>
+            {productsLoading ? (
+              <div className="vp-empty">
+                <h3>Loading products&hellip;</h3>
+              </div>
+            ) : productsError ? (
+              <div className="vp-empty">
+                <h3>Something went wrong</h3>
+                <p>We couldn&apos;t load the catalogue.</p>
+                <button className="vp-add" style={{ marginTop: 16 }} onClick={() => refetchProducts()}>
+                  Try again
+                </button>
+              </div>
+            ) : (
+              <div className={`vp-grid ${view === "list" ? "list" : ""}`}>
+                {pageItems.length === 0 ? (
+                  <div className="vp-empty">
+                    <h3>No products match your filters</h3>
+                    <p>Try widening your price range or clearing a filter.</p>
+                  </div>
+                ) : (
+                  pageItems.map((p, i) => (
+                    <ProductCard
+                      key={p.id}
+                      product={p}
+                      index={i}
+                      wished={wishedIds.has(p.id)}
+                      onWishlistToggle={() => toggleWish(p.id)}
+                      onAdd={() => handleAddToBag(p.id)}
+                    />
+                  ))
+                )}
+              </div>
+            )}
 
             {totalPages > 1 && (
               <nav className="vp-pagination" aria-label="Pagination">

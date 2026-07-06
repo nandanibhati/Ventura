@@ -4,8 +4,10 @@ import { Lock } from "lucide-react";
 import { Input } from "../../components/ui/Input";
 import { PrimaryButton } from "../../components/ui/Button";
 import { useAuth } from "../../context/AuthContext";
+import { useDocumentTitle } from "../../lib/useDocumentTitle";
 
 export default function Login() {
+  useDocumentTitle("Sign In");
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -60,21 +62,28 @@ export default function Login() {
           <Input
             label="Email address"
             type="email"
-            placeholder="you@example.com"
+            placeholder="Enter your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             error={errors.email}
             required
           />
-          <Input
-            label="Password"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            error={errors.password}
-            required
-          />
+          <div>
+            <Input
+              label="Password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              error={errors.password}
+              required
+            />
+            <div className="mt-1.5 text-right">
+              <Link to="/forgot-password" className="text-sm font-medium text-gold-600 hover:underline dark:text-gold-400">
+                Forgot password?
+              </Link>
+            </div>
+          </div>
 
           {formError && <p className="text-sm text-error-500">{formError}</p>}
 

@@ -388,11 +388,12 @@ function Navbar() {
                     <Search className="ml-3 h-4 w-4 shrink-0 text-neutral-400" />
                     <input
                       autoFocus
+                      aria-label="Search products"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       onBlur={() => !query && setSearchOpen(false)}
                       placeholder="Search products..."
-                      className="w-full bg-transparent px-2.5 py-2 text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-white"
+                      className="w-full bg-transparent px-2.5 py-2 text-sm text-neutral-800 placeholder:text-neutral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-400 dark:text-white"
                     />
                   </motion.form>
                 ) : (
@@ -522,7 +523,9 @@ function Navbar() {
                         { icon: User, label: "My Profile", to: "/account" },
                         { icon: Package, label: "Orders", to: "/orders" },
                         { icon: Heart, label: "Wishlist", to: "/wishlist" },
-                        ...(user?.role === "admin" ? [{ icon: Settings, label: "Admin Dashboard", to: "/admin" }] : []),
+                        ...(user?.role === "admin" || user?.role === "superadmin"
+                          ? [{ icon: Settings, label: "Admin Dashboard", to: "/admin" }]
+                          : []),
                         ...(user?.role === "seller"
                           ? [{ icon: Settings, label: "Seller Dashboard", to: "/seller/dashboard" }]
                           : []),
@@ -613,10 +616,11 @@ function Navbar() {
               >
                 <Search className="h-4 w-4 shrink-0 text-neutral-400" />
                 <input
+                  aria-label="Search products"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search products..."
-                  className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none dark:text-white"
+                  className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-400 dark:text-white"
                 />
               </form>
 

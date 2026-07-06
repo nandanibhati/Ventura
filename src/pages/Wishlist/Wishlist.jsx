@@ -2,12 +2,15 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Heart } from "lucide-react";
 import { wishlistApi } from "../../api/orders";
+import { resolveMediaUrl } from "../../lib/api";
 import { useCart } from "../../context/CartContext";
 import ProductCard from "../../components/ui/Cards/ProductCard";
 import { LoadingSpinner, EmptyState, ErrorState } from "../../components/ui/Feedback";
 import { Breadcrumb } from "../../components/ui/Navigation";
+import { useDocumentTitle } from "../../lib/useDocumentTitle";
 
 export default function Wishlist() {
+  useDocumentTitle("Wishlist");
   const queryClient = useQueryClient();
   const { addItem } = useCart();
 
@@ -49,6 +52,7 @@ export default function Wishlist() {
               <ProductCard
                 key={product.id}
                 product={{
+                  id: product.id,
                   name: product.name,
                   brand: product.brand?.name,
                   category: product.category?.name,
@@ -57,8 +61,14 @@ export default function Wishlist() {
                   rating: product.ratingAvg,
                   reviews: product.ratingCount,
                   isNew: product.isNew,
+                  isTrending: product.isTrending,
+                  isBestSeller: product.isBestSeller,
+                  badge: product.badge,
+                  stock: product.stock,
+                  lowStockThreshold: product.lowStockThreshold,
+                  animationOverride: product.animationOverride,
                 }}
-                image={product.images?.[0]?.url}
+                image={resolveMediaUrl(product.images?.[0]?.url)}
                 wished
                 onWishlistToggle={() => removeMutation.mutate(product.id)}
                 onAdd={() => addItem({ productId: product.id, quantity: 1 })}

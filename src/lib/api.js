@@ -2,15 +2,30 @@ import axios from "axios";
 import { tokenStorage, getGuestSessionId } from "./tokenStorage";
 
 const baseURL = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
+const apiOrigin = baseURL.replace(/\/api\/v1\/?$/, "");
 
 export const api = axios.create({ baseURL });
+
+/**
+ * Uploaded file URLs come back from the backend as origin-relative paths
+ * (e.g. "/uploads/xxx.png") since it doesn't know its own public hostname.
+ * The frontend is served from a different origin (Vite dev server / static
+ * host), so `<img src="/uploads/...">` would resolve against the wrong host
+ * and 404 — this resolves it against the API's actual origin instead.
+ */
+export function resolveMediaUrl(url) {
+  if (!url) return url;
+  if (/^https?:\/\//i.test(url) || url.startsWith("data:")) return url;
+  return `${apiOrigin}${url}`;
+}
 
 // Attach the access token (and, for guest cart requests, a session id) to every request.
 api.interceptors.request.use((config) => {
   const token = tokenStorage.getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-  } else if (config.url?.startsWith("/cart")) {
+  } else if (config.url?.startsWith("/cart") || config.url?.startsWith("/orders")) {
+    // Guests need a session id both for their cart and to complete guest checkout on /orders.
     config.headers["X-Session-Id"] = getGuestSessionId();
   }
   return config;

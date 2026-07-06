@@ -1,7 +1,17 @@
 import { createContext, useCallback, useContext, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cartApi } from "../api/cart";
+import { resolveMediaUrl } from "../lib/api";
 import { useAuth } from "./AuthContext";
+
+/** The backend returns origin-relative upload paths; resolve them once here so every
+ * consumer of `cart` (Cart page, Checkout summary, Navbar, ...) gets a usable image URL. */
+function resolveCartImages(cart) {
+  return { ...cart, items: cart.items.map((item) => ({ ...item, image: resolveMediaUrl(item.image) })) };
+}
+async function getCartResolved() {
+  return resolveCartImages(await cartApi.get());
+}
 
 const CartContext = createContext(null);
 const CART_QUERY_KEY = ["cart"];
@@ -19,7 +29,7 @@ export function CartProvider({ children }) {
     error,
   } = useQuery({
     queryKey: CART_QUERY_KEY,
-    queryFn: cartApi.get,
+    queryFn: getCartResolved,
     enabled: status !== "loading",
     staleTime: 0,
   });
@@ -28,27 +38,27 @@ export function CartProvider({ children }) {
 
   const addItemMutation = useMutation({
     mutationFn: ({ productId, quantity = 1, variant }) => cartApi.addItem({ productId, quantity, variant }),
-    onSuccess: (data) => queryClient.setQueryData(CART_QUERY_KEY, data),
+    onSuccess: (data) => queryClient.setQueryData(CART_QUERY_KEY, resolveCartImages(data)),
   });
 
   const updateItemMutation = useMutation({
     mutationFn: ({ itemId, quantity }) => cartApi.updateItem(itemId, quantity),
-    onSuccess: (data) => queryClient.setQueryData(CART_QUERY_KEY, data),
+    onSuccess: (data) => queryClient.setQueryData(CART_QUERY_KEY, resolveCartImages(data)),
   });
 
   const removeItemMutation = useMutation({
     mutationFn: (itemId) => cartApi.removeItem(itemId),
-    onSuccess: (data) => queryClient.setQueryData(CART_QUERY_KEY, data),
+    onSuccess: (data) => queryClient.setQueryData(CART_QUERY_KEY, resolveCartImages(data)),
   });
 
   const applyCouponMutation = useMutation({
     mutationFn: (code) => cartApi.applyCoupon(code),
-    onSuccess: (data) => queryClient.setQueryData(CART_QUERY_KEY, data),
+    onSuccess: (data) => queryClient.setQueryData(CART_QUERY_KEY, resolveCartImages(data)),
   });
 
   const removeCouponMutation = useMutation({
     mutationFn: () => cartApi.removeCoupon(),
-    onSuccess: (data) => queryClient.setQueryData(CART_QUERY_KEY, data),
+    onSuccess: (data) => queryClient.setQueryData(CART_QUERY_KEY, resolveCartImages(data)),
   });
 
   const value = useMemo(

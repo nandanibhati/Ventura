@@ -4,8 +4,10 @@ import { UserPlus } from "lucide-react";
 import { Input, Select } from "../../components/ui/Input";
 import { PrimaryButton } from "../../components/ui/Button";
 import { useAuth } from "../../context/AuthContext";
+import { useDocumentTitle } from "../../lib/useDocumentTitle";
 
 export default function Signup() {
+  useDocumentTitle("Create Account");
   const { register } = useAuth();
   const navigate = useNavigate();
 

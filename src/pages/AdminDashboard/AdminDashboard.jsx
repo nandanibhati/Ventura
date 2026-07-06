@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Users as UsersIcon,
   Package,
   Tags,
   Ticket,
-  FileBarChart,
+  Percent as PercentIcon,
   LineChart as LineChartIcon,
   BarChart3,
   History,
@@ -22,6 +23,16 @@ import {
   ShoppingCart,
   Percent,
   AlertTriangle,
+  Store,
+  Star,
+  Layout,
+  Settings as SettingsIcon,
+  ShieldCheck,
+  ArrowUp,
+  ArrowDown,
+  Copy,
+  KeyRound,
+  X,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -42,19 +53,28 @@ import {
 } from "recharts";
 
 import { PrimaryButton, SecondaryButton, OutlineButton, IconButton } from "../../components/ui/Button";
-import { Input, Select } from "../../components/ui/Input";
+import { Input, Select, Checkbox } from "../../components/ui/Input";
 import { SearchInput } from "../../components/ui/Input";
-import { Badge, Chip, Avatar, EmptyState } from "../../components/ui/Feedback";
+import { Badge, Chip, Avatar, EmptyState, useToast } from "../../components/ui/Feedback";
 import { Modal, Drawer, Dropdown } from "../../components/ui/Overlay";
 import { Pagination } from "../../components/ui/Navigation";
 import { SectionTitle } from "../../components/ui/Typography";
 import { StatCard } from "../../components/ui/Cards";
+import { useDocumentTitle } from "../../lib/useDocumentTitle";
+import { AnimatedCard, ANIMATION_PRESETS, DEFAULT_ANIMATION_CONFIG } from "../../lib/animations";
 import { cn } from "../../lib/utils";
+import { useAuth } from "../../context/AuthContext";
+import { adminApi } from "../../api/admin";
+import { productsApi, uploadsApi } from "../../api/products";
+import { resolveMediaUrl } from "../../lib/api";
+import { categoriesApi, brandsApi, promotionsApi, settingsApi, homepageApi, permissionsApi } from "../../api/catalog";
+import { couponsApi } from "../../api/cart";
 
 const CURRENCY = "£";
 const CHART_GOLD = "#d8b36a";
 const CHART_INK = "#4a4855";
 const PIE_COLORS = ["#d8b36a", "#8f8d99", "#6fae76", "#e0645f"];
+const PAGE_SIZE = 10;
 
 /* — Nav — */
 const NAV_GROUPS = [
@@ -62,111 +82,46 @@ const NAV_GROUPS = [
     label: "Manage",
     items: [
       { id: "users", label: "Users", icon: UsersIcon },
+      { id: "sellers", label: "Sellers", icon: Store },
       { id: "orders", label: "Orders", icon: ShoppingCart },
       { id: "products", label: "Products", icon: Package },
       { id: "categories", label: "Categories", icon: Tags },
       { id: "coupons", label: "Coupons", icon: Ticket },
+      { id: "promotions", label: "Offers", icon: PercentIcon },
+      { id: "reviews", label: "Reviews", icon: Star },
+      { id: "homepage", label: "Homepage CMS", icon: Layout },
     ],
   },
   {
     label: "Insights",
     items: [
-      { id: "reports", label: "Reports", icon: FileBarChart },
       { id: "analytics", label: "Analytics", icon: LineChartIcon },
       { id: "charts", label: "Charts", icon: BarChart3 },
     ],
   },
   {
     label: "System",
-    items: [{ id: "logs", label: "Activity Logs", icon: History }],
+    items: [
+      { id: "settings", label: "Store Settings", icon: SettingsIcon },
+      { id: "permissions", label: "Roles & Permissions", icon: ShieldCheck },
+      { id: "logs", label: "Activity Logs", icon: History },
+    ],
   },
 ];
 const ALL_NAV_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
 
-/* — Sample data — */
-const USERS = [
-  { id: 1, name: "Alexandra Wren", email: "alexandra.wren@example.com", role: "Customer", status: "active", joined: "12 Mar 2024" },
-  { id: 2, name: "Marcus Bellucci", email: "marcus.b@example.com", role: "Admin", status: "active", joined: "04 Jan 2023" },
-  { id: 3, name: "Sofia Reyes", email: "sofia.reyes@example.com", role: "Editor", status: "active", joined: "22 Jul 2024" },
-  { id: 4, name: "James Norlen", email: "j.norlen@example.com", role: "Customer", status: "suspended", joined: "09 Sep 2023" },
-  { id: 5, name: "Priya Aurelio", email: "priya.a@example.com", role: "Customer", status: "active", joined: "30 Nov 2024" },
-  { id: 6, name: "Daniel Sabrine", email: "d.sabrine@example.com", role: "Editor", status: "active", joined: "15 Feb 2025" },
-];
-
-const ADMIN_ORDERS = [
-  { id: 1, number: "VNT-284915", customer: "Alexandra Wren", date: "28 Jun 2026", items: 2, total: 2640, status: "shipped", payment: "paid" },
-  { id: 2, number: "VNT-281203", customer: "Priya Aurelio", date: "14 Jun 2026", items: 2, total: 520, status: "delivered", payment: "paid" },
-  { id: 3, number: "VNT-276810", customer: "James Norlen", date: "02 Jun 2026", items: 1, total: 3200, status: "processing", payment: "pending" },
-  { id: 4, number: "VNT-269944", customer: "Sofia Reyes", date: "19 May 2026", items: 2, total: 1670, status: "delivered", payment: "paid" },
-  { id: 5, number: "VNT-261102", customer: "Daniel Sabrine", date: "30 Apr 2026", items: 1, total: 225, status: "cancelled", payment: "refunded" },
-  { id: 6, number: "VNT-259887", customer: "Marcus Bellucci", date: "22 Apr 2026", items: 3, total: 4980, status: "shipped", payment: "paid" },
-];
-
-const ADMIN_PRODUCTS = [
-  { id: 1, name: "Aurora Pro Wireless Earbuds", category: "Audio", brand: "Veluntra", price: 178, stock: 14, status: "active" },
-  { id: 2, name: "Nova Titanium Smartwatch", category: "Wearables", brand: "Nexora", price: 890, stock: 3, status: "active" },
-  { id: 3, name: "Meridian Mechanical Keyboard", category: "Computing", brand: "Meridian", price: 145, stock: 0, status: "draft" },
-  { id: 4, name: "Zenith Noise-Cancel Headphones", category: "Audio", brand: "Circuit & Co.", price: 349, stock: 42, status: "active" },
-  { id: 5, name: "Onyx 14\" Ultrabook", category: "Computing", brand: "Veluntra", price: 1340, stock: 24, status: "active" },
-  { id: 6, name: "Lumen Smart Desk Lamp", category: "Smart Home", brand: "Nordline", price: 65, stock: 3, status: "active" },
-];
-
-const CATEGORIES = [
-  { id: 1, name: "Audio", count: 48 },
-  { id: 2, name: "Wearables", count: 22 },
-  { id: 3, name: "Computing", count: 36 },
-  { id: 4, name: "Smart Home", count: 19 },
-  { id: 5, name: "Home & Kitchen", count: 27 },
-  { id: 6, name: "Mobile & Tablets", count: 41 },
-];
-
-const COUPONS = [
-  { id: 1, code: "Veluntra10", type: "Percent", value: "10%", used: 284, limit: 500, expires: "31 Aug 2026", status: "active" },
-  { id: 2, code: "WELCOME15", type: "Percent", value: "15%", used: 612, limit: 1000, expires: "30 Sep 2026", status: "active" },
-  { id: 3, code: "FREESHIP", type: "Fixed", value: `${CURRENCY}18`, used: 190, limit: 200, expires: "10 Jul 2026", status: "active" },
-  { id: 4, code: "SPRING24", type: "Percent", value: "20%", used: 500, limit: 500, expires: "01 Jun 2026", status: "expired" },
-];
-
-const REPORTS = [
-  { id: 1, name: "Monthly Sales Report", range: "Jun 2026", format: "PDF", generated: "01 Jul 2026" },
-  { id: 2, name: "Inventory Snapshot", range: "As of 30 Jun 2026", format: "XLSX", generated: "30 Jun 2026" },
-  { id: 3, name: "Customer Cohort Report", range: "Q2 2026", format: "PDF", generated: "28 Jun 2026" },
-  { id: 4, name: "Coupon Performance", range: "Jan – Jun 2026", format: "XLSX", generated: "25 Jun 2026" },
-];
-
-const ACTIVITY_LOGS = [
-  { id: 1, actor: "Marcus Bellucci", action: "Suspended user James Norlen", scope: "users", time: "12 min ago" },
-  { id: 2, actor: "Sofia Reyes", action: "Published product “Lumen Smart Desk Lamp”", scope: "products", time: "1h ago" },
-  { id: 3, actor: "System", action: "Order VNT-276810 payment marked pending", scope: "orders", time: "2h ago" },
-  { id: 4, actor: "Daniel Sabrine", action: "Created coupon FREESHIP", scope: "coupons", time: "5h ago" },
-  { id: 5, actor: "Marcus Bellucci", action: "Updated category “Home & Kitchen” description", scope: "products", time: "1d ago" },
-  { id: 6, actor: "System", action: "Generated Monthly Sales Report", scope: "system", time: "1d ago" },
-  { id: 7, actor: "Sofia Reyes", action: "Refunded order VNT-261102", scope: "orders", time: "3d ago" },
-  { id: 8, actor: "Marcus Bellucci", action: "Added new admin Daniel Sabrine", scope: "users", time: "6d ago" },
-];
-
-const REVENUE_TREND = [
-  { month: "Jan", revenue: 42000 }, { month: "Feb", revenue: 38500 }, { month: "Mar", revenue: 51000 },
-  { month: "Apr", revenue: 47800 }, { month: "May", revenue: 58200 }, { month: "Jun", revenue: 64500 },
-];
-const ORDERS_BY_CATEGORY = [
-  { category: "Audio", orders: 128 }, { category: "Wearables", orders: 64 }, { category: "Computing", orders: 92 },
-  { category: "Smart Home", orders: 156 }, { category: "Home & Kitchen", orders: 74 }, { category: "Mobile", orders: 88 },
-];
-const PAYMENT_SPLIT = [
-  { name: "Card", value: 62 }, { name: "PayPal", value: 24 }, { name: "Apple Pay", value: 11 }, { name: "Other", value: 3 },
-];
-const CUSTOMER_TREND = [
-  { month: "Jan", newC: 210, returning: 340 }, { month: "Feb", newC: 190, returning: 360 },
-  { month: "Mar", newC: 260, returning: 400 }, { month: "Apr", newC: 240, returning: 420 },
-  { month: "May", newC: 310, returning: 460 }, { month: "Jun", newC: 340, returning: 500 },
-];
-
-const PAGE_SIZE = 5;
-
 export default function AdminDashboard() {
+  useDocumentTitle("Admin Dashboard");
   const [activeTab, setActiveTab] = useState("users");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { role } = useAuth();
+  const navGroups = useMemo(
+    () =>
+      role === "superadmin"
+        ? NAV_GROUPS
+        : NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => i.id !== "permissions") })),
+    [role]
+  );
   const activeItem = ALL_NAV_ITEMS.find((n) => n.id === activeTab);
 
   return (
@@ -183,11 +138,11 @@ export default function AdminDashboard() {
 
       <div className="mx-auto flex max-w-[1400px] gap-8 px-5 py-6 sm:px-8 lg:py-10">
         <aside className="hidden lg:block w-[250px] shrink-0">
-          <SidebarContent active={activeTab} onSelect={setActiveTab} />
+          <SidebarContent groups={navGroups} active={activeTab} onSelect={setActiveTab} />
         </aside>
 
         <Drawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} side="left" title="Admin Panel" width="290px">
-          <SidebarContent active={activeTab} onSelect={(id) => { setActiveTab(id); setMobileNavOpen(false); }} embedded />
+          <SidebarContent groups={navGroups} active={activeTab} onSelect={(id) => { setActiveTab(id); setMobileNavOpen(false); }} embedded />
         </Drawer>
 
         <main className="flex-1 min-w-0">
@@ -200,13 +155,18 @@ export default function AdminDashboard() {
               transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             >
               {activeTab === "users" && <UsersSection />}
+              {activeTab === "sellers" && <SellersSection />}
               {activeTab === "orders" && <OrdersSection />}
               {activeTab === "products" && <ProductsSection />}
               {activeTab === "categories" && <CategoriesSection />}
               {activeTab === "coupons" && <CouponsSection />}
-              {activeTab === "reports" && <ReportsSection />}
+              {activeTab === "promotions" && <PromotionsSection />}
+              {activeTab === "reviews" && <ReviewsSection />}
+              {activeTab === "homepage" && <HomepageCmsSection />}
               {activeTab === "analytics" && <AnalyticsSection />}
               {activeTab === "charts" && <ChartsSection />}
+              {activeTab === "settings" && <SettingsSection />}
+              {activeTab === "permissions" && <PermissionsSection />}
               {activeTab === "logs" && <ActivityLogsSection />}
             </motion.div>
           </AnimatePresence>
@@ -218,7 +178,7 @@ export default function AdminDashboard() {
 
 /* — Sidebar — */
 
-function SidebarContent({ active, onSelect, embedded }) {
+function SidebarContent({ groups, active, onSelect, embedded }) {
   return (
     <div className={cn("flex flex-col gap-7", !embedded && "sticky top-8")}>
       {!embedded && (
@@ -233,7 +193,7 @@ function SidebarContent({ active, onSelect, embedded }) {
         </div>
       )}
 
-      {NAV_GROUPS.map((group) => (
+      {groups.map((group) => (
         <div key={group.label}>
           <p className="px-4 mb-2 text-[10.5px] font-medium uppercase tracking-wider text-[var(--text-muted)]">{group.label}</p>
           <nav className="flex flex-col gap-1">
@@ -271,7 +231,7 @@ function Toolbar({ search, onSearch, children }) {
       <div className="w-full sm:w-72">
         <SearchInput value={search} onChange={(e) => onSearch(e.target.value)} onClear={() => onSearch("")} placeholder="Search…" />
       </div>
-      <div className="flex items-center gap-2">{children}</div>
+      <div className="flex items-center gap-2 flex-wrap">{children}</div>
     </div>
   );
 }
@@ -294,51 +254,67 @@ function Td({ children, className }) {
   return <td className={cn("px-5 py-4 text-[var(--text-primary)]", className)}>{children}</td>;
 }
 
-function usePagedFilter(list, matchFn, page, setPage) {
-  const filtered = useMemo(() => list.filter(matchFn), [list, matchFn]);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageItems = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  return { filtered, totalPages, pageItems, safePage };
+function ErrorNotice({ onRetry }) {
+  return (
+    <div className="rounded-[var(--radius-lg)] border border-error-500/30 bg-error-500/5 p-6 text-center">
+      <p className="text-sm text-error-600">Something went wrong loading this section.</p>
+      <button onClick={onRetry} className="mt-2 text-sm font-medium text-gold-600 hover:underline">Try again</button>
+    </div>
+  );
 }
 
 /* — Users — */
+
+const USER_ROLES = ["all", "customer", "seller", "admin", "superadmin"];
 
 function UsersSection() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [rows, setRows] = useState(USERS);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  const matchFn = (u) =>
-    (roleFilter === "all" || u.role === roleFilter) &&
-    (u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()));
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-users", { search, roleFilter, page }],
+    queryFn: () => adminApi.listUsers({ search: search || undefined, role: roleFilter, page, limit: PAGE_SIZE }),
+  });
 
-  const { totalPages, pageItems, safePage } = usePagedFilter(rows, matchFn, page, setPage);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-users"] });
 
-  const toggleStatus = (id) =>
-    setRows((r) => r.map((u) => (u.id === id ? { ...u, status: u.status === "active" ? "suspended" : "active" } : u)));
-  const removeUser = (id) => setRows((r) => r.filter((u) => u.id !== id));
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }) => adminApi.setUserStatus(id, status),
+    onSuccess: invalidate,
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (id) => adminApi.deleteUser(id),
+    onSuccess: invalidate,
+  });
+  const resetPasswordMutation = useMutation({
+    mutationFn: (id) => adminApi.resetUserPassword(id),
+    onSuccess: () => toast({ title: "Password reset email sent", variant: "success" }),
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't send reset email", variant: "error" }),
+  });
+
+  const users = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
 
   return (
     <div>
-      <SectionTitle
-        eyebrow="Manage"
-        title="Users"
-        description="Everyone with access to storefront accounts or the admin console."
-        action={<PrimaryButton leftIcon={Plus} onClick={() => setModalOpen(true)}>Add user</PrimaryButton>}
-      />
+      <SectionTitle eyebrow="Manage" title="Users" description="Everyone with an account on the platform." />
 
       <Toolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }}>
-        {["all", "Customer", "Admin", "Editor"].map((r) => (
+        {USER_ROLES.map((r) => (
           <Chip key={r} selected={roleFilter === r} onClick={() => { setRoleFilter(r); setPage(1); }}>
-            {r === "all" ? "All roles" : r}
+            {r === "all" ? "All roles" : r[0].toUpperCase() + r.slice(1)}
           </Chip>
         ))}
       </Toolbar>
 
-      {pageItems.length === 0 ? (
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading users…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : users.length === 0 ? (
         <EmptyState icon={UsersIcon} title="No users found" description="Try a different search or filter." />
       ) : (
         <TableShell>
@@ -346,7 +322,7 @@ function UsersSection() {
             <tr><Th>Name</Th><Th>Role</Th><Th>Status</Th><Th>Joined</Th><Th className="text-right">Actions</Th></tr>
           </thead>
           <tbody className="divide-y divide-[var(--border)]">
-            {pageItems.map((u) => (
+            {users.map((u) => (
               <tr key={u.id}>
                 <Td>
                   <div className="flex items-center gap-3">
@@ -363,15 +339,18 @@ function UsersSection() {
                     {u.status === "active" ? "Active" : "Suspended"}
                   </Badge>
                 </Td>
-                <Td className="text-[var(--text-muted)]">{u.joined}</Td>
+                <Td className="text-[var(--text-muted)]">{new Date(u.createdAt).toLocaleDateString()}</Td>
                 <Td className="text-right">
                   <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
-                    <Dropdown.Item icon={Pencil}>Edit user</Dropdown.Item>
-                    <Dropdown.Item icon={u.status === "active" ? Ban : CheckCircle2} onClick={() => toggleStatus(u.id)}>
+                    <Dropdown.Item icon={KeyRound} onClick={() => resetPasswordMutation.mutate(u.id)}>Reset password</Dropdown.Item>
+                    <Dropdown.Item
+                      icon={u.status === "active" ? Ban : CheckCircle2}
+                      onClick={() => statusMutation.mutate({ id: u.id, status: u.status === "active" ? "suspended" : "active" })}
+                    >
                       {u.status === "active" ? "Suspend" : "Reactivate"}
                     </Dropdown.Item>
                     <Dropdown.Separator />
-                    <Dropdown.Item icon={Trash2} destructive onClick={() => removeUser(u.id)}>Delete</Dropdown.Item>
+                    <Dropdown.Item icon={Trash2} destructive onClick={() => deleteMutation.mutate(u.id)}>Delete</Dropdown.Item>
                   </Dropdown>
                 </Td>
               </tr>
@@ -380,53 +359,176 @@ function UsersSection() {
         </TableShell>
       )}
 
-      <div className="mt-6"><Pagination page={safePage} totalPages={totalPages} onChange={setPage} /></div>
-
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add user" footer={
-        <>
-          <SecondaryButton onClick={() => setModalOpen(false)}>Cancel</SecondaryButton>
-          <PrimaryButton onClick={() => setModalOpen(false)}>Send invite</PrimaryButton>
-        </>
-      }>
-        <div className="flex flex-col gap-4">
-          <Input label="Full name" placeholder="Jane Doe" />
-          <Input label="Email" type="email" placeholder="jane@example.com" />
-          <Select label="Role" defaultValue="Customer" options={[{ value: "Customer", label: "Customer" }, { value: "Editor", label: "Editor" }, { value: "Admin", label: "Admin" }]} />
-        </div>
-      </Modal>
+      <div className="mt-6"><Pagination page={page} totalPages={totalPages} onChange={setPage} /></div>
     </div>
   );
 }
 
-/* — Orders — */
+/* — Sellers — */
 
-const ORDER_STATUS_VARIANT = { processing: "warning", shipped: "gold", delivered: "success", cancelled: "error" };
-const PAYMENT_STATUS_VARIANT = { paid: "success", pending: "warning", refunded: "neutral" };
-
-function OrdersSection() {
+function SellersSection() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
+  const [commissionDraft, setCommissionDraft] = useState({});
+  const queryClient = useQueryClient();
 
-  const matchFn = (o) =>
-    (statusFilter === "all" || o.status === statusFilter) &&
-    (o.number.toLowerCase().includes(search.toLowerCase()) || o.customer.toLowerCase().includes(search.toLowerCase()));
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-sellers", { search, statusFilter, page }],
+    queryFn: () => adminApi.listStores({ search: search || undefined, status: statusFilter, page, limit: PAGE_SIZE }),
+  });
 
-  const { totalPages, pageItems, safePage } = usePagedFilter(ADMIN_ORDERS, matchFn, page, setPage);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-sellers"] });
+  const statusMutation = useMutation({ mutationFn: ({ id, status }) => adminApi.setStoreStatus(id, status), onSuccess: invalidate });
+  const commissionMutation = useMutation({
+    mutationFn: ({ id, commissionPercent }) => adminApi.setStoreCommission(id, commissionPercent),
+    onSuccess: invalidate,
+  });
+
+  const stores = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
 
   return (
     <div>
-      <SectionTitle eyebrow="Manage" title="Orders" description="Every transaction across the storefront, in one queue." />
+      <SectionTitle eyebrow="Manage" title="Sellers" description="Seller stores, approval status, and commission rates." />
 
       <Toolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }}>
-        {["all", "processing", "shipped", "delivered", "cancelled"].map((s) => (
+        {["all", "pending", "approved", "suspended"].map((s) => (
           <Chip key={s} selected={statusFilter === s} onClick={() => { setStatusFilter(s); setPage(1); }}>
             {s === "all" ? "All" : s[0].toUpperCase() + s.slice(1)}
           </Chip>
         ))}
       </Toolbar>
 
-      {pageItems.length === 0 ? (
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading sellers…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : stores.length === 0 ? (
+        <EmptyState icon={Store} title="No sellers found" description="Try a different search or filter." />
+      ) : (
+        <TableShell>
+          <thead className="border-b border-[var(--border)]">
+            <tr><Th>Store</Th><Th>Owner</Th><Th>Products</Th><Th>Orders</Th><Th>Commission</Th><Th>Status</Th><Th className="text-right">Actions</Th></tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--border)]">
+            {stores.map((s) => (
+              <tr key={s.id}>
+                <Td className="font-medium">{s.name}</Td>
+                <Td>
+                  <p>{s.ownerName}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{s.ownerEmail}</p>
+                </Td>
+                <Td>{s.productCount}</Td>
+                <Td>{s.orderCount}</Td>
+                <Td>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      className="w-20"
+                      placeholder="Default"
+                      value={commissionDraft[s.id] ?? (s.commissionPercent ?? "")}
+                      onChange={(e) => setCommissionDraft((d) => ({ ...d, [s.id]: e.target.value }))}
+                    />
+                    <button
+                      className="text-xs font-medium text-gold-600 hover:underline"
+                      onClick={() =>
+                        commissionMutation.mutate({
+                          id: s.id,
+                          commissionPercent: commissionDraft[s.id] === "" ? null : Number(commissionDraft[s.id] ?? s.commissionPercent),
+                        })
+                      }
+                    >
+                      Save
+                    </button>
+                  </div>
+                </Td>
+                <Td>
+                  <Badge variant={s.status === "approved" ? "success" : s.status === "pending" ? "warning" : "error"}>
+                    {s.status[0].toUpperCase() + s.status.slice(1)}
+                  </Badge>
+                </Td>
+                <Td className="text-right">
+                  <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
+                    {s.status !== "approved" && (
+                      <Dropdown.Item icon={CheckCircle2} onClick={() => statusMutation.mutate({ id: s.id, status: "approved" })}>
+                        Approve
+                      </Dropdown.Item>
+                    )}
+                    {s.status !== "suspended" && (
+                      <Dropdown.Item icon={Ban} destructive onClick={() => statusMutation.mutate({ id: s.id, status: "suspended" })}>
+                        Suspend
+                      </Dropdown.Item>
+                    )}
+                    {s.status === "suspended" && (
+                      <Dropdown.Item icon={CheckCircle2} onClick={() => statusMutation.mutate({ id: s.id, status: "approved" })}>
+                        Reinstate
+                      </Dropdown.Item>
+                    )}
+                  </Dropdown>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </TableShell>
+      )}
+
+      <div className="mt-6"><Pagination page={page} totalPages={totalPages} onChange={setPage} /></div>
+    </div>
+  );
+}
+
+/* — Orders — */
+
+const ORDER_STATUS_VARIANT = {
+  pending: "neutral",
+  processing: "warning",
+  shipped: "gold",
+  delivered: "success",
+  cancelled: "error",
+  return_requested: "warning",
+  returned: "error",
+  exchange_requested: "warning",
+  exchanged: "gold",
+};
+const PAYMENT_STATUS_VARIANT = { paid: "success", pending: "warning", refunded: "neutral" };
+const ORDER_STATUSES = ["pending", "processing", "shipped", "delivered", "cancelled", "return_requested", "returned", "exchange_requested", "exchanged"];
+
+function OrdersSection() {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-orders", { search, statusFilter, page }],
+    queryFn: () => adminApi.listOrders({ search: search || undefined, status: statusFilter, page, limit: PAGE_SIZE }),
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }) => adminApi.updateOrderStatus(id, { status }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-orders"] }),
+  });
+
+  const orders = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+
+  return (
+    <div>
+      <SectionTitle eyebrow="Manage" title="Orders" description="Every transaction across the storefront, in one queue." />
+
+      <Toolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }}>
+        {["all", ...ORDER_STATUSES].map((s) => (
+          <Chip key={s} selected={statusFilter === s} onClick={() => { setStatusFilter(s); setPage(1); }}>
+            {s === "all" ? "All" : s.replace(/_/g, " ")}
+          </Chip>
+        ))}
+      </Toolbar>
+
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading orders…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : orders.length === 0 ? (
         <EmptyState icon={ShoppingCart} title="No orders found" description="Try a different search or filter." />
       ) : (
         <TableShell>
@@ -434,20 +536,23 @@ function OrdersSection() {
             <tr><Th>Order</Th><Th>Customer</Th><Th>Date</Th><Th>Total</Th><Th>Status</Th><Th>Payment</Th><Th className="text-right">Actions</Th></tr>
           </thead>
           <tbody className="divide-y divide-[var(--border)]">
-            {pageItems.map((o) => (
+            {orders.map((o) => (
               <tr key={o.id}>
-                <Td className="font-medium">{o.number}</Td>
+                <Td className="font-medium">{o.orderNumber}</Td>
                 <Td>{o.customer}</Td>
-                <Td className="text-[var(--text-muted)]">{o.date}</Td>
-                <Td>{CURRENCY}{o.total.toLocaleString()}</Td>
-                <Td><Badge variant={ORDER_STATUS_VARIANT[o.status]}>{o.status[0].toUpperCase() + o.status.slice(1)}</Badge></Td>
-                <Td><Badge variant={PAYMENT_STATUS_VARIANT[o.payment]}>{o.payment[0].toUpperCase() + o.payment.slice(1)}</Badge></Td>
+                <Td className="text-[var(--text-muted)]">{new Date(o.placedAt).toLocaleDateString()}</Td>
+                <Td>{CURRENCY}{Number(o.total).toLocaleString()}</Td>
+                <Td><Badge variant={ORDER_STATUS_VARIANT[o.status]}>{o.status.replace(/_/g, " ")}</Badge></Td>
+                <Td><Badge variant={PAYMENT_STATUS_VARIANT[o.paymentStatus]}>{o.paymentStatus}</Badge></Td>
                 <Td className="text-right">
                   <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
-                    <Dropdown.Item icon={Pencil}>View details</Dropdown.Item>
-                    <Dropdown.Item icon={CheckCircle2}>Mark as shipped</Dropdown.Item>
+                    <Dropdown.Item icon={Download} onClick={() => adminApi.downloadInvoice(o.id, o.orderNumber)}>Download invoice</Dropdown.Item>
                     <Dropdown.Separator />
-                    <Dropdown.Item icon={Ban} destructive>Cancel order</Dropdown.Item>
+                    {ORDER_STATUSES.filter((s) => s !== o.status).map((s) => (
+                      <Dropdown.Item key={s} icon={CheckCircle2} onClick={() => statusMutation.mutate({ id: o.id, status: s })}>
+                        Mark as {s.replace(/_/g, " ")}
+                      </Dropdown.Item>
+                    ))}
                   </Dropdown>
                 </Td>
               </tr>
@@ -456,90 +561,273 @@ function OrdersSection() {
         </TableShell>
       )}
 
-      <div className="mt-6"><Pagination page={safePage} totalPages={totalPages} onChange={setPage} /></div>
+      <div className="mt-6"><Pagination page={page} totalPages={totalPages} onChange={setPage} /></div>
     </div>
   );
 }
 
 /* — Products — */
 
+const PRODUCT_STATUSES = ["draft", "published", "archived", "hidden", "upcoming", "discontinued"];
+
 function ProductsSection() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({});
+  const [uploading, setUploading] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  const matchFn = (p) => p.name.toLowerCase().includes(search.toLowerCase());
-  const { totalPages, pageItems, safePage } = usePagedFilter(ADMIN_PRODUCTS, matchFn, page, setPage);
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-products", { search, page }],
+    queryFn: () => adminApi.listProducts({ search: search || undefined, page, limit: PAGE_SIZE }),
+  });
+  const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: categoriesApi.list });
+  const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: brandsApi.list });
+  const { data: sellersResult } = useQuery({ queryKey: ["admin-sellers-all"], queryFn: () => adminApi.listStores({ limit: 100 }) });
+  const stores = sellersResult?.items || [];
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+
+  const createMutation = useMutation({
+    mutationFn: (payload) => productsApi.create(payload),
+    onSuccess: () => { invalidate(); setModalOpen(false); toast({ title: "Product created", variant: "success" }); },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't create product", variant: "error" }),
+  });
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }) => productsApi.update(id, payload),
+    onSuccess: () => { invalidate(); setModalOpen(false); toast({ title: "Product updated", variant: "success" }); },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't update product", variant: "error" }),
+  });
+  const removeMutation = useMutation({ mutationFn: (id) => productsApi.remove(id), onSuccess: invalidate });
+  const duplicateMutation = useMutation({ mutationFn: (id) => productsApi.duplicate(id), onSuccess: invalidate });
+
+  const products = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm({
+      name: "", description: "", categoryId: categories[0]?.id, brandId: brands[0]?.id, storeId: stores[0]?.id,
+      price: "", stock: 0, status: "draft", images: [],
+      isFeatured: false, isTrending: false, isBestSeller: false, isNew: false, badge: "",
+      animationOverride: null,
+    });
+    setModalOpen(true);
+  };
+  const openEdit = (p) => {
+    setEditing(p);
+    setForm({
+      name: p.name, price: p.price, stock: p.stock, status: p.status, categoryId: p.categoryId, brandId: p.brandId,
+      images: p.images?.map((i) => resolveMediaUrl(i.url)) || [],
+      isFeatured: !!p.isFeatured, isTrending: !!p.isTrending, isBestSeller: !!p.isBestSeller, isNew: !!p.isNew,
+      badge: p.badge || "",
+      animationOverride: p.animationOverride || null,
+    });
+    setModalOpen(true);
+  };
+  const handleImageUpload = async (files) => {
+    if (!files.length) return;
+    setUploading(true);
+    try {
+      const { urls } = await uploadsApi.uploadImages(Array.from(files));
+      setForm((f) => ({ ...f, images: [...(f.images || []), ...urls.map(resolveMediaUrl)] }));
+    } catch {
+      toast({ title: "Image upload failed", variant: "error" });
+    } finally {
+      setUploading(false);
+    }
+  };
+  const submitForm = () => {
+    const merchandising = {
+      isFeatured: form.isFeatured, isTrending: form.isTrending, isBestSeller: form.isBestSeller, isNew: form.isNew,
+      badge: form.badge || null,
+      animationOverride: form.animationOverride,
+    };
+    if (editing) {
+      updateMutation.mutate({
+        id: editing.id,
+        payload: { name: form.name, price: Number(form.price), stock: Number(form.stock), status: form.status, images: form.images, ...merchandising },
+      });
+    } else {
+      createMutation.mutate({ ...form, ...merchandising, price: Number(form.price), stock: Number(form.stock) });
+    }
+  };
 
   return (
     <div>
       <SectionTitle
         eyebrow="Manage"
         title="Products"
-        description="Catalogue inventory, pricing, and publish status."
-        action={<PrimaryButton leftIcon={Plus} onClick={() => setModalOpen(true)}>Add product</PrimaryButton>}
+        description="Catalogue inventory, pricing, and publish status across every store."
+        action={<PrimaryButton leftIcon={Plus} onClick={openCreate}>Add product</PrimaryButton>}
       />
 
       <Toolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }} />
 
-      <TableShell>
-        <thead className="border-b border-[var(--border)]">
-          <tr><Th>Product</Th><Th>Category</Th><Th>Brand</Th><Th>Price</Th><Th>Stock</Th><Th>Status</Th><Th className="text-right">Actions</Th></tr>
-        </thead>
-        <tbody className="divide-y divide-[var(--border)]">
-          {pageItems.map((p) => (
-            <tr key={p.id}>
-              <Td>
-                <div className="flex items-center gap-3">
-                  <span
-                    className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-inset)] font-medium text-gold-500"
-                    style={{ fontFamily: "var(--font-display)" }}
-                  >
-                    {p.name.charAt(0)}
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading products…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : products.length === 0 ? (
+        <EmptyState icon={Package} title="No products found" description="Try a different search." />
+      ) : (
+        <TableShell>
+          <thead className="border-b border-[var(--border)]">
+            <tr><Th>Product</Th><Th>Category</Th><Th>Brand</Th><Th>Price</Th><Th>Stock</Th><Th>Status</Th><Th className="text-right">Actions</Th></tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--border)]">
+            {products.map((p) => (
+              <tr key={p.id}>
+                <Td>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-inset)] font-medium text-gold-500"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      {p.images?.[0]?.url ? <img src={resolveMediaUrl(p.images[0].url)} alt="" className="h-full w-full object-cover" /> : p.name.charAt(0)}
+                    </span>
+                    <span className="font-medium">{p.name}</span>
+                  </div>
+                </Td>
+                <Td className="text-[var(--text-muted)]">{p.category?.name}</Td>
+                <Td className="text-[var(--text-muted)]">{p.brand?.name}</Td>
+                <Td>{CURRENCY}{Number(p.price).toLocaleString()}</Td>
+                <Td>
+                  <span className={cn("flex items-center gap-1.5", p.stock === 0 ? "text-error-500" : p.stock < 5 ? "text-warning-500" : "")}>
+                    {p.stock < 5 && p.stock > 0 && <AlertTriangle className="size-3.5" />}
+                    {p.stock === 0 ? "Out of stock" : p.stock}
                   </span>
-                  <span className="font-medium">{p.name}</span>
-                </div>
-              </Td>
-              <Td className="text-[var(--text-muted)]">{p.category}</Td>
-              <Td className="text-[var(--text-muted)]">{p.brand}</Td>
-              <Td>{CURRENCY}{p.price.toLocaleString()}</Td>
-              <Td>
-                <span className={cn("flex items-center gap-1.5", p.stock === 0 ? "text-error-500" : p.stock < 5 ? "text-warning-500" : "")}>
-                  {p.stock < 5 && p.stock > 0 && <AlertTriangle className="size-3.5" />}
-                  {p.stock === 0 ? "Out of stock" : p.stock}
-                </span>
-              </Td>
-              <Td><Badge variant={p.status === "active" ? "success" : "neutral"}>{p.status === "active" ? "Active" : "Draft"}</Badge></Td>
-              <Td className="text-right">
-                <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
-                  <Dropdown.Item icon={Pencil}>Edit product</Dropdown.Item>
-                  <Dropdown.Item icon={CheckCircle2}>{p.status === "active" ? "Unpublish" : "Publish"}</Dropdown.Item>
-                  <Dropdown.Separator />
-                  <Dropdown.Item icon={Trash2} destructive>Delete</Dropdown.Item>
-                </Dropdown>
-              </Td>
-            </tr>
-          ))}
-        </tbody>
-      </TableShell>
+                </Td>
+                <Td><Badge variant={p.status === "published" ? "success" : "neutral"}>{p.status}</Badge></Td>
+                <Td className="text-right">
+                  <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
+                    <Dropdown.Item icon={Pencil} onClick={() => openEdit(p)}>Edit product</Dropdown.Item>
+                    <Dropdown.Item icon={Copy} onClick={() => duplicateMutation.mutate(p.id)}>Duplicate</Dropdown.Item>
+                    <Dropdown.Item
+                      icon={CheckCircle2}
+                      onClick={() => updateMutation.mutate({ id: p.id, payload: { status: p.status === "published" ? "archived" : "published" } })}
+                    >
+                      {p.status === "published" ? "Archive" : "Publish"}
+                    </Dropdown.Item>
+                    <Dropdown.Separator />
+                    <Dropdown.Item icon={Trash2} destructive onClick={() => removeMutation.mutate(p.id)}>Delete</Dropdown.Item>
+                  </Dropdown>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </TableShell>
+      )}
 
-      <div className="mt-6"><Pagination page={safePage} totalPages={totalPages} onChange={setPage} /></div>
+      <div className="mt-6"><Pagination page={page} totalPages={totalPages} onChange={setPage} /></div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add product" footer={
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit product" : "Add product"} footer={
         <>
           <SecondaryButton onClick={() => setModalOpen(false)}>Cancel</SecondaryButton>
-          <PrimaryButton onClick={() => setModalOpen(false)}>Save product</PrimaryButton>
+          <PrimaryButton onClick={submitForm} loading={createMutation.isPending || updateMutation.isPending}>
+            {editing ? "Save changes" : "Save product"}
+          </PrimaryButton>
         </>
       }>
         <div className="flex flex-col gap-4">
-          <Input label="Product name" />
+          <Input label="Product name" value={form.name || ""} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          {!editing && (
+            <textarea
+              placeholder="Description"
+              value={form.description || ""}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              className="w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm"
+              rows={3}
+            />
+          )}
+          {!editing && (
+            <div className="grid grid-cols-2 gap-4">
+              <Select label="Category" value={form.categoryId} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))} options={categories.map((c) => ({ value: c.id, label: c.name }))} />
+              <Select label="Brand" value={form.brandId} onChange={(e) => setForm((f) => ({ ...f, brandId: e.target.value }))} options={brands.map((b) => ({ value: b.id, label: b.name }))} />
+            </div>
+          )}
+          {!editing && (
+            <Select label="Store" value={form.storeId} onChange={(e) => setForm((f) => ({ ...f, storeId: e.target.value }))} options={stores.map((s) => ({ value: s.id, label: s.name }))} />
+          )}
           <div className="grid grid-cols-2 gap-4">
-            <Select label="Category" options={CATEGORIES.map((c) => ({ value: c.name, label: c.name }))} />
-            <Input label="Brand" />
+            <Input label="Price" type="number" leftIcon={DollarSign} value={form.price ?? ""} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} />
+            <Input label="Stock quantity" type="number" value={form.stock ?? ""} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Input label="Price" type="number" leftIcon={DollarSign} />
-            <Input label="Stock quantity" type="number" />
+          <Select label="Status" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))} options={PRODUCT_STATUSES.map((s) => ({ value: s, label: s }))} />
+
+          <div>
+            <p className="mb-2 text-sm font-medium text-[var(--text-primary)]">Homepage merchandising</p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Checkbox label="Featured" checked={!!form.isFeatured} onChange={(e) => setForm((f) => ({ ...f, isFeatured: e.target.checked }))} />
+              <Checkbox label="Trending" checked={!!form.isTrending} onChange={(e) => setForm((f) => ({ ...f, isTrending: e.target.checked }))} />
+              <Checkbox label="Best Seller" checked={!!form.isBestSeller} onChange={(e) => setForm((f) => ({ ...f, isBestSeller: e.target.checked }))} />
+              <Checkbox label="New" checked={!!form.isNew} onChange={(e) => setForm((f) => ({ ...f, isNew: e.target.checked }))} />
+            </div>
+            <div className="mt-3">
+              <Input label="Badge text (optional)" placeholder="e.g. Limited Edition" value={form.badge || ""} onChange={(e) => setForm((f) => ({ ...f, badge: e.target.value }))} />
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-sm font-medium text-[var(--text-primary)]">Animation</p>
+            <Checkbox
+              label="Enable animation for this product"
+              checked={form.animationOverride?.enabled !== false}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, animationOverride: { ...f.animationOverride, enabled: e.target.checked } }))
+              }
+            />
+            {form.animationOverride?.enabled !== false && (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <Select
+                  label="Type override (optional)"
+                  value={form.animationOverride?.type || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, animationOverride: { ...f.animationOverride, type: e.target.value || undefined } }))}
+                  options={[{ value: "", label: "Inherit global" }, ...["float", "breathe", "tilt", "glow", "shine", "pulse", "none"].map((v) => ({ value: v, label: v }))]}
+                />
+                <Select
+                  label="Intensity override (optional)"
+                  value={form.animationOverride?.intensity || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, animationOverride: { ...f.animationOverride, intensity: e.target.value || undefined } }))}
+                  options={[{ value: "", label: "Inherit global" }, ...["subtle", "normal", "strong"].map((v) => ({ value: v, label: v }))]}
+                />
+                <Checkbox
+                  label="Highlight in Hero"
+                  checked={!!form.animationOverride?.heroHighlight}
+                  onChange={(e) => setForm((f) => ({ ...f, animationOverride: { ...f.animationOverride, heroHighlight: e.target.checked } }))}
+                />
+                <Checkbox
+                  label="Highlight on Homepage"
+                  checked={!!form.animationOverride?.homepageHighlight}
+                  onChange={(e) => setForm((f) => ({ ...f, animationOverride: { ...f.animationOverride, homepageHighlight: e.target.checked } }))}
+                />
+              </div>
+            )}
+          </div>
+
+          <div>
+            <p className="mb-2 text-sm font-medium text-[var(--text-primary)]">Images</p>
+            <div className="flex flex-wrap gap-2">
+              {(form.images || []).map((url) => (
+                <div key={url} className="relative h-16 w-16 overflow-hidden rounded-lg border border-[var(--border)]">
+                  <img src={url} alt="" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, images: f.images.filter((u) => u !== url) }))}
+                    className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-lg border border-dashed border-[var(--border)] text-xs text-[var(--text-muted)]">
+                {uploading ? "…" : <Plus className="h-4 w-4" />}
+                <input type="file" accept="image/*" multiple hidden onChange={(e) => handleImageUpload(e.target.files)} />
+              </label>
+            </div>
           </div>
         </div>
       </Modal>
@@ -551,6 +839,29 @@ function ProductsSection() {
 
 function CategoriesSection() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({ name: "", slug: "" });
+  const queryClient = useQueryClient();
+
+  const { data: categories = [], isLoading, isError, refetch } = useQuery({ queryKey: ["categories"], queryFn: categoriesApi.list });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["categories"] });
+
+  const createMutation = useMutation({ mutationFn: (payload) => categoriesApi.create(payload), onSuccess: () => { invalidate(); setModalOpen(false); } });
+  const updateMutation = useMutation({ mutationFn: ({ id, payload }) => categoriesApi.update(id, payload), onSuccess: () => { invalidate(); setModalOpen(false); } });
+  const removeMutation = useMutation({ mutationFn: (id) => categoriesApi.remove(id), onSuccess: invalidate });
+  const reorderMutation = useMutation({ mutationFn: (items) => categoriesApi.reorder(items), onSuccess: invalidate });
+
+  const move = (index, dir) => {
+    const next = [...categories];
+    const swap = index + dir;
+    if (swap < 0 || swap >= next.length) return;
+    [next[index], next[swap]] = [next[swap], next[index]];
+    reorderMutation.mutate(next.map((c, i) => ({ id: c.id, position: i })));
+  };
+
+  const openCreate = () => { setEditing(null); setForm({ name: "", slug: "" }); setModalOpen(true); };
+  const openEdit = (c) => { setEditing(c); setForm({ name: c.name, slug: c.slug }); setModalOpen(true); };
+  const submitForm = () => (editing ? updateMutation.mutate({ id: editing.id, payload: form }) : createMutation.mutate(form));
 
   return (
     <div>
@@ -558,38 +869,46 @@ function CategoriesSection() {
         eyebrow="Manage"
         title="Categories"
         description="Top-level groupings used across the storefront and filters."
-        action={<PrimaryButton leftIcon={Plus} onClick={() => setModalOpen(true)}>Add category</PrimaryButton>}
+        action={<PrimaryButton leftIcon={Plus} onClick={openCreate}>Add category</PrimaryButton>}
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {CATEGORIES.map((c) => (
-          <div key={c.id} className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-soft-sm">
-            <div className="flex items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-full bg-gold-400/12 text-gold-500">
-                <Tags className="size-4.5" />
-              </span>
-              <div>
-                <p className="text-sm font-medium text-[var(--text-primary)]">{c.name}</p>
-                <p className="text-xs text-[var(--text-muted)]">{c.count} products</p>
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading categories…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {categories.map((c, i) => (
+            <div key={c.id} className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-soft-sm">
+              <div className="flex items-center gap-3">
+                <span className="grid size-10 place-items-center rounded-full bg-gold-400/12 text-gold-500">
+                  <Tags className="size-4.5" />
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{c.name}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{c.productCount} products</p>
+                </div>
+              </div>
+              <div className="flex gap-1">
+                <IconButton icon={ArrowUp} size="sm" aria-label="Move up" onClick={() => move(i, -1)} />
+                <IconButton icon={ArrowDown} size="sm" aria-label="Move down" onClick={() => move(i, 1)} />
+                <IconButton icon={Pencil} size="sm" aria-label="Edit category" onClick={() => openEdit(c)} />
+                <IconButton icon={Trash2} size="sm" aria-label="Delete category" onClick={() => removeMutation.mutate(c.id)} />
               </div>
             </div>
-            <div className="flex gap-1">
-              <IconButton icon={Pencil} size="sm" aria-label="Edit category" />
-              <IconButton icon={Trash2} size="sm" aria-label="Delete category" />
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add category" footer={
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit category" : "Add category"} footer={
         <>
           <SecondaryButton onClick={() => setModalOpen(false)}>Cancel</SecondaryButton>
-          <PrimaryButton onClick={() => setModalOpen(false)}>Save category</PrimaryButton>
+          <PrimaryButton onClick={submitForm}>{editing ? "Save changes" : "Save category"}</PrimaryButton>
         </>
       }>
         <div className="flex flex-col gap-4">
-          <Input label="Category name" />
-          <Input label="Slug" helperText="Used in the storefront URL." />
+          <Input label="Category name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          <Input label="Slug (optional)" helperText="Used in the storefront URL." value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} />
         </div>
       </Modal>
     </div>
@@ -600,6 +919,22 @@ function CategoriesSection() {
 
 function CouponsSection() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [form, setForm] = useState({ code: "", type: "percent", value: "", usageLimit: 100, expiresAt: "" });
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["admin-coupons"], queryFn: () => couponsApi.list({ limit: 50 }) });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-coupons"] });
+
+  const createMutation = useMutation({
+    mutationFn: (payload) => couponsApi.create(payload),
+    onSuccess: () => { invalidate(); setModalOpen(false); },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't create coupon", variant: "error" }),
+  });
+  const updateMutation = useMutation({ mutationFn: ({ id, payload }) => couponsApi.update(id, payload), onSuccess: invalidate });
+  const removeMutation = useMutation({ mutationFn: (id) => couponsApi.remove(id), onSuccess: invalidate });
+
+  const coupons = data?.items || [];
 
   return (
     <div>
@@ -610,55 +945,70 @@ function CouponsSection() {
         action={<PrimaryButton leftIcon={Plus} onClick={() => setModalOpen(true)}>Create coupon</PrimaryButton>}
       />
 
-      <TableShell>
-        <thead className="border-b border-[var(--border)]">
-          <tr><Th>Code</Th><Th>Type</Th><Th>Usage</Th><Th>Expires</Th><Th>Status</Th><Th className="text-right">Actions</Th></tr>
-        </thead>
-        <tbody className="divide-y divide-[var(--border)]">
-          {COUPONS.map((c) => (
-            <tr key={c.id}>
-              <Td className="font-medium tracking-wide">{c.code}</Td>
-              <Td className="text-[var(--text-muted)]">{c.type} · {c.value}</Td>
-              <Td>
-                <div className="flex items-center gap-2 w-36">
-                  <div className="h-1.5 flex-1 rounded-full bg-[var(--surface-inset)] overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-gold-400 to-gold-100"
-                      style={{ width: `${Math.min(100, (c.used / c.limit) * 100)}%` }}
-                    />
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading coupons…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : coupons.length === 0 ? (
+        <EmptyState icon={Ticket} title="No coupons yet" description="Create your first coupon code." />
+      ) : (
+        <TableShell>
+          <thead className="border-b border-[var(--border)]">
+            <tr><Th>Code</Th><Th>Type</Th><Th>Usage</Th><Th>Expires</Th><Th>Status</Th><Th className="text-right">Actions</Th></tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--border)]">
+            {coupons.map((c) => (
+              <tr key={c.id}>
+                <Td className="font-medium tracking-wide">{c.code}</Td>
+                <Td className="text-[var(--text-muted)]">
+                  {c.type} · {c.type === "percent" ? `${Number(c.value)}%` : c.type === "fixed" ? `${CURRENCY}${Number(c.value)}` : "—"}
+                </Td>
+                <Td>
+                  <div className="flex items-center gap-2 w-36">
+                    <div className="h-1.5 flex-1 rounded-full bg-[var(--surface-inset)] overflow-hidden">
+                      <div className="h-full rounded-full bg-gradient-to-r from-gold-400 to-gold-100" style={{ width: `${Math.min(100, (c.usageCount / c.usageLimit) * 100)}%` }} />
+                    </div>
+                    <span className="text-xs text-[var(--text-muted)] shrink-0">{c.usageCount}/{c.usageLimit}</span>
                   </div>
-                  <span className="text-xs text-[var(--text-muted)] shrink-0">{c.used}/{c.limit}</span>
-                </div>
-              </Td>
-              <Td className="text-[var(--text-muted)]">{c.expires}</Td>
-              <Td><Badge variant={c.status === "active" ? "success" : "neutral"}>{c.status === "active" ? "Active" : "Expired"}</Badge></Td>
-              <Td className="text-right">
-                <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
-                  <Dropdown.Item icon={Pencil}>Edit coupon</Dropdown.Item>
-                  <Dropdown.Separator />
-                  <Dropdown.Item icon={Trash2} destructive>Delete</Dropdown.Item>
-                </Dropdown>
-              </Td>
-            </tr>
-          ))}
-        </tbody>
-      </TableShell>
+                </Td>
+                <Td className="text-[var(--text-muted)]">{new Date(c.expiresAt).toLocaleDateString()}</Td>
+                <Td>
+                  <Badge variant={c.enabled && new Date(c.expiresAt) > new Date() ? "success" : "neutral"}>
+                    {c.enabled && new Date(c.expiresAt) > new Date() ? "Active" : "Inactive"}
+                  </Badge>
+                </Td>
+                <Td className="text-right">
+                  <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
+                    <Dropdown.Item icon={c.enabled ? Ban : CheckCircle2} onClick={() => updateMutation.mutate({ id: c.id, payload: { enabled: !c.enabled } })}>
+                      {c.enabled ? "Disable" : "Enable"}
+                    </Dropdown.Item>
+                    <Dropdown.Separator />
+                    <Dropdown.Item icon={Trash2} destructive onClick={() => removeMutation.mutate(c.id)}>Delete</Dropdown.Item>
+                  </Dropdown>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </TableShell>
+      )}
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Create coupon" footer={
         <>
           <SecondaryButton onClick={() => setModalOpen(false)}>Cancel</SecondaryButton>
-          <PrimaryButton onClick={() => setModalOpen(false)}>Create coupon</PrimaryButton>
+          <PrimaryButton onClick={() => createMutation.mutate({ ...form, value: Number(form.value), usageLimit: Number(form.usageLimit) })} loading={createMutation.isPending}>
+            Create coupon
+          </PrimaryButton>
         </>
       }>
         <div className="flex flex-col gap-4">
-          <Input label="Coupon code" placeholder="SUMMER20" />
+          <Input label="Coupon code" placeholder="SUMMER20" value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} />
           <div className="grid grid-cols-2 gap-4">
-            <Select label="Discount type" options={[{ value: "percent", label: "Percentage" }, { value: "fixed", label: "Fixed amount" }]} />
-            <Input label="Value" leftIcon={Percent} />
+            <Select label="Discount type" value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} options={[{ value: "percent", label: "Percentage" }, { value: "fixed", label: "Fixed amount" }, { value: "free_shipping", label: "Free shipping" }]} />
+            <Input label="Value" leftIcon={Percent} value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))} />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Usage limit" type="number" />
-            <Input label="Expires" type="date" />
+            <Input label="Usage limit" type="number" value={form.usageLimit} onChange={(e) => setForm((f) => ({ ...f, usageLimit: e.target.value }))} />
+            <Input label="Expires" type="date" value={form.expiresAt} onChange={(e) => setForm((f) => ({ ...f, expiresAt: e.target.value }))} />
           </div>
         </div>
       </Modal>
@@ -666,58 +1016,371 @@ function CouponsSection() {
   );
 }
 
-/* — Reports — */
+/* — Promotions / Offers — */
 
-function ReportsSection() {
+const PROMOTION_TYPES = ["flash_sale", "deal_of_day", "bogo", "percentage", "fixed", "category_discount", "brand_discount", "product_discount", "first_order", "festival"];
+
+function PromotionsSection() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", type: "flash_sale", value: "", startsAt: "", endsAt: "" });
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["admin-promotions"], queryFn: () => promotionsApi.list({ limit: 50 }) });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-promotions"] });
+
+  const createMutation = useMutation({
+    mutationFn: (payload) => promotionsApi.create(payload),
+    onSuccess: () => { invalidate(); setModalOpen(false); },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't create offer", variant: "error" }),
+  });
+  const updateMutation = useMutation({ mutationFn: ({ id, payload }) => promotionsApi.update(id, payload), onSuccess: invalidate });
+  const removeMutation = useMutation({ mutationFn: (id) => promotionsApi.remove(id), onSuccess: invalidate });
+
+  const promotions = data?.items || [];
+  const STATUS_VARIANT = { active: "success", scheduled: "warning", ended: "neutral", disabled: "neutral" };
 
   return (
     <div>
       <SectionTitle
-        eyebrow="Insights"
-        title="Reports"
-        description="Generate and download exportable reports for finance and ops."
-        action={<PrimaryButton leftIcon={Plus} onClick={() => setModalOpen(true)}>Generate report</PrimaryButton>}
+        eyebrow="Manage"
+        title="Offers"
+        description="Flash sales, deals of the day, and scoped discounts — status is always computed live."
+        action={<PrimaryButton leftIcon={Plus} onClick={() => setModalOpen(true)}>Create offer</PrimaryButton>}
       />
 
-      <div className="flex flex-col gap-3">
-        {REPORTS.map((r) => (
-          <div key={r.id} className="flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-soft-sm">
-            <div className="flex items-center gap-4">
-              <span className="grid size-11 place-items-center rounded-[var(--radius-sm)] bg-gold-400/12 text-gold-500">
-                <FileBarChart className="size-5" />
-              </span>
-              <div>
-                <p className="text-sm font-medium text-[var(--text-primary)]">{r.name}</p>
-                <p className="text-xs text-[var(--text-muted)]">{r.range} · Generated {r.generated}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Badge variant="neutral">{r.format}</Badge>
-              <OutlineButton size="sm" leftIcon={Download}>Download</OutlineButton>
-            </div>
-          </div>
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading offers…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : promotions.length === 0 ? (
+        <EmptyState icon={PercentIcon} title="No offers yet" description="Create your first promotional offer." />
+      ) : (
+        <TableShell>
+          <thead className="border-b border-[var(--border)]">
+            <tr><Th>Name</Th><Th>Type</Th><Th>Value</Th><Th>Window</Th><Th>Status</Th><Th className="text-right">Actions</Th></tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--border)]">
+            {promotions.map((p) => (
+              <tr key={p.id}>
+                <Td className="font-medium">{p.name}</Td>
+                <Td className="text-[var(--text-muted)]">{p.type.replace(/_/g, " ")}</Td>
+                <Td>{p.value != null ? `${p.value}${p.type === "fixed" ? CURRENCY : "%"}` : "—"}</Td>
+                <Td className="text-[var(--text-muted)] text-xs">
+                  {new Date(p.startsAt).toLocaleDateString()} – {new Date(p.endsAt).toLocaleDateString()}
+                </Td>
+                <Td><Badge variant={STATUS_VARIANT[p.status]}>{p.status}</Badge></Td>
+                <Td className="text-right">
+                  <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
+                    <Dropdown.Item icon={p.enabled ? Ban : CheckCircle2} onClick={() => updateMutation.mutate({ id: p.id, payload: { enabled: !p.enabled } })}>
+                      {p.enabled ? "Disable" : "Enable"}
+                    </Dropdown.Item>
+                    <Dropdown.Separator />
+                    <Dropdown.Item icon={Trash2} destructive onClick={() => removeMutation.mutate(p.id)}>Delete</Dropdown.Item>
+                  </Dropdown>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </TableShell>
+      )}
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Generate report" footer={
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Create offer" footer={
         <>
           <SecondaryButton onClick={() => setModalOpen(false)}>Cancel</SecondaryButton>
-          <PrimaryButton onClick={() => setModalOpen(false)}>Generate</PrimaryButton>
+          <PrimaryButton
+            onClick={() => createMutation.mutate({ ...form, value: form.value ? Number(form.value) : undefined })}
+            loading={createMutation.isPending}
+          >
+            Create offer
+          </PrimaryButton>
         </>
       }>
         <div className="flex flex-col gap-4">
-          <Select label="Report type" options={[
-            { value: "sales", label: "Sales report" },
-            { value: "inventory", label: "Inventory snapshot" },
-            { value: "customers", label: "Customer cohort" },
-            { value: "coupons", label: "Coupon performance" },
-          ]} />
+          <Input label="Offer name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          <Select label="Type" value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} options={PROMOTION_TYPES.map((t) => ({ value: t, label: t.replace(/_/g, " ") }))} />
+          <Input label="Value (% or flat amount, if applicable)" type="number" value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))} />
           <div className="grid grid-cols-2 gap-4">
-            <Input label="From" type="date" />
-            <Input label="To" type="date" />
+            <Input label="Starts" type="datetime-local" value={form.startsAt} onChange={(e) => setForm((f) => ({ ...f, startsAt: e.target.value }))} />
+            <Input label="Ends" type="datetime-local" value={form.endsAt} onChange={(e) => setForm((f) => ({ ...f, endsAt: e.target.value }))} />
           </div>
-          <Select label="Format" defaultValue="pdf" options={[{ value: "pdf", label: "PDF" }, { value: "xlsx", label: "XLSX" }]} />
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/* — Reviews — */
+
+function ReviewsSection() {
+  const [statusFilter, setStatusFilter] = useState("pending");
+  const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-reviews", { statusFilter, page }],
+    queryFn: () => adminApi.listReviews({ status: statusFilter, page, limit: PAGE_SIZE }),
+  });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-reviews"] });
+
+  const approveMutation = useMutation({ mutationFn: (id) => adminApi.approveReview(id), onSuccess: invalidate });
+  const rejectMutation = useMutation({ mutationFn: (id) => adminApi.rejectReview(id), onSuccess: invalidate });
+  const featureMutation = useMutation({ mutationFn: ({ id, isFeatured }) => adminApi.setReviewFeatured(id, isFeatured), onSuccess: invalidate });
+  const deleteMutation = useMutation({ mutationFn: (id) => adminApi.deleteReview(id), onSuccess: invalidate });
+
+  const reviews = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+
+  return (
+    <div>
+      <SectionTitle eyebrow="Manage" title="Reviews" description="Moderate customer reviews before they go live." />
+
+      <Toolbar search="" onSearch={() => {}}>
+        {["pending", "approved", "rejected", "all"].map((s) => (
+          <Chip key={s} selected={statusFilter === s} onClick={() => { setStatusFilter(s); setPage(1); }}>
+            {s[0].toUpperCase() + s.slice(1)}
+          </Chip>
+        ))}
+      </Toolbar>
+
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading reviews…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : reviews.length === 0 ? (
+        <EmptyState icon={Star} title="No reviews here" description="Nothing to moderate in this filter." />
+      ) : (
+        <div className="flex flex-col gap-4">
+          {reviews.map((r) => (
+            <div key={r.id} className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-soft-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{r.reviewer}</p>
+                    <div className="flex">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} className={cn("size-3.5", i < r.rating ? "fill-amber-400 text-amber-400" : "text-neutral-300")} />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-xs text-[var(--text-muted)]">on {r.productName}</p>
+                  {r.title && <p className="mt-2 text-sm font-medium">{r.title}</p>}
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">{r.body}</p>
+                </div>
+                <Badge variant={r.status === "approved" ? "success" : r.status === "rejected" ? "error" : "warning"}>{r.status}</Badge>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                {r.status !== "approved" && (
+                  <OutlineButton size="sm" leftIcon={CheckCircle2} onClick={() => approveMutation.mutate(r.id)}>Approve</OutlineButton>
+                )}
+                {r.status !== "rejected" && (
+                  <OutlineButton size="sm" leftIcon={Ban} onClick={() => rejectMutation.mutate(r.id)}>Reject</OutlineButton>
+                )}
+                <OutlineButton size="sm" leftIcon={Star} onClick={() => featureMutation.mutate({ id: r.id, isFeatured: !r.isFeatured })}>
+                  {r.isFeatured ? "Unfeature" : "Feature"}
+                </OutlineButton>
+                <OutlineButton size="sm" leftIcon={Trash2} onClick={() => deleteMutation.mutate(r.id)}>Delete</OutlineButton>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-6"><Pagination page={page} totalPages={totalPages} onChange={setPage} /></div>
+    </div>
+  );
+}
+
+/* — Homepage CMS — */
+
+const SECTION_TYPES = ["hero_banner", "slider", "categories", "featured_products", "trending_products", "best_sellers", "flash_sale", "collections", "brands", "testimonials", "announcement", "ad_banner", "custom"];
+
+const CONFIGURABLE_SECTION_TYPES = new Set(["hero_banner", "announcement", "ad_banner"]);
+
+/** Formats a Date/ISO-string for a <input type="datetime-local"> value, or "" if unset. */
+function toDatetimeLocal(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function HomepageCmsSection() {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({ type: "announcement", title: "", config: {}, startsAt: "", endsAt: "" });
+  const [heroUploading, setHeroUploading] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: sections = [], isLoading, isError, refetch } = useQuery({ queryKey: ["admin-homepage"], queryFn: homepageApi.listAll });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-homepage"] });
+
+  const createMutation = useMutation({ mutationFn: (payload) => homepageApi.create(payload), onSuccess: () => { invalidate(); setModalOpen(false); } });
+  const updateMutation = useMutation({ mutationFn: ({ id, payload }) => homepageApi.update(id, payload), onSuccess: () => { invalidate(); setModalOpen(false); } });
+  const removeMutation = useMutation({ mutationFn: (id) => homepageApi.remove(id), onSuccess: invalidate });
+  const reorderMutation = useMutation({ mutationFn: (items) => homepageApi.reorder(items), onSuccess: invalidate });
+
+  const move = (index, dir) => {
+    const next = [...sections];
+    const swap = index + dir;
+    if (swap < 0 || swap >= next.length) return;
+    [next[index], next[swap]] = [next[swap], next[index]];
+    reorderMutation.mutate(next.map((s, i) => ({ id: s.id, position: i })));
+  };
+
+  const openCreate = () => { setEditing(null); setForm({ type: "announcement", title: "", config: {}, startsAt: "", endsAt: "" }); setModalOpen(true); };
+  const openEdit = (s) => {
+    setEditing(s);
+    setForm({
+      type: s.type,
+      title: s.title || "",
+      config: s.config || {},
+      startsAt: toDatetimeLocal(s.startsAt),
+      endsAt: toDatetimeLocal(s.endsAt),
+    });
+    setModalOpen(true);
+  };
+  const submitForm = () => {
+    const payload = {
+      title: form.title,
+      config: form.config,
+      startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
+      endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
+    };
+    if (editing) updateMutation.mutate({ id: editing.id, payload });
+    else createMutation.mutate({ ...payload, type: form.type });
+  };
+  const setConfig = (key, value) => setForm((f) => ({ ...f, config: { ...f.config, [key]: value } }));
+
+  const handleHeroImageUpload = async (files) => {
+    if (!files.length) return;
+    setHeroUploading(true);
+    try {
+      const { urls } = await uploadsApi.uploadImages(Array.from(files));
+      setConfig("backgroundImage", resolveMediaUrl(urls[0]));
+    } catch {
+      toast({ title: "Image upload failed", variant: "error" });
+    } finally {
+      setHeroUploading(false);
+    }
+  };
+
+  return (
+    <div>
+      <SectionTitle
+        eyebrow="Manage"
+        title="Homepage CMS"
+        description="Control which merchandising sections appear on the homepage, their order, visibility, and content."
+        action={<PrimaryButton leftIcon={Plus} onClick={openCreate}>Add section</PrimaryButton>}
+      />
+
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading sections…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : sections.length === 0 ? (
+        <EmptyState icon={Layout} title="No sections configured" description="Add a section to control the homepage." />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {sections.map((s, i) => (
+            <div key={s.id} className="flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-soft-sm">
+              <div className="flex items-center gap-4">
+                <span className="grid size-10 place-items-center rounded-[var(--radius-sm)] bg-gold-400/12 text-gold-500">
+                  <Layout className="size-4.5" />
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{s.title || s.type.replace(/_/g, " ")}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{s.type.replace(/_/g, " ")}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant={s.enabled ? "success" : "neutral"}>{s.enabled ? "Enabled" : "Disabled"}</Badge>
+                <IconButton icon={ArrowUp} size="sm" aria-label="Move up" onClick={() => move(i, -1)} />
+                <IconButton icon={ArrowDown} size="sm" aria-label="Move down" onClick={() => move(i, 1)} />
+                <IconButton icon={Pencil} size="sm" aria-label="Edit" onClick={() => openEdit(s)} />
+                <IconButton icon={s.enabled ? Ban : CheckCircle2} size="sm" aria-label="Toggle" onClick={() => updateMutation.mutate({ id: s.id, payload: { enabled: !s.enabled } })} />
+                <IconButton icon={Trash2} size="sm" aria-label="Remove" onClick={() => removeMutation.mutate(s.id)} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit section" : "Add homepage section"} footer={
+        <>
+          <SecondaryButton onClick={() => setModalOpen(false)}>Cancel</SecondaryButton>
+          <PrimaryButton onClick={submitForm} loading={createMutation.isPending || updateMutation.isPending}>
+            {editing ? "Save changes" : "Add section"}
+          </PrimaryButton>
+        </>
+      }>
+        <div className="flex flex-col gap-4">
+          {!editing && (
+            <Select label="Section type" value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value, config: {} }))} options={SECTION_TYPES.map((t) => ({ value: t, label: t.replace(/_/g, " ") }))} />
+          )}
+          <Input label="Title (optional)" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
+
+          {form.type === "announcement" && (
+            <>
+              <Input label="Announcement text" value={form.config.text || ""} onChange={(e) => setConfig("text", e.target.value)} />
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="Link (optional)" value={form.config.link || ""} onChange={(e) => setConfig("link", e.target.value)} />
+                <Input label="Link label (optional)" value={form.config.linkLabel || ""} onChange={(e) => setConfig("linkLabel", e.target.value)} />
+              </div>
+            </>
+          )}
+          {form.type === "ad_banner" && (
+            <>
+              <Input label="Banner image URL" value={form.config.imageUrl || ""} onChange={(e) => setConfig("imageUrl", e.target.value)} />
+              <Input label="Link (optional)" value={form.config.link || ""} onChange={(e) => setConfig("link", e.target.value)} />
+            </>
+          )}
+          {form.type === "hero_banner" && (
+            <>
+              <Input label="Headline" value={form.config.headline || ""} onChange={(e) => setConfig("headline", e.target.value)} />
+              <Input label="Subheadline" value={form.config.subheadline || ""} onChange={(e) => setConfig("subheadline", e.target.value)} />
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="CTA text" value={form.config.ctaText || ""} onChange={(e) => setConfig("ctaText", e.target.value)} />
+                <Input label="CTA link" value={form.config.ctaLink || ""} onChange={(e) => setConfig("ctaLink", e.target.value)} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Background image</span>
+                {form.config.backgroundImage && (
+                  <img src={form.config.backgroundImage} alt="" className="h-28 w-full rounded-[var(--radius-md)] object-cover" />
+                )}
+                <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-xs font-medium">
+                  {heroUploading ? "Uploading…" : "Upload image"}
+                  <input type="file" accept="image/*" hidden disabled={heroUploading} onChange={(e) => handleHeroImageUpload(e.target.files)} />
+                </label>
+              </div>
+              <Input
+                label="Background video URL (optional)"
+                helperText="Takes priority over the image when set."
+                value={form.config.backgroundVideo || ""}
+                onChange={(e) => setConfig("backgroundVideo", e.target.value)}
+              />
+            </>
+          )}
+          {!CONFIGURABLE_SECTION_TYPES.has(form.type) && (
+            <p className="text-xs text-[var(--text-muted)]">This section pulls live data automatically — nothing else to configure.</p>
+          )}
+
+          <div className="grid grid-cols-2 gap-4 border-t border-[var(--border)] pt-4">
+            <Input
+              type="datetime-local"
+              label="Show from (optional)"
+              value={form.startsAt}
+              onChange={(e) => setForm((f) => ({ ...f, startsAt: e.target.value }))}
+            />
+            <Input
+              type="datetime-local"
+              label="Show until (optional)"
+              value={form.endsAt}
+              onChange={(e) => setForm((f) => ({ ...f, endsAt: e.target.value }))}
+            />
+          </div>
         </div>
       </Modal>
     </div>
@@ -727,22 +1390,31 @@ function ReportsSection() {
 /* — Analytics — */
 
 function AnalyticsSection() {
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["admin-analytics"], queryFn: () => adminApi.analytics() });
+
+  if (isLoading) return <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading analytics…</div>;
+  if (isError) return <ErrorNotice onRetry={refetch} />;
+
+  const overview = data?.overview || {};
+  const revenueTrend = data?.revenueTrend || [];
+  const topProducts = data?.topProducts || [];
+
   return (
     <div>
       <SectionTitle eyebrow="Insights" title="Analytics" description="Key performance indicators at a glance." />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        <StatCard label="Revenue (MTD)" value={`${CURRENCY}64,500`} icon={DollarSign} trend={{ direction: "up", value: "10.8%" }} />
-        <StatCard label="Orders (MTD)" value="602" icon={ShoppingCart} trend={{ direction: "up", value: "4.2%" }} />
-        <StatCard label="Avg. order value" value={`${CURRENCY}214`} icon={TrendingUp} trend={{ direction: "up", value: "1.9%" }} />
-        <StatCard label="Conversion rate" value="3.4%" icon={Percent} trend={{ direction: "down", value: "0.3%" }} />
+        <StatCard label="Total revenue" value={`${CURRENCY}${Number(overview.totalRevenue || 0).toLocaleString()}`} icon={DollarSign} />
+        <StatCard label="Total orders" value={overview.totalOrders || 0} icon={ShoppingCart} />
+        <StatCard label="Avg. order value" value={`${CURRENCY}${overview.avgOrderValue || 0}`} icon={TrendingUp} />
+        <StatCard label="Refund rate" value={`${overview.refundRate || 0}%`} icon={Percent} />
       </div>
 
       <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-soft-sm mb-8">
         <h3 className="text-[15px] font-medium text-[var(--text-primary)] mb-5">Revenue trend</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={REVENUE_TREND}>
+            <AreaChart data={revenueTrend}>
               <defs>
                 <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={CHART_GOLD} stopOpacity={0.35} />
@@ -752,7 +1424,7 @@ function AnalyticsSection() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis dataKey="month" stroke={CHART_INK} fontSize={12} tickLine={false} axisLine={false} />
               <YAxis stroke={CHART_INK} fontSize={12} tickLine={false} axisLine={false} width={48} />
-              <ChartTooltip contentStyle={{ borderRadius: 12, border: "1px solid var(--border)", fontSize: 13 }} formatter={(v) => [`${CURRENCY}${v.toLocaleString()}`, "Revenue"]} />
+              <ChartTooltip contentStyle={{ borderRadius: 12, border: "1px solid var(--border)", fontSize: 13 }} formatter={(v) => [`${CURRENCY}${Number(v).toLocaleString()}`, "Revenue"]} />
               <Area type="monotone" dataKey="revenue" stroke={CHART_GOLD} strokeWidth={2.5} fill="url(#revenueFill)" />
             </AreaChart>
           </ResponsiveContainer>
@@ -761,21 +1433,25 @@ function AnalyticsSection() {
 
       <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] shadow-soft-sm">
         <div className="p-6 pb-0"><h3 className="text-[15px] font-medium text-[var(--text-primary)] mb-1">Top products</h3></div>
-        <TableShell>
-          <thead className="border-b border-[var(--border)]">
-            <tr><Th>Product</Th><Th>Category</Th><Th>Units sold</Th><Th className="text-right">Revenue</Th></tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--border)]">
-            {ADMIN_PRODUCTS.slice(0, 4).map((p, i) => (
-              <tr key={p.id}>
-                <Td className="font-medium">{p.name}</Td>
-                <Td className="text-[var(--text-muted)]">{p.category}</Td>
-                <Td>{(80 - i * 12)}</Td>
-                <Td className="text-right">{CURRENCY}{((80 - i * 12) * p.price).toLocaleString()}</Td>
-              </tr>
-            ))}
-          </tbody>
-        </TableShell>
+        {topProducts.length === 0 ? (
+          <div className="p-6 text-sm text-[var(--text-muted)]">No sales data yet.</div>
+        ) : (
+          <TableShell>
+            <thead className="border-b border-[var(--border)]">
+              <tr><Th>Product</Th><Th>Category</Th><Th>Units sold</Th><Th className="text-right">Revenue</Th></tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border)]">
+              {topProducts.map((p) => (
+                <tr key={p.id}>
+                  <Td className="font-medium">{p.name}</Td>
+                  <Td className="text-[var(--text-muted)]">{p.category}</Td>
+                  <Td>{p.unitsSold}</Td>
+                  <Td className="text-right">{CURRENCY}{Number(p.revenue).toLocaleString()}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </TableShell>
+        )}
       </div>
     </div>
   );
@@ -784,6 +1460,15 @@ function AnalyticsSection() {
 /* — Charts — */
 
 function ChartsSection() {
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["admin-analytics"], queryFn: () => adminApi.analytics() });
+
+  if (isLoading) return <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading charts…</div>;
+  if (isError) return <ErrorNotice onRetry={refetch} />;
+
+  const ordersByCategory = data?.ordersByCategory || [];
+  const paymentSplit = data?.paymentSplit || [];
+  const customerTrend = data?.customerTrend || [];
+
   return (
     <div>
       <SectionTitle eyebrow="Insights" title="Charts" description="Visual breakdowns across orders, payments, and customers." />
@@ -791,7 +1476,7 @@ function ChartsSection() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ChartCard title="Orders by category">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={ORDERS_BY_CATEGORY}>
+            <BarChart data={ordersByCategory}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis dataKey="category" stroke={CHART_INK} fontSize={11} tickLine={false} axisLine={false} />
               <YAxis stroke={CHART_INK} fontSize={12} tickLine={false} axisLine={false} width={36} />
@@ -804,8 +1489,8 @@ function ChartsSection() {
         <ChartCard title="Payment method split">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={PAYMENT_SPLIT} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={3}>
-                {PAYMENT_SPLIT.map((entry, i) => <Cell key={entry.name} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+              <Pie data={paymentSplit} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={3}>
+                {paymentSplit.map((entry, i) => <Cell key={entry.name} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
               </Pie>
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
               <ChartTooltip contentStyle={{ borderRadius: 12, border: "1px solid var(--border)", fontSize: 13 }} formatter={(v) => `${v}%`} />
@@ -815,7 +1500,7 @@ function ChartsSection() {
 
         <ChartCard title="New vs. returning customers" span>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={CUSTOMER_TREND}>
+            <LineChart data={customerTrend}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis dataKey="month" stroke={CHART_INK} fontSize={12} tickLine={false} axisLine={false} />
               <YAxis stroke={CHART_INK} fontSize={12} tickLine={false} axisLine={false} width={40} />
@@ -840,54 +1525,345 @@ function ChartCard({ title, children, span }) {
   );
 }
 
+/* — Store Settings — */
+
+const FEATURE_FLAG_LABELS = {
+  wishlist: "Wishlist",
+  reviews: "Reviews",
+  coupons: "Coupons",
+  flashSale: "Flash Sale",
+  cod: "Cash on Delivery",
+  loyaltyPoints: "Loyalty Points",
+  referrals: "Referrals",
+  guestCheckout: "Guest Checkout",
+  sellerCoupons: "Seller Coupons",
+  emailNotifications: "Email Notifications",
+  pushNotifications: "Push Notifications",
+};
+
+const PRESET_LABELS = {
+  apple: "Apple",
+  nike: "Nike",
+  samsung: "Samsung",
+  luxury: "Luxury",
+  minimal: "Minimal",
+  gaming: "Gaming",
+  glass: "Glass",
+  neon: "Neon",
+  modern: "Modern",
+  corporate: "Corporate",
+};
+
+function SettingsSection() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [form, setForm] = useState(null);
+
+  const { data: settings, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-settings"],
+    queryFn: settingsApi.getForAdmin,
+  });
+
+  useEffect(() => {
+    if (settings && !form) setForm(settings);
+  }, [settings, form]);
+
+  const current = form || settings;
+
+  const updateMutation = useMutation({
+    mutationFn: (payload) => settingsApi.update(payload),
+    onSuccess: (s) => { setForm(s); queryClient.invalidateQueries({ queryKey: ["admin-settings"] }); toast({ title: "Settings saved", variant: "success" }); },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't save settings", variant: "error" }),
+  });
+
+  if (isLoading || !current) return <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading settings…</div>;
+  if (isError) return <ErrorNotice onRetry={refetch} />;
+
+  const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+  const setFlag = (key, value) => setForm((f) => ({ ...f, featureFlags: { ...f.featureFlags, [key]: value } }));
+  const currentAnim = { ...DEFAULT_ANIMATION_CONFIG, ...(current.animationConfig || {}) };
+  const setAnim = (key, value) => setForm((f) => ({ ...f, animationConfig: { ...DEFAULT_ANIMATION_CONFIG, ...f.animationConfig, [key]: value } }));
+  const applyPreset = (presetName) =>
+    setForm((f) => ({ ...f, animationConfig: { preset: presetName, ...ANIMATION_PRESETS[presetName] } }));
+
+  return (
+    <div>
+      <SectionTitle eyebrow="System" title="Store Settings" description="Everything here is editable without a code change." />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-soft-sm">
+          <h3 className="mb-4 text-[15px] font-medium">Store info</h3>
+          <div className="flex flex-col gap-4">
+            <Input label="Store name" value={current.storeName || ""} onChange={(e) => set("storeName", e.target.value)} />
+            <Input label="Currency" value={current.currency || ""} onChange={(e) => set("currency", e.target.value)} />
+            <Input label="Contact email" value={current.contactEmail || ""} onChange={(e) => set("contactEmail", e.target.value)} />
+            <Input label="Contact phone" value={current.contactPhone || ""} onChange={(e) => set("contactPhone", e.target.value)} />
+          </div>
+        </div>
+
+        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-soft-sm">
+          <h3 className="mb-4 text-[15px] font-medium">Business rules</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Tax %" type="number" value={current.taxPercent ?? ""} onChange={(e) => set("taxPercent", e.target.value)} />
+            <Input label="Platform commission %" type="number" value={current.platformCommissionPercent ?? ""} onChange={(e) => set("platformCommissionPercent", e.target.value)} />
+            <Input label="Default shipping" type="number" value={current.defaultShippingCost ?? ""} onChange={(e) => set("defaultShippingCost", e.target.value)} />
+            <Input label="Free shipping over" type="number" value={current.freeShippingThreshold ?? ""} onChange={(e) => set("freeShippingThreshold", e.target.value)} />
+            <Input label="COD charge" type="number" value={current.codCharge ?? ""} onChange={(e) => set("codCharge", e.target.value)} />
+            <Input label="Min order value" type="number" value={current.minOrderValue ?? ""} onChange={(e) => set("minOrderValue", e.target.value)} />
+            <Input label="Return window (days)" type="number" value={current.returnWindowDays ?? ""} onChange={(e) => set("returnWindowDays", e.target.value)} />
+            <Input label="Exchange window (days)" type="number" value={current.exchangeWindowDays ?? ""} onChange={(e) => set("exchangeWindowDays", e.target.value)} />
+            <Input label="Cancellation window (hrs)" type="number" value={current.cancellationWindowHours ?? ""} onChange={(e) => set("cancellationWindowHours", e.target.value)} />
+            <Input label="Loyalty points per unit" type="number" value={current.loyaltyPointsPerUnit ?? ""} onChange={(e) => set("loyaltyPointsPerUnit", e.target.value)} />
+            <Input label="Referral bonus" type="number" value={current.referralBonusAmount ?? ""} onChange={(e) => set("referralBonusAmount", e.target.value)} />
+          </div>
+        </div>
+
+        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-soft-sm lg:col-span-2">
+          <h3 className="mb-4 text-[15px] font-medium">Feature flags</h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {Object.entries(FEATURE_FLAG_LABELS).map(([key, label]) => (
+              <Checkbox
+                key={key}
+                label={label}
+                checked={current.featureFlags?.[key] !== false}
+                onChange={(e) => setFlag(key, e.target.checked)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-soft-sm lg:col-span-2">
+          <h3 className="mb-1 text-[15px] font-medium">Animation &amp; Design</h3>
+          <p className="mb-4 text-xs text-[var(--text-muted)]">
+            Controls the premium animation preset applied to every product and category card storefront-wide.
+            Individual products can still override this from their own edit form.
+          </p>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_260px]">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <Select
+                label="Preset"
+                value={currentAnim.preset}
+                onChange={(e) => applyPreset(e.target.value)}
+                options={Object.entries(PRESET_LABELS).map(([value, label]) => ({ value, label }))}
+              />
+              <Select
+                label="Speed"
+                value={currentAnim.speed}
+                onChange={(e) => setAnim("speed", e.target.value)}
+                options={["slow", "normal", "fast"].map((v) => ({ value: v, label: v }))}
+              />
+              <Input
+                label="Duration (s)"
+                type="number"
+                step="0.1"
+                min="0.1"
+                max="3"
+                value={currentAnim.duration}
+                onChange={(e) => setAnim("duration", Number(e.target.value))}
+              />
+              <Select
+                label="Intensity"
+                value={currentAnim.intensity}
+                onChange={(e) => setAnim("intensity", e.target.value)}
+                options={["subtle", "normal", "strong"].map((v) => ({ value: v, label: v }))}
+              />
+              <Select
+                label="Hover animation"
+                value={currentAnim.hover}
+                onChange={(e) => setAnim("hover", e.target.value)}
+                options={["lift", "tilt", "zoom", "glow", "none"].map((v) => ({ value: v, label: v }))}
+              />
+              <Select
+                label="Idle animation"
+                value={currentAnim.idle}
+                onChange={(e) => setAnim("idle", e.target.value)}
+                options={["float", "breathe", "pulse", "none"].map((v) => ({ value: v, label: v }))}
+              />
+              <Select
+                label="Shadow"
+                value={currentAnim.shadow}
+                onChange={(e) => setAnim("shadow", e.target.value)}
+                options={["none", "soft", "medium", "strong"].map((v) => ({ value: v, label: v }))}
+              />
+              <Select
+                label="Border radius"
+                value={currentAnim.borderRadius}
+                onChange={(e) => setAnim("borderRadius", e.target.value)}
+                options={["sharp", "soft", "rounded", "pill"].map((v) => ({ value: v, label: v }))}
+              />
+              <Select
+                label="Card style"
+                value={currentAnim.cardStyle}
+                onChange={(e) => setAnim("cardStyle", e.target.value)}
+                options={["flat", "elevated", "glass", "bordered"].map((v) => ({ value: v, label: v }))}
+              />
+              <Input
+                label="Stagger delay (s)"
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                value={currentAnim.delay}
+                onChange={(e) => setAnim("delay", Number(e.target.value))}
+              />
+              <Checkbox label="Glow" checked={!!currentAnim.glow} onChange={(e) => setAnim("glow", e.target.checked)} />
+              <Checkbox label="Loop idle animation" checked={!!currentAnim.loop} onChange={(e) => setAnim("loop", e.target.checked)} />
+            </div>
+
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Live preview</span>
+              <AnimatedCard settings={currentAnim} disableEntrance className="w-full max-w-[220px] p-6">
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <div className="grid size-16 place-items-center rounded-2xl bg-gradient-to-br from-gold-400 to-amber-600 text-2xl font-semibold text-white">
+                    V
+                  </div>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">Sample Product</p>
+                  <p className="text-xs text-[var(--text-muted)]">Hover to preview</p>
+                </div>
+              </AnimatedCard>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-soft-sm lg:col-span-2">
+          <h3 className="mb-4 text-[15px] font-medium">Policies</h3>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <textarea placeholder="Return policy" value={current.returnPolicy || ""} onChange={(e) => set("returnPolicy", e.target.value)} rows={4} className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm" />
+            <textarea placeholder="Privacy policy" value={current.privacyPolicy || ""} onChange={(e) => set("privacyPolicy", e.target.value)} rows={4} className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm" />
+            <textarea placeholder="Terms of service" value={current.termsOfService || ""} onChange={(e) => set("termsOfService", e.target.value)} rows={4} className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm" />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 flex justify-end">
+        <PrimaryButton onClick={() => updateMutation.mutate(form)} loading={updateMutation.isPending}>Save settings</PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
+/* — Roles & Permissions — */
+
+function PermissionsSection() {
+  const { role } = useAuth();
+  const queryClient = useQueryClient();
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["permissions"], queryFn: permissionsApi.getGrid, enabled: role === "superadmin" });
+
+  const bulkSetMutation = useMutation({
+    mutationFn: (items) => permissionsApi.bulkSet(items),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["permissions"] }),
+  });
+
+  if (role !== "superadmin") {
+    return <EmptyState icon={ShieldCheck} title="Super Admin only" description="Only the Super Admin account can configure role permissions." />;
+  }
+  if (isLoading) return <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading permissions…</div>;
+  if (isError) return <ErrorNotice onRetry={refetch} />;
+
+  const { permissions, grid } = data;
+
+  const toggle = (roleName, permission, allowed) => {
+    bulkSetMutation.mutate([{ role: roleName, permission, allowed }]);
+  };
+
+  return (
+    <div>
+      <SectionTitle eyebrow="System" title="Roles & Permissions" description="Configure exactly what each role can do — no code changes needed." />
+
+      <TableShell>
+        <thead className="border-b border-[var(--border)]">
+          <tr>
+            <Th>Permission</Th>
+            {grid.map((g) => <Th key={g.role} className="text-center">{g.role}</Th>)}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[var(--border)]">
+          {permissions.map((perm) => (
+            <tr key={perm}>
+              <Td className="font-medium">{perm.replace(/\./g, " › ")}</Td>
+              {grid.map((g) => (
+                <Td key={g.role} className="text-center">
+                  <input
+                    type="checkbox"
+                    checked={g.permissions[perm]}
+                    onChange={(e) => toggle(g.role, perm, e.target.checked)}
+                    className="size-4 accent-[var(--gold-500,#d8b36a)]"
+                  />
+                </Td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </TableShell>
+    </div>
+  );
+}
+
 /* — Activity Logs — */
 
 const SCOPE_META = {
   users: { label: "Users", variant: "neutral" },
   orders: { label: "Orders", variant: "gold" },
   products: { label: "Products", variant: "success" },
+  catalog: { label: "Catalog", variant: "success" },
   coupons: { label: "Coupons", variant: "warning" },
+  promotions: { label: "Offers", variant: "warning" },
+  settings: { label: "Settings", variant: "neutral" },
+  reviews: { label: "Reviews", variant: "gold" },
+  roles: { label: "Roles", variant: "error" },
+  homepage: { label: "Homepage", variant: "gold" },
   system: { label: "System", variant: "neutral" },
 };
 
 function ActivityLogsSection() {
   const [scope, setScope] = useState("all");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
-  const filtered = ACTIVITY_LOGS.filter(
-    (l) => (scope === "all" || l.scope === scope) && l.action.toLowerCase().includes(search.toLowerCase())
-  );
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-activity-logs", { scope, search, page }],
+    queryFn: () => adminApi.listActivityLogs({ scope, search: search || undefined, page, limit: PAGE_SIZE }),
+  });
+
+  const logs = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
 
   return (
     <div>
       <SectionTitle eyebrow="System" title="Activity Logs" description="A running audit trail of admin and system actions." />
 
-      <Toolbar search={search} onSearch={setSearch}>
-        {["all", "users", "orders", "products", "coupons", "system"].map((s) => (
-          <Chip key={s} selected={scope === s} onClick={() => setScope(s)}>
+      <Toolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }}>
+        {["all", ...Object.keys(SCOPE_META)].map((s) => (
+          <Chip key={s} selected={scope === s} onClick={() => { setScope(s); setPage(1); }}>
             {s === "all" ? "All" : SCOPE_META[s].label}
           </Chip>
         ))}
       </Toolbar>
 
-      {filtered.length === 0 ? (
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading activity…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : logs.length === 0 ? (
         <EmptyState icon={History} title="No matching activity" description="Try a different filter or search term." />
       ) : (
         <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] shadow-soft-sm divide-y divide-[var(--border)]">
-          {filtered.map((log) => (
+          {logs.map((log) => (
             <div key={log.id} className="flex items-center gap-4 p-5">
               <Avatar name={log.actor} size="sm" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-[var(--text-primary)]">
                   <span className="font-medium">{log.actor}</span> {log.action}
                 </p>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">{log.time}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">{new Date(log.createdAt).toLocaleString()}</p>
               </div>
-              <Badge variant={SCOPE_META[log.scope].variant}>{SCOPE_META[log.scope].label}</Badge>
+              <Badge variant={SCOPE_META[log.scope]?.variant || "neutral"}>{SCOPE_META[log.scope]?.label || log.scope}</Badge>
             </div>
           ))}
         </div>
       )}
+
+      <div className="mt-6"><Pagination page={page} totalPages={totalPages} onChange={setPage} /></div>
     </div>
   );
 }

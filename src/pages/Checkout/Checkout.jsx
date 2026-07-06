@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Lock,
@@ -7,6 +9,7 @@ import {
   Zap,
   CreditCard,
   Wallet,
+  Banknote,
   Tag,
   ChevronDown,
   CheckCircle2,
@@ -20,30 +23,14 @@ import { PrimaryButton, OutlineButton } from "../../components/ui/Button";
 import { Badge, LoadingSpinner } from "../../components/ui/Feedback";
 import { Breadcrumb } from "../../components/ui/Navigation";
 import { cn } from "../../lib/utils";
+import { useAuth } from "../../context/AuthContext";
+import { useCart } from "../../context/CartContext";
+import { addressesApi, ordersApi } from "../../api/orders";
+import { shippingApi, settingsApi } from "../../api/catalog";
+import { useDocumentTitle } from "../../lib/useDocumentTitle";
 
-/* — Sample data (wire up to real cart / API in production) — */
-const CART_ITEMS = [
-  { id: 1, name: "Aurora Pro Wireless Earbuds", variant: "Black · Standard", qty: 1, price: 178 },
-  { id: 2, name: "Nova Titanium Smartwatch", variant: "Titanium · 44mm", qty: 1, price: 890 },
-  { id: 3, name: "Meridian Mechanical Keyboard", variant: "Charcoal · Full-size", qty: 2, price: 145 },
-];
-
-const COUPONS = {
-  Veluntra10: 0.1,
-  WELCOME15: 0.15,
-};
-
-const DELIVERY_OPTIONS = [
-  { id: "standard", label: "Standard", eta: "5–7 business days", price: 0, icon: Truck },
-  { id: "express", label: "Express", eta: "2–3 business days", price: 18, icon: Zap },
-  { id: "nextday", label: "Next day", eta: "Arrives tomorrow", price: 32, icon: Zap },
-];
-
-const PAYMENT_OPTIONS = [
-  { id: "card", label: "Card", icon: CreditCard },
-  { id: "paypal", label: "PayPal", icon: Wallet },
-  { id: "applepay", label: "Apple Pay", icon: Wallet },
-];
+const ICON_BY_PAYMENT = { card: CreditCard, paypal: Wallet, applepay: Wallet, cod: Banknote };
+const LABEL_BY_PAYMENT = { card: "Card", paypal: "PayPal", applepay: "Apple Pay", cod: "Cash on Delivery" };
 
 const CURRENCY = "£";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -59,6 +46,7 @@ function formatExpiry(value) {
 }
 
 export default function Checkout() {
+  useDocumentTitle("Checkout");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState({
     firstName: "",
@@ -72,46 +60,59 @@ export default function Checkout() {
     phone: "",
   });
   const [saveInfo, setSaveInfo] = useState(true);
-  const [delivery, setDelivery] = useState("standard");
+  const [delivery, setDelivery] = useState(null);
   const [payment, setPayment] = useState("card");
   const [card, setCard] = useState({ number: "", name: "", expiry: "", cvc: "" });
 
   const [couponInput, setCouponInput] = useState("");
-  const [coupon, setCoupon] = useState(null);
-  const [couponError, setCouponError] = useState("");
-  const [applyingCoupon, setApplyingCoupon] = useState(false);
 
   const [errors, setErrors] = useState({});
-  const [placing, setPlacing] = useState(false);
-  const [orderPlaced, setOrderPlaced] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [placedOrder, setPlacedOrder] = useState(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
+
+  const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
+  const { cart, isLoading: cartLoading, applyCoupon: applyCartCoupon, removeCoupon: removeCartCoupon, couponError, refetchCart } = useCart();
+  const queryClient = useQueryClient();
+
+  const { data: shippingMethods = [] } = useQuery({ queryKey: ["shipping-methods"], queryFn: shippingApi.list });
+  const { data: settings } = useQuery({ queryKey: ["settings-public"], queryFn: settingsApi.getPublic });
+
+  useEffect(() => {
+    if (!delivery && shippingMethods.length) setDelivery(shippingMethods[0].id);
+  }, [shippingMethods, delivery]);
+
+  useEffect(() => {
+    if (isAuthenticated && user?.email) setEmail(user.email);
+  }, [isAuthenticated, user]);
 
   const setAddr = (field) => (e) => setAddress((a) => ({ ...a, [field]: e.target.value }));
 
-  /* — Pricing — */
-  const subtotal = useMemo(() => CART_ITEMS.reduce((sum, i) => sum + i.price * i.qty, 0), []);
-  const discount = coupon ? subtotal * coupon.percent : 0;
-  const deliveryCost = DELIVERY_OPTIONS.find((d) => d.id === delivery)?.price ?? 0;
-  const tax = Math.round((subtotal - discount) * 0.08 * 100) / 100;
-  const total = subtotal - discount + deliveryCost + tax;
+  const codEnabled = settings?.featureFlags?.cod !== false;
+  const paymentOptions = useMemo(
+    () => ["card", "paypal", "applepay", ...(codEnabled ? ["cod"] : [])],
+    [codEnabled]
+  );
 
-  /* — Coupon — */
+  /* — Pricing (subtotal/discount authoritative from the live cart; delivery/tax/COD are previews — the
+     server recomputes everything from scratch when the order is actually placed) — */
+  const subtotal = cart.subtotal;
+  const discount = cart.discount + (cart.promotionDiscount || 0);
+  const selectedShipping = shippingMethods.find((d) => d.id === delivery);
+  const isFreeShippingCoupon = cart.coupon?.type === "free_shipping";
+  const deliveryCost = isFreeShippingCoupon ? 0 : Number(selectedShipping?.price || 0);
+  const codCharge = payment === "cod" ? Number(settings?.codCharge || 0) : 0;
+  const taxPercent = settings ? Number(settings.taxPercent) : 0;
+  const tax = Math.round(Math.max(subtotal - discount, 0) * (taxPercent / 100) * 100) / 100;
+  const total = Math.max(subtotal - discount, 0) + deliveryCost + tax + codCharge;
+
+  /* — Coupon (delegates to the live cart — coupon validity/discount is always server-authoritative) — */
   const applyCoupon = () => {
-    const code = couponInput.trim().toUpperCase();
-    if (!code) return;
-    setApplyingCoupon(true);
-    setCouponError("");
-    setTimeout(() => {
-      if (COUPONS[code]) {
-        setCoupon({ code, percent: COUPONS[code] });
-        setCouponInput("");
-      } else {
-        setCouponError("This code isn't valid or has expired.");
-      }
-      setApplyingCoupon(false);
-    }, 500);
+    if (!couponInput.trim()) return;
+    applyCartCoupon(couponInput.trim()).then(() => setCouponInput(""));
   };
-  const removeCoupon = () => setCoupon(null);
+  const removeCoupon = () => removeCartCoupon();
 
   /* — Validation — */
   const validate = () => {
@@ -135,21 +136,59 @@ export default function Checkout() {
     return Object.keys(e).length === 0;
   };
 
+  const placeOrderMutation = useMutation({
+    mutationFn: async () => {
+      if (isAuthenticated) {
+        const newAddress = await addressesApi.create({ ...address, isDefault: saveInfo });
+        return ordersApi.create({ shippingAddressId: newAddress.id, shippingMethodId: delivery, paymentMethod: payment });
+      }
+      return ordersApi.create({
+        shippingMethodId: delivery,
+        paymentMethod: payment,
+        guestEmail: email,
+        guestName: `${address.firstName} ${address.lastName}`.trim(),
+        guestAddress: address,
+      });
+    },
+    onSuccess: (orders) => {
+      setPlacedOrder(orders[0]);
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      refetchCart();
+    },
+    onError: (err) => {
+      const message = err.response?.data?.error?.message || "Something went wrong placing your order. Please try again.";
+      setSubmitError(message);
+      document.getElementById("checkout-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    },
+  });
+
   const handlePlaceOrder = (e) => {
     e.preventDefault();
+    setSubmitError("");
     if (!validate()) {
       document.getElementById("checkout-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
-    setPlacing(true);
-    setTimeout(() => {
-      setPlacing(false);
-      setOrderPlaced(true);
-    }, 1400);
+    placeOrderMutation.mutate();
   };
 
-  if (orderPlaced) {
-    return <OrderConfirmation total={total} email={email} />;
+  const placing = placeOrderMutation.isPending;
+
+  if (placedOrder) {
+    return <OrderConfirmation order={placedOrder} email={email} />;
+  }
+
+  if (cartLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-muted)]">
+        <LoadingSpinner size="lg" label="Loading your order..." />
+      </div>
+    );
+  }
+
+  if (cart.items.length === 0) {
+    navigate("/cart", { replace: true });
+    return null;
   }
 
   return (
@@ -201,17 +240,18 @@ export default function Checkout() {
               className="overflow-hidden sm:hidden"
             >
               <OrderSummary
+                items={cart.items}
                 subtotal={subtotal}
                 discount={discount}
                 deliveryCost={deliveryCost}
+                codCharge={codCharge}
                 tax={tax}
                 total={total}
-                coupon={coupon}
+                coupon={cart.coupon}
                 couponInput={couponInput}
                 setCouponInput={setCouponInput}
                 applyCoupon={applyCoupon}
                 removeCoupon={removeCoupon}
-                applyingCoupon={applyingCoupon}
                 couponError={couponError}
                 className="mb-6"
               />
@@ -280,15 +320,15 @@ export default function Checkout() {
             <section>
               <SectionHeader step="03" title="Delivery method" icon={Truck} />
               <div className="flex flex-col gap-3">
-                {DELIVERY_OPTIONS.map((opt) => (
+                {shippingMethods.map((opt) => (
                   <OptionCard
                     key={opt.id}
                     selected={delivery === opt.id}
                     onClick={() => setDelivery(opt.id)}
-                    icon={opt.icon}
-                    title={opt.label}
-                    subtitle={opt.eta}
-                    trailing={opt.price === 0 ? "Free" : `${CURRENCY}${opt.price.toFixed(2)}`}
+                    icon={Number(opt.price) === 0 ? Truck : Zap}
+                    title={opt.name}
+                    subtitle={opt.description || `${opt.etaDays} business days`}
+                    trailing={Number(opt.price) === 0 ? "Free" : `${CURRENCY}${Number(opt.price).toFixed(2)}`}
                   />
                 ))}
               </div>
@@ -297,15 +337,15 @@ export default function Checkout() {
             {/* Payment */}
             <section>
               <SectionHeader step="04" title="Payment" icon={CreditCard} />
-              <div className="grid grid-cols-3 gap-3 mb-5">
-                {PAYMENT_OPTIONS.map((opt) => {
-                  const Icon = opt.icon;
-                  const selected = payment === opt.id;
+              <div className="grid grid-cols-2 gap-3 mb-5 sm:grid-cols-4">
+                {paymentOptions.map((id) => {
+                  const Icon = ICON_BY_PAYMENT[id];
+                  const selected = payment === id;
                   return (
                     <button
-                      key={opt.id}
+                      key={id}
                       type="button"
-                      onClick={() => setPayment(opt.id)}
+                      onClick={() => setPayment(id)}
                       className={cn(
                         "flex flex-col items-center justify-center gap-2 rounded-[var(--radius-md)] border p-4 transition-all",
                         selected
@@ -314,7 +354,7 @@ export default function Checkout() {
                       )}
                     >
                       <Icon className={cn("size-5", selected ? "text-gold-500" : "text-[var(--text-muted)]")} />
-                      <span className="text-xs font-medium">{opt.label}</span>
+                      <span className="text-xs font-medium">{LABEL_BY_PAYMENT[id]}</span>
                     </button>
                   );
                 })}
@@ -375,11 +415,19 @@ export default function Checkout() {
                     transition={{ duration: 0.2 }}
                     className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-inset)] p-4 text-sm text-[var(--text-muted)]"
                   >
-                    You'll be redirected to {payment === "paypal" ? "PayPal" : "Apple Pay"} to complete this payment securely after placing your order.
+                    {payment === "cod"
+                      ? `Pay in cash when your order arrives.${codCharge > 0 ? ` A ${CURRENCY}${codCharge.toFixed(2)} cash-on-delivery charge applies.` : ""}`
+                      : `You'll be redirected to ${LABEL_BY_PAYMENT[payment]} to complete this payment securely after placing your order.`}
                   </motion.div>
                 )}
               </AnimatePresence>
             </section>
+
+            {submitError && (
+              <p className="rounded-[var(--radius-md)] border border-error-500/30 bg-error-500/5 px-4 py-3 text-sm text-error-600">
+                {submitError}
+              </p>
+            )}
 
             {/* Desktop submit */}
             <div className="hidden lg:block">
@@ -396,17 +444,18 @@ export default function Checkout() {
           <div className="hidden sm:block">
             <div className="sticky top-8">
               <OrderSummary
+                items={cart.items}
                 subtotal={subtotal}
                 discount={discount}
                 deliveryCost={deliveryCost}
+                codCharge={codCharge}
                 tax={tax}
                 total={total}
-                coupon={coupon}
+                coupon={cart.coupon}
                 couponInput={couponInput}
                 setCouponInput={setCouponInput}
                 applyCoupon={applyCoupon}
                 removeCoupon={removeCoupon}
-                applyingCoupon={applyingCoupon}
                 couponError={couponError}
               />
             </div>
@@ -415,6 +464,11 @@ export default function Checkout() {
 
         {/* Mobile submit */}
         <div className="mt-8 lg:hidden">
+          {submitError && (
+            <p className="mb-3 rounded-[var(--radius-md)] border border-error-500/30 bg-error-500/5 px-4 py-3 text-sm text-error-600">
+              {submitError}
+            </p>
+          )}
           <PrimaryButton onClick={handlePlaceOrder} size="lg" fullWidth loading={placing} leftIcon={placing ? undefined : Lock}>
             {placing ? "Placing your order…" : `Pay ${CURRENCY}${total.toFixed(2)}`}
           </PrimaryButton>
@@ -474,9 +528,11 @@ function OptionCard({ selected, onClick, icon: Icon, title, subtitle, trailing }
 }
 
 function OrderSummary({
+  items,
   subtotal,
   discount,
   deliveryCost,
+  codCharge,
   tax,
   total,
   coupon,
@@ -484,7 +540,6 @@ function OrderSummary({
   setCouponInput,
   applyCoupon,
   removeCoupon,
-  applyingCoupon,
   couponError,
   className,
 }) {
@@ -493,23 +548,30 @@ function OrderSummary({
       <h3 className="mb-5 text-[15px] font-medium text-[var(--text-primary)]">Order summary</h3>
 
       <ul className="flex flex-col gap-4 mb-5">
-        {CART_ITEMS.map((item) => (
-          <li key={item.id} className="flex items-center gap-3">
-            <span
-              className="flex size-14 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-inset)] text-lg font-semibold text-gold-500/40"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              {item.name.charAt(0)}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.name}</p>
-              <p className="text-xs text-[var(--text-muted)]">{item.variant} · Qty {item.qty}</p>
-            </div>
-            <span className="text-sm text-[var(--text-primary)] shrink-0">
-              {CURRENCY}{(item.price * item.qty).toLocaleString()}
-            </span>
-          </li>
-        ))}
+        {items.map((item) => {
+          const variantLabel = item.variant && Object.keys(item.variant).length
+            ? Object.values(item.variant).join(" · ")
+            : null;
+          return (
+            <li key={item.id} className="flex items-center gap-3">
+              <span
+                className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-inset)] text-lg font-semibold text-gold-500/40"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                {item.image ? <img src={item.image} alt={item.name} className="h-full w-full object-cover" /> : item.name.charAt(0)}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.name}</p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {variantLabel ? `${variantLabel} · ` : ""}Qty {item.quantity}
+                </p>
+              </div>
+              <span className="text-sm text-[var(--text-primary)] shrink-0">
+                {CURRENCY}{item.lineTotal.toLocaleString()}
+              </span>
+            </li>
+          );
+        })}
       </ul>
 
       {/* Coupon */}
@@ -534,8 +596,8 @@ function OrderSummary({
                 leftIcon={Tag}
               />
             </div>
-            <OutlineButton onClick={applyCoupon} disabled={!couponInput.trim() || applyingCoupon}>
-              {applyingCoupon ? <LoadingSpinner size="sm" /> : "Apply"}
+            <OutlineButton onClick={applyCoupon} disabled={!couponInput.trim()}>
+              Apply
             </OutlineButton>
           </div>
         )}
@@ -545,10 +607,11 @@ function OrderSummary({
       <div className="flex flex-col gap-2.5 border-t border-[var(--border)] pt-4 text-sm">
         <Row label="Subtotal" value={`${CURRENCY}${subtotal.toLocaleString()}`} />
         {discount > 0 && (
-          <Row label={`Discount (${Math.round(coupon.percent * 100)}%)`} value={`-${CURRENCY}${discount.toFixed(2)}`} valueClass="text-success-600" />
+          <Row label="Discount" value={`-${CURRENCY}${discount.toFixed(2)}`} valueClass="text-success-600" />
         )}
         <Row label="Delivery" value={deliveryCost === 0 ? "Free" : `${CURRENCY}${deliveryCost.toFixed(2)}`} />
         <Row label="Tax (est.)" value={`${CURRENCY}${tax.toFixed(2)}`} />
+        {codCharge > 0 && <Row label="Cash on delivery charge" value={`${CURRENCY}${codCharge.toFixed(2)}`} />}
       </div>
       <div className="mt-4 flex items-center justify-between border-t border-[var(--border)] pt-4">
         <span className="text-base font-medium text-[var(--text-primary)]">Total</span>
@@ -574,7 +637,7 @@ function Row({ label, value, valueClass }) {
   );
 }
 
-function OrderConfirmation({ total, email }) {
+function OrderConfirmation({ order, email }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--surface-muted)] px-5">
       <motion.div
@@ -599,11 +662,11 @@ function OrderConfirmation({ total, email }) {
         </p>
         <div className="mt-6 flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-inset)] px-4 py-3.5 text-sm">
           <span className="text-[var(--text-muted)]">Order number</span>
-          <span className="font-medium text-[var(--text-primary)]">VNT-{Math.floor(100000 + Math.random() * 900000)}</span>
+          <span className="font-medium text-[var(--text-primary)]">{order.orderNumber}</span>
         </div>
         <div className="mt-2 flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-inset)] px-4 py-3.5 text-sm">
           <span className="text-[var(--text-muted)]">Total paid</span>
-          <span className="font-medium text-[var(--text-primary)]">£{total.toFixed(2)}</span>
+          <span className="font-medium text-[var(--text-primary)]">£{Number(order.total).toFixed(2)}</span>
         </div>
         <div className="mt-7">
           <PrimaryButton href="/orders" fullWidth>
