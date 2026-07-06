@@ -35,6 +35,7 @@ import {
   X,
   UserPlus,
   ShieldOff,
+  Award,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -88,6 +89,7 @@ const NAV_GROUPS = [
       { id: "orders", label: "Orders", icon: ShoppingCart },
       { id: "products", label: "Products", icon: Package },
       { id: "categories", label: "Categories", icon: Tags },
+      { id: "brands", label: "Brands", icon: Award },
       { id: "coupons", label: "Coupons", icon: Ticket },
       { id: "promotions", label: "Offers", icon: PercentIcon },
       { id: "reviews", label: "Reviews", icon: Star },
@@ -161,6 +163,7 @@ export default function AdminDashboard() {
               {activeTab === "orders" && <OrdersSection />}
               {activeTab === "products" && <ProductsSection />}
               {activeTab === "categories" && <CategoriesSection />}
+              {activeTab === "brands" && <BrandsSection />}
               {activeTab === "coupons" && <CouponsSection />}
               {activeTab === "promotions" && <PromotionsSection />}
               {activeTab === "reviews" && <ReviewsSection />}
@@ -1000,6 +1003,127 @@ function CategoriesSection() {
         <div className="flex flex-col gap-4">
           <Input label="Category name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
           <Input label="Slug (optional)" helperText="Used in the storefront URL." value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} />
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/* — Brands — */
+
+function BrandsSection() {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({ name: "", slug: "", logoUrl: null });
+  const [uploading, setUploading] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: brands = [], isLoading, isError, refetch } = useQuery({ queryKey: ["brands"], queryFn: brandsApi.list });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["brands"] });
+
+  const createMutation = useMutation({
+    mutationFn: (payload) => brandsApi.create(payload),
+    onSuccess: () => { invalidate(); setModalOpen(false); },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't create brand", variant: "error" }),
+  });
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }) => brandsApi.update(id, payload),
+    onSuccess: () => { invalidate(); setModalOpen(false); },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't update brand", variant: "error" }),
+  });
+  const removeMutation = useMutation({ mutationFn: (id) => brandsApi.remove(id), onSuccess: invalidate });
+  const reorderMutation = useMutation({ mutationFn: (items) => brandsApi.reorder(items), onSuccess: invalidate });
+
+  const move = (index, dir) => {
+    const next = [...brands];
+    const swap = index + dir;
+    if (swap < 0 || swap >= next.length) return;
+    [next[index], next[swap]] = [next[swap], next[index]];
+    reorderMutation.mutate(next.map((b, i) => ({ id: b.id, position: i })));
+  };
+
+  const openCreate = () => { setEditing(null); setForm({ name: "", slug: "", logoUrl: null }); setModalOpen(true); };
+  const openEdit = (b) => { setEditing(b); setForm({ name: b.name, slug: b.slug, logoUrl: b.logoUrl ? resolveMediaUrl(b.logoUrl) : null }); setModalOpen(true); };
+  const submitForm = () => (editing ? updateMutation.mutate({ id: editing.id, payload: form }) : createMutation.mutate(form));
+
+  const handleLogoUpload = async (files) => {
+    if (!files.length) return;
+    setUploading(true);
+    try {
+      const { urls } = await uploadsApi.uploadImages([files[0]]);
+      setForm((f) => ({ ...f, logoUrl: resolveMediaUrl(urls[0]) }));
+    } catch {
+      toast({ title: "Logo upload failed", variant: "error" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div>
+      <SectionTitle
+        eyebrow="Manage"
+        title="Brands"
+        description="Brand logos shown on the homepage and product filters."
+        action={<PrimaryButton leftIcon={Plus} onClick={openCreate}>Add brand</PrimaryButton>}
+      />
+
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading brands…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {brands.map((b, i) => (
+            <div key={b.id} className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-soft-sm">
+              <div className="flex items-center gap-3">
+                <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-gold-400/12 text-gold-500">
+                  {b.logoUrl ? <img src={resolveMediaUrl(b.logoUrl)} alt="" className="size-full object-contain" /> : <Award className="size-4.5" />}
+                </span>
+                <p className="text-sm font-medium text-[var(--text-primary)]">{b.name}</p>
+              </div>
+              <div className="flex gap-1">
+                <IconButton icon={ArrowUp} size="sm" aria-label="Move up" onClick={() => move(i, -1)} />
+                <IconButton icon={ArrowDown} size="sm" aria-label="Move down" onClick={() => move(i, 1)} />
+                <IconButton icon={Pencil} size="sm" aria-label="Edit brand" onClick={() => openEdit(b)} />
+                <IconButton icon={Trash2} size="sm" aria-label="Delete brand" onClick={() => removeMutation.mutate(b.id)} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit brand" : "Add brand"} footer={
+        <>
+          <SecondaryButton onClick={() => setModalOpen(false)}>Cancel</SecondaryButton>
+          <PrimaryButton onClick={submitForm}>{editing ? "Save changes" : "Save brand"}</PrimaryButton>
+        </>
+      }>
+        <div className="flex flex-col gap-4">
+          <Input label="Brand name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          <Input label="Slug (optional)" helperText="Used in the storefront URL." value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} />
+          <div>
+            <p className="mb-2 text-sm font-medium text-[var(--text-primary)]">Logo</p>
+            <div className="flex items-center gap-3">
+              {form.logoUrl && (
+                <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-[var(--border)] p-1">
+                  <img src={form.logoUrl} alt="" className="size-full object-contain" />
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, logoUrl: null }))}
+                    className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+              <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-lg border border-dashed border-[var(--border)] text-xs text-[var(--text-muted)]">
+                {uploading ? "…" : <Plus className="h-4 w-4" />}
+                <input type="file" accept="image/*" hidden onChange={(e) => handleLogoUpload(e.target.files)} />
+              </label>
+            </div>
+          </div>
         </div>
       </Modal>
     </div>

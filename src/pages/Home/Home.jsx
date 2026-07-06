@@ -636,9 +636,13 @@ function BrandsSection() {
           {brands.slice(0, 12).map((brand) => (
             <div
               key={brand.id}
-              className="flex items-center justify-center rounded-sm border border-black/5 py-3 opacity-60 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0 dark:border-white/10"
+              className="flex items-center justify-center rounded-sm border border-black/5 p-3 opacity-60 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0 dark:border-white/10"
             >
-              <span className="text-xs font-bold tracking-wide text-neutral-900 dark:text-white sm:text-sm">{brand.name.toUpperCase()}</span>
+              {brand.logoUrl ? (
+                <img src={resolveMediaUrl(brand.logoUrl)} alt={brand.name} className="h-8 max-w-full object-contain sm:h-10" />
+              ) : (
+                <span className="text-xs font-bold tracking-wide text-neutral-900 dark:text-white sm:text-sm">{brand.name.toUpperCase()}</span>
+              )}
             </div>
           ))}
         </div>
