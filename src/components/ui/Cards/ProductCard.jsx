@@ -203,7 +203,7 @@ export default function ProductCard({
                   onClick={onAdd}
                   disabled={stock === 0}
                   aria-label="Add to bag"
-                  className="grid size-6 shrink-0 place-items-center rounded-[var(--radius-btn,999px)] bg-gold-400 text-ink-950 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="grid size-6 shrink-0 place-items-center rounded-[var(--radius-btn,999px)] bg-gold-400 text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Plus className="size-3.5" />
                 </button>
@@ -264,7 +264,7 @@ export default function ProductCard({
                   className={cn(
                     "rounded-[var(--radius-btn,999px)] border border-[var(--border)] px-4 py-2 text-[11px] font-medium uppercase tracking-wider",
                     cfg.cta === "pill-full" && "w-full py-2.5",
-                    "transition-colors hover:border-gold-400 hover:bg-gradient-to-r hover:from-gold-400 hover:to-gold-100 hover:text-ink-950",
+                    "transition-colors hover:border-gold-400 hover:bg-gold-400 hover:text-white",
                     "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:bg-none disabled:hover:text-[var(--text-primary)]"
                   )}
                 >

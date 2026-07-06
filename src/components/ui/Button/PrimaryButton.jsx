@@ -50,12 +50,11 @@ const PrimaryButton = forwardRef(function PrimaryButton(
       transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
         "relative inline-flex items-center justify-center rounded-[var(--radius-btn,var(--radius-md))] font-medium",
-        "bg-gradient-to-r from-gold-400 via-gold-100 to-gold-400 bg-[length:200%_auto] bg-[position:0%_0]",
-        "text-ink-950 shadow-soft-sm",
-        "transition-[background-position,box-shadow] duration-500",
-        "hover:bg-[position:100%_0] hover:shadow-soft-md",
+        "bg-gold-400 text-white shadow-soft-sm",
+        "transition-colors duration-200",
+        "hover:bg-gold-500 hover:shadow-soft-md",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]",
-        "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[position:0%_0] disabled:shadow-none",
+        "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gold-400 disabled:shadow-none",
         SIZES[size],
         fullWidth && "w-full",
         className

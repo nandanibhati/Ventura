@@ -36,7 +36,7 @@ export default function PopupBanner() {
           <Link
             to={popup.ctaLink}
             onClick={close}
-            className="inline-flex w-full items-center justify-center rounded-[var(--radius-btn,999px)] bg-gradient-to-r from-gold-400 via-gold-100 to-gold-400 px-6 py-3 text-sm font-medium text-ink-950 shadow-soft-sm transition-shadow hover:shadow-soft-md"
+            className="inline-flex w-full items-center justify-center rounded-[var(--radius-btn,999px)] bg-gold-400 px-6 py-3 text-sm font-medium text-white shadow-soft-sm transition-colors hover:bg-gold-500"
           >
             {popup.ctaText}
           </Link>

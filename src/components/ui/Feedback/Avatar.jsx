@@ -44,7 +44,7 @@ export default function Avatar({ src, name, size = "md", status, className }) {
         <span
           className={cn(
             "flex size-full items-center justify-center rounded-full font-medium",
-            "bg-gradient-to-br from-gold-400 to-gold-600 text-ink-950 border border-gold-400/40"
+            "bg-gold-400 text-white border border-gold-400/40"
           )}
         >
           {initials || <User className="size-1/2" aria-hidden="true" />}

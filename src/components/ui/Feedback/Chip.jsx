@@ -27,7 +27,7 @@ export default function Chip({ children, selected = false, onClick, onRemove, cl
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors duration-200",
         selected
-          ? "bg-gold-400 border-gold-400 text-ink-950"
+          ? "bg-gold-400 border-gold-400 text-white"
           : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-primary)]",
         isInteractive && "cursor-pointer hover:border-gold-400",
         className

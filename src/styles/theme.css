@@ -15,51 +15,55 @@
 
 @theme {
   /* ---------- Brand palette ---------- */
-  --color-gold-50:  #fbf6ea;
-  --color-gold-100: #f4e6c3;
-  --color-gold-200: #ecd7a1;
-  --color-gold-300: #e2c483;
-  --color-gold-400: #d8b36a;
-  --color-gold-500: #c79a4c;
-  --color-gold-600: #a97e3b;
-  --color-gold-700: #86602d;
+  /* "gold-*" is the historical token name (kept so the hundreds of existing
+     bg-gold-400 / text-gold-500 / etc. classes don't need renaming) — it's a
+     professional blue scale now, not literal gold. See lib/themePresets.js
+     for the admin-configurable primary/accent (gold-400/500) override. */
+  --color-gold-50:  #eff6ff;
+  --color-gold-100: #dbeafe;
+  --color-gold-200: #bfdbfe;
+  --color-gold-300: #93c5fd;
+  --color-gold-400: #3b82f6;
+  --color-gold-500: #2563eb;
+  --color-gold-600: #1d4ed8;
+  --color-gold-700: #1e40af;
 
   --color-ink-0:   #ffffff;
-  --color-ink-50:  #f7f5f0;
-  --color-ink-100: #ece9e0;
-  --color-ink-200: #d8d4c8;
-  --color-ink-300: #a9a6ad;
-  --color-ink-400: #8f8d99;
-  --color-ink-500: #6b6875;
-  --color-ink-600: #4a4855;
-  --color-ink-700: #302e3a;
-  --color-ink-800: #191926;
-  --color-ink-900: #10101a;
-  --color-ink-950: #08080d;
+  --color-ink-50:  #f8fafc;
+  --color-ink-100: #f1f5f9;
+  --color-ink-200: #e2e8f0;
+  --color-ink-300: #cbd5e1;
+  --color-ink-400: #94a3b8;
+  --color-ink-500: #64748b;
+  --color-ink-600: #475569;
+  --color-ink-700: #334155;
+  --color-ink-800: #1e293b;
+  --color-ink-900: #0f172a;
+  --color-ink-950: #020617;
 
-  --color-success-500: #6fae76;
-  --color-success-600: #4d8c56;
-  --color-error-500:   #e0645f;
-  --color-error-600:   #c14741;
-  --color-warning-500: #d9a656;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+  --color-error-500:   #ef4444;
+  --color-error-600:   #dc2626;
+  --color-warning-500: #f59e0b;
 
   /* ---------- Radius ---------- */
-  /* System-wide "premium" radius. Surfaces (cards, modals, inputs, dropdowns)
-     use --radius-lg (20px per spec). Buttons use a slightly tighter radius
-     so pill-shaped controls stay ergonomic at small heights. */
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
+  /* Surfaces (cards, modals, inputs, dropdowns) use --radius-lg. Buttons use
+     a slightly tighter radius, matching a standard marketplace look rather
+     than fully pill-shaped controls. */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
 
-  /* ---------- Shadows (soft, diffuse, "Apple-level") ---------- */
-  --shadow-soft-sm: 0 2px 8px -2px rgb(16 16 26 / 0.08), 0 1px 2px -1px rgb(16 16 26 / 0.06);
-  --shadow-soft-md: 0 12px 24px -8px rgb(16 16 26 / 0.12), 0 4px 8px -4px rgb(16 16 26 / 0.08);
-  --shadow-soft-lg: 0 24px 48px -16px rgb(16 16 26 / 0.18), 0 8px 16px -8px rgb(16 16 26 / 0.10);
-  --shadow-gold-glow: 0 0 0 3px rgb(216 179 106 / 0.16);
+  /* ---------- Shadows (soft, diffuse) ---------- */
+  --shadow-soft-sm: 0 2px 8px -2px rgb(15 23 42 / 0.08), 0 1px 2px -1px rgb(15 23 42 / 0.06);
+  --shadow-soft-md: 0 12px 24px -8px rgb(15 23 42 / 0.12), 0 4px 8px -4px rgb(15 23 42 / 0.08);
+  --shadow-soft-lg: 0 24px 48px -16px rgb(15 23 42 / 0.18), 0 8px 16px -8px rgb(15 23 42 / 0.10);
+  --shadow-gold-glow: 0 0 0 3px rgb(59 130 246 / 0.16);
 
   /* ---------- Typography ---------- */
-  --font-display: "Cormorant Garamond", ui-serif, Georgia, serif;
+  --font-display: "Poppins", system-ui, -apple-system, sans-serif;
   --font-sans: "Inter", "Jost", system-ui, -apple-system, sans-serif;
 
   /* ---------- Motion ---------- */
@@ -80,7 +84,7 @@
   --surface: var(--color-ink-900);
   --surface-muted: var(--color-ink-800);
   --surface-inset: var(--color-ink-700);
-  --border: rgb(216 179 106 / 0.16);
+  --border: rgb(148 163 184 / 0.16);
   --text-primary: var(--color-ink-50);
   --text-muted: var(--color-ink-300);
 }

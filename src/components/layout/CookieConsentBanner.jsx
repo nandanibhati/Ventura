@@ -28,7 +28,7 @@ export default function CookieConsentBanner() {
         </p>
         <button
           onClick={accept}
-          className="shrink-0 rounded-[var(--radius-btn,999px)] bg-gradient-to-r from-gold-400 via-gold-100 to-gold-400 px-6 py-2 text-sm font-medium text-ink-950 shadow-soft-sm"
+          className="shrink-0 rounded-[var(--radius-btn,999px)] bg-gold-400 px-6 py-2 text-sm font-medium text-white shadow-soft-sm transition-colors hover:bg-gold-500"
         >
           Accept
         </button>

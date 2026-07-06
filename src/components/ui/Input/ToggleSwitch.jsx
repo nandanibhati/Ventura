@@ -33,7 +33,7 @@ const ToggleSwitch = forwardRef(function ToggleSwitch(
         className={cn(
           "relative inline-flex items-center rounded-full transition-colors duration-200 shrink-0",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]",
-          checked ? "bg-gradient-to-r from-gold-400 to-gold-100" : "bg-[var(--surface-inset)] border border-[var(--border)]",
+          checked ? "bg-gold-400" : "bg-[var(--surface-inset)] border border-[var(--border)]",
           disabled && "opacity-50 cursor-not-allowed",
           s.track
         )}

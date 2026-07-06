@@ -15,19 +15,19 @@ export const FONT_PRESETS = {
 };
 
 export const DEFAULT_THEME = {
-  primary: "#d8b36a",
-  accent: "#c79a4c",
-  secondary: "#4b5563",
+  primary: "#3b82f6",
+  accent: "#2563eb",
+  secondary: "#f97316",
   surfaceLight: "#ffffff",
-  surfaceDark: "#10101a",
-  font: "classic",
+  surfaceDark: "#0f172a",
+  font: "modern",
   buttonStyle: "rounded",
   cardTemplate: "marketplace",
 };
 
 const BUTTON_RADIUS = {
   square: "4px",
-  rounded: "14px",
+  rounded: "10px",
   pill: "999px",
 };
 
@@ -48,7 +48,7 @@ export function applyTheme(theme, target) {
   el.style.setProperty("--color-ink-900", t.surfaceDark);
   el.style.setProperty("--radius-btn", BUTTON_RADIUS[t.buttonStyle] || BUTTON_RADIUS.rounded);
 
-  const preset = FONT_PRESETS[t.font] || FONT_PRESETS.classic;
+  const preset = FONT_PRESETS[t.font] || FONT_PRESETS.modern;
   el.style.setProperty("--font-display", preset.display);
   el.style.setProperty("--font-sans", preset.sans);
 }

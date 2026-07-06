@@ -48,7 +48,7 @@ export default function Pagination({ page, totalPages, onChange, className }) {
             className={cn(
               "min-w-10 h-10 px-2 rounded-[var(--radius-sm)] text-sm transition-colors",
               page === n
-                ? "bg-gradient-to-r from-gold-400 to-gold-100 text-ink-950 font-medium"
+                ? "bg-gold-400 text-white font-medium"
                 : "border border-[var(--border)] text-[var(--text-muted)] hover:border-gold-400 hover:text-gold-500"
             )}
           >

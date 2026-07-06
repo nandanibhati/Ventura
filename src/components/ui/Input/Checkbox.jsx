@@ -56,7 +56,7 @@ const Checkbox = forwardRef(function Checkbox(
             animate={{ opacity: checked ? 1 : 0, scale: checked ? 1 : 0.5 }}
             transition={{ duration: 0.15 }}
           >
-            <Check className="size-3 text-ink-950" strokeWidth={3} aria-hidden="true" />
+            <Check className="size-3 text-white" strokeWidth={3} aria-hidden="true" />
           </motion.span>
         </motion.span>
       </span>
