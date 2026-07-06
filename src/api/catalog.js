@@ -57,4 +57,7 @@ export const homepageApi = {
   reorder: (items) => api.patch("/homepage/admin/sections/reorder", { items }).then(unwrap),
   getHistory: (params) => api.get("/homepage/admin/history", { params }).then(unwrap),
   restoreSection: (logId, reason) => api.post(`/homepage/admin/history/${logId}/restore`, { reason }).then(unwrap),
+  saveDraft: (id, payload) => api.patch(`/homepage/admin/sections/${id}/draft`, payload).then(unwrap),
+  publishDraft: (id) => api.post(`/homepage/admin/sections/${id}/publish`).then(unwrap),
+  discardDraft: (id) => api.post(`/homepage/admin/sections/${id}/discard`).then(unwrap),
 };

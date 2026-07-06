@@ -1506,6 +1506,7 @@ function SortableSectionRow({ section: s, onMoveUp, onMoveDown, onEdit, onToggle
         <span className={cn("truncate text-sm", s.enabled ? "text-[var(--text-primary)]" : "text-[var(--text-muted)] line-through")}>
           {s.title || s.type.replace(/_/g, " ")}
         </span>
+        {s.draft && <Badge variant="warning" className="shrink-0">Draft</Badge>}
       </div>
       <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
         <IconButton icon={ArrowUp} size="sm" aria-label="Move up" onClick={(e) => { e.stopPropagation(); onMoveUp(); }} />
@@ -1609,6 +1610,18 @@ function HomepageCmsSection() {
   const updateMutation = useMutation({ mutationFn: ({ id, payload }) => homepageApi.update(id, payload), onSuccess: () => { invalidate(); setModalOpen(false); } });
   const removeMutation = useMutation({ mutationFn: (id) => homepageApi.remove(id), onSuccess: invalidate });
   const reorderMutation = useMutation({ mutationFn: (items) => homepageApi.reorder(items), onSuccess: invalidate });
+  const saveDraftMutation = useMutation({
+    mutationFn: ({ id, payload }) => homepageApi.saveDraft(id, payload),
+    onSuccess: () => { invalidate(); setModalOpen(false); toast({ title: "Draft saved — not visible to visitors yet", variant: "success" }); },
+  });
+  const publishDraftMutation = useMutation({
+    mutationFn: (id) => homepageApi.publishDraft(id),
+    onSuccess: () => { invalidate(); setModalOpen(false); toast({ title: "Draft published", variant: "success" }); },
+  });
+  const discardDraftMutation = useMutation({
+    mutationFn: (id) => homepageApi.discardDraft(id),
+    onSuccess: () => { invalidate(); setModalOpen(false); toast({ title: "Draft discarded", variant: "success" }); },
+  });
 
   const [view, setView] = useState("sections"); // "sections" | "history"
   const { data: history, isLoading: historyLoading } = useQuery({
@@ -1710,12 +1723,15 @@ function HomepageCmsSection() {
   };
   const openEdit = (s) => {
     setEditing(s);
+    // Resume editing the pending draft if one exists (per-field fallback to the live value —
+    // a draft only ever contains the fields that were actually changed since it was created).
+    const d = s.draft || {};
     const initial = {
       type: s.type,
-      title: s.title || "",
-      config: s.config || {},
-      startsAt: toDatetimeLocal(s.startsAt),
-      endsAt: toDatetimeLocal(s.endsAt),
+      title: d.title ?? s.title ?? "",
+      config: d.config ?? s.config ?? {},
+      startsAt: toDatetimeLocal(d.startsAt ?? s.startsAt),
+      endsAt: toDatetimeLocal(d.endsAt ?? s.endsAt),
     };
     setForm(initial);
     prevFormRef.current = initial;
@@ -1723,20 +1739,33 @@ function HomepageCmsSection() {
     setFuture([]);
     setModalOpen(true);
   };
-  const submitForm = () => {
+  const buildPayload = () => {
     // Home.jsx reads the heading for these section types from `config.title`, not the
     // top-level `title` column — mirror the one "Title" field the admin actually sees
     // into config so it shows up on the live page without a second, confusing input.
     const usesConfigTitle = GRID_SETTINGS_TYPES.has(form.type) || TITLE_ONLY_TYPES.has(form.type);
     const config = usesConfigTitle ? { ...form.config, title: form.title || undefined } : form.config;
-    const payload = {
+    return {
       title: form.title,
       config,
       startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
       endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
     };
-    if (editing) updateMutation.mutate({ id: editing.id, payload });
-    else createMutation.mutate({ ...payload, type: form.type });
+  };
+  // "Publish" writes straight to the live section, exactly like this editor's only button
+  // used to behave — creating a new section has no draft concept, so it only ever publishes.
+  const handlePublish = () => {
+    const payload = buildPayload();
+    if (editing) {
+      updateMutation.mutate({ id: editing.id, payload });
+      if (editing.draft) discardDraftMutation.mutate(editing.id); // a direct publish supersedes any pending draft
+    } else {
+      createMutation.mutate({ ...payload, type: form.type });
+    }
+  };
+  const handleSaveDraft = () => {
+    if (!editing) return; // brand-new sections have nothing published yet to protect — publish only
+    saveDraftMutation.mutate({ id: editing.id, payload: buildPayload() });
   };
   const setConfig = (key, value) => setForm((f) => ({ ...f, config: { ...f.config, [key]: value } }));
 
@@ -1858,7 +1887,10 @@ function HomepageCmsSection() {
       {modalOpen && (
       <div className="mt-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-soft-sm">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">{editing ? "Edit section" : "Add homepage section"}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">{editing ? "Edit section" : "Add homepage section"}</h3>
+            {editing?.draft && <Badge variant="warning">Unpublished draft</Badge>}
+          </div>
           <div className="flex items-center gap-1">
             <IconButton icon={Undo2} size="sm" aria-label="Undo" disabled={past.length === 0} onClick={undo} />
             <IconButton icon={Redo2} size="sm" aria-label="Redo" disabled={future.length === 0} onClick={redo} />
@@ -2017,11 +2049,30 @@ function HomepageCmsSection() {
             />
           </div>
         </div>
-        <div className="mt-5 flex justify-end gap-2 border-t border-[var(--border)] pt-4">
-          <SecondaryButton onClick={() => setModalOpen(false)}>Cancel</SecondaryButton>
-          <PrimaryButton onClick={submitForm} loading={createMutation.isPending || updateMutation.isPending}>
-            {editing ? "Save changes" : "Add section"}
-          </PrimaryButton>
+        <div className="mt-5 flex items-center justify-between border-t border-[var(--border)] pt-4">
+          <div className="flex gap-2">
+            {editing?.draft && (
+              <>
+                <OutlineButton size="sm" loading={discardDraftMutation.isPending} onClick={() => discardDraftMutation.mutate(editing.id)}>
+                  Discard draft
+                </OutlineButton>
+                <OutlineButton size="sm" loading={publishDraftMutation.isPending} onClick={() => publishDraftMutation.mutate(editing.id)}>
+                  Publish draft as-is
+                </OutlineButton>
+              </>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <SecondaryButton onClick={() => setModalOpen(false)}>Cancel</SecondaryButton>
+            {editing && (
+              <SecondaryButton onClick={handleSaveDraft} loading={saveDraftMutation.isPending}>
+                Save draft
+              </SecondaryButton>
+            )}
+            <PrimaryButton onClick={handlePublish} loading={createMutation.isPending || updateMutation.isPending}>
+              {editing ? "Publish" : "Add section"}
+            </PrimaryButton>
+          </div>
         </div>
       </div>
       )}
