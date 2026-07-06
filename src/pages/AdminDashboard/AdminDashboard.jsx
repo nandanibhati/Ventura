@@ -199,7 +199,7 @@ export default function AdminDashboard() {
 
 function SidebarContent({ groups, active, onSelect, embedded }) {
   return (
-    <div className={cn("flex flex-col gap-7", !embedded && "sticky top-8")}>
+    <div className={cn("flex flex-col gap-7", !embedded && "sticky top-8 max-h-[calc(100vh-4rem)] overflow-y-auto")}>
       {!embedded && (
         <div className="flex items-center gap-3 px-1">
           <span className="grid size-9 place-items-center rounded-[var(--radius-sm)] bg-gradient-to-br from-gold-400 to-gold-600 text-ink-950 font-medium">
@@ -842,6 +842,29 @@ function ProductsSection() {
       }>
         <div className="flex flex-col gap-4">
           <Input label="Product name" value={form.name || ""} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+
+          <div>
+            <p className="mb-2 text-sm font-medium text-[var(--text-primary)]">Images</p>
+            <div className="flex flex-wrap gap-2">
+              {(form.images || []).map((url) => (
+                <div key={url} className="relative h-16 w-16 overflow-hidden rounded-lg border border-[var(--border)]">
+                  <img src={url} alt="" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, images: f.images.filter((u) => u !== url) }))}
+                    className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-lg border border-dashed border-[var(--border)] text-xs text-[var(--text-muted)]">
+                {uploading ? "…" : <Plus className="h-4 w-4" />}
+                <input type="file" accept="image/*" multiple hidden onChange={(e) => handleImageUpload(e.target.files)} />
+              </label>
+            </div>
+          </div>
+
           {!editing && (
             <textarea
               placeholder="Description"
@@ -914,28 +937,6 @@ function ProductsSection() {
                 />
               </div>
             )}
-          </div>
-
-          <div>
-            <p className="mb-2 text-sm font-medium text-[var(--text-primary)]">Images</p>
-            <div className="flex flex-wrap gap-2">
-              {(form.images || []).map((url) => (
-                <div key={url} className="relative h-16 w-16 overflow-hidden rounded-lg border border-[var(--border)]">
-                  <img src={url} alt="" className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, images: f.images.filter((u) => u !== url) }))}
-                    className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-              <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-lg border border-dashed border-[var(--border)] text-xs text-[var(--text-muted)]">
-                {uploading ? "…" : <Plus className="h-4 w-4" />}
-                <input type="file" accept="image/*" multiple hidden onChange={(e) => handleImageUpload(e.target.files)} />
-              </label>
-            </div>
           </div>
         </div>
       </Modal>
@@ -1920,12 +1921,6 @@ function HomepageCmsSection() {
           )}
           {form.type === "hero_banner" && (
             <>
-              <Input label="Headline" value={form.config.headline || ""} onChange={(e) => setConfig("headline", e.target.value)} />
-              <Input label="Subheadline" value={form.config.subheadline || ""} onChange={(e) => setConfig("subheadline", e.target.value)} />
-              <div className="grid grid-cols-2 gap-4">
-                <Input label="CTA text" value={form.config.ctaText || ""} onChange={(e) => setConfig("ctaText", e.target.value)} />
-                <Input label="CTA link" value={form.config.ctaLink || ""} onChange={(e) => setConfig("ctaLink", e.target.value)} />
-              </div>
               <div className="flex flex-col gap-2">
                 <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Background image</span>
                 {form.config.backgroundImage && (
@@ -1935,6 +1930,12 @@ function HomepageCmsSection() {
                   {heroUploading ? "Uploading…" : "Upload image"}
                   <input type="file" accept="image/*" hidden disabled={heroUploading} onChange={(e) => handleHeroImageUpload(e.target.files)} />
                 </label>
+              </div>
+              <Input label="Headline" value={form.config.headline || ""} onChange={(e) => setConfig("headline", e.target.value)} />
+              <Input label="Subheadline" value={form.config.subheadline || ""} onChange={(e) => setConfig("subheadline", e.target.value)} />
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="CTA text" value={form.config.ctaText || ""} onChange={(e) => setConfig("ctaText", e.target.value)} />
+                <Input label="CTA link" value={form.config.ctaLink || ""} onChange={(e) => setConfig("ctaLink", e.target.value)} />
               </div>
               <Input
                 label="Background video URL (optional)"
@@ -2272,6 +2273,7 @@ const FEATURE_FLAG_LABELS = {
   sellerCoupons: "Seller Coupons",
   emailNotifications: "Email Notifications",
   pushNotifications: "Push Notifications",
+  cookieConsent: "Cookie Consent Banner",
 };
 
 const PRESET_LABELS = {

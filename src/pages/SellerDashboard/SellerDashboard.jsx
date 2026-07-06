@@ -764,6 +764,29 @@ function ProductsTab({ tokens, categoryColors }) {
       }>
         <div className="flex flex-col gap-4">
           <Input label="Product name" value={form.name || ""} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+
+          <div>
+            <p className="mb-2 text-sm font-medium text-neutral-900 dark:text-white">Images</p>
+            <div className="flex flex-wrap gap-2">
+              {(form.images || []).map((url) => (
+                <div key={url} className="relative h-16 w-16 overflow-hidden rounded-lg border border-black/10 dark:border-white/15">
+                  <img src={url} alt="" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, images: f.images.filter((u) => u !== url) }))}
+                    className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-lg border border-dashed border-black/20 text-xs text-neutral-400 dark:border-white/20">
+                {uploading ? "…" : <Plus className="h-4 w-4" />}
+                <input type="file" accept="image/*" multiple hidden onChange={(e) => handleImageUpload(e.target.files)} />
+              </label>
+            </div>
+          </div>
+
           {!editing && (
             <textarea
               placeholder="Description"
@@ -831,28 +854,6 @@ function ProductsTab({ tokens, categoryColors }) {
                 />
               </div>
             )}
-          </div>
-
-          <div>
-            <p className="mb-2 text-sm font-medium text-neutral-900 dark:text-white">Images</p>
-            <div className="flex flex-wrap gap-2">
-              {(form.images || []).map((url) => (
-                <div key={url} className="relative h-16 w-16 overflow-hidden rounded-lg border border-black/10 dark:border-white/15">
-                  <img src={url} alt="" className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, images: f.images.filter((u) => u !== url) }))}
-                    className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-              <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-lg border border-dashed border-black/20 text-xs text-neutral-400 dark:border-white/20">
-                {uploading ? "…" : <Plus className="h-4 w-4" />}
-                <input type="file" accept="image/*" multiple hidden onChange={(e) => handleImageUpload(e.target.files)} />
-              </label>
-            </div>
           </div>
         </div>
       </Modal>
