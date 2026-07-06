@@ -3,6 +3,7 @@ import { Heart, Star, Eye, Plus } from "lucide-react";
 import { cn } from "../../../lib/utils";
 import Badge from "../Feedback/Badge";
 import { AnimatedCard, useResolvedAnimation } from "../../../lib/animations";
+import { CARD_TEMPLATES } from "../../../lib/cardTemplates";
 
 function stockStatusFor(stock, lowStockThreshold = 10) {
   if (stock == null) return null;
@@ -25,6 +26,7 @@ function autoBadge(product) {
   return null;
 }
 
+
 /**
  * ProductCard — the single card every page renders a product through (Home, Products,
  * Cart recommendations, ProductDetails related, Wishlist). Wrapped in AnimatedCard so
@@ -43,6 +45,9 @@ function autoBadge(product) {
  *  - onQuickView: () => void — optional, shows a Quick View button when provided
  *  - compact: marketplace-dense layout (square image, discount %, tight text) for
  *             high-density grids like the homepage — otherwise the spacious default.
+ *             Ignored when `template` is given explicitly.
+ *  - template: "minimal" | "marketplace" | "luxury" | "grid" | "large" — overrides
+ *              `compact` with one of the 5 named card templates (see CARD_TEMPLATES).
  *  - index: stagger position for the entrance animation
  */
 export default function ProductCard({
@@ -56,6 +61,7 @@ export default function ProductCard({
   currency = "£",
   index = 0,
   compact = false,
+  template,
   className,
 }) {
   const { id, name, brand, category, price, oldPrice, rating, reviews, stock, lowStockThreshold } = product;
@@ -64,34 +70,36 @@ export default function ProductCard({
   const stockStatus = stockStatusFor(stock, lowStockThreshold);
   const anim = useResolvedAnimation(product.animationOverride);
   const href = id ? `/product/${id}` : undefined;
+  const cfg = CARD_TEMPLATES[template] || CARD_TEMPLATES[compact ? "marketplace" : "luxury"];
 
   return (
     <AnimatedCard
       settings={anim}
       index={index}
       as="article"
-      className={cn("group flex flex-col", className)}
+      className={cn("group flex flex-col", cfg.bordered && "overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)]", className)}
     >
       <Link
         to={href}
         className={cn(
           "relative block overflow-hidden bg-[var(--surface-inset)]",
-          compact ? "aspect-square" : "aspect-[4/5]"
+          cfg.dense ? "aspect-square" : cfg.tall ? "aspect-[3/4]" : "aspect-[4/5]"
         )}
       >
-        {compact ? (
-          discount != null && (
-            <span className="absolute left-2 top-2 z-10 rounded-sm bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-              -{discount}%
-            </span>
-          )
-        ) : (
-          badge && (
-            <Badge variant="gold" className="absolute left-3 top-3 z-10">
-              {badge}
-            </Badge>
-          )
-        )}
+        {cfg.showBadge &&
+          (cfg.dense ? (
+            discount != null && (
+              <span className="absolute left-2 top-2 z-10 rounded-sm bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                -{discount}%
+              </span>
+            )
+          ) : (
+            badge && (
+              <Badge variant="gold" className="absolute left-3 top-3 z-10">
+                {badge}
+              </Badge>
+            )
+          ))}
         {onWishlistToggle && (
           <button
             onClick={(e) => {
@@ -103,13 +111,13 @@ export default function ProductCard({
             aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
             className={cn(
               "absolute z-10 grid place-items-center rounded-full border backdrop-blur-sm transition-all",
-              compact ? "right-1.5 top-1.5 size-6" : "right-3 top-3 size-9",
+              cfg.dense ? "right-1.5 top-1.5 size-6" : "right-3 top-3 size-9",
               wished
                 ? "border-gold-400 bg-gold-400/15 text-gold-500"
                 : "border-white/20 bg-ink-950/40 text-white hover:scale-110"
             )}
           >
-            <Heart className={compact ? "size-3" : "size-4"} fill={wished ? "currentColor" : "none"} />
+            <Heart className={cfg.dense ? "size-3" : "size-4"} fill={wished ? "currentColor" : "none"} />
           </button>
         )}
 
@@ -127,14 +135,14 @@ export default function ProductCard({
             src={image}
             alt={name}
             loading="lazy"
-            className={cn("size-full transition-transform duration-500 group-hover:scale-[1.06]", compact ? "object-contain p-2" : "object-cover")}
+            className={cn("size-full transition-transform duration-500 group-hover:scale-[1.06]", cfg.dense ? "object-contain p-2" : "object-cover")}
           />
         ) : (
           <div className="flex size-full items-center justify-center">
             <span
               className={cn(
                 "font-semibold text-white/10 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-2",
-                compact ? "text-4xl" : "text-7xl"
+                cfg.dense ? "text-4xl" : "text-7xl"
               )}
               style={{ fontFamily: "var(--font-display)" }}
             >
@@ -143,7 +151,7 @@ export default function ProductCard({
           </div>
         )}
 
-        {!compact && onQuickView && (
+        {!cfg.dense && onQuickView && (
           <div className="absolute inset-x-0 bottom-0 z-10 flex translate-y-full justify-center bg-black/40 py-2.5 backdrop-blur-sm transition-transform duration-300 group-hover:translate-y-0">
             <button
               onClick={(e) => {
@@ -159,12 +167,12 @@ export default function ProductCard({
         )}
       </Link>
 
-      {compact ? (
-        <div className="flex flex-1 flex-col gap-1 p-2">
+      {cfg.dense ? (
+        <div className={cn("flex flex-1 flex-col gap-1 p-2", cfg.align === "center" && "items-center text-center")}>
           <Link to={href}>
             <h3 className="line-clamp-2 text-[12.5px] leading-snug text-[var(--text-primary)]">{name}</h3>
           </Link>
-          {rating != null && (
+          {cfg.showRating && rating != null && (
             <div className="flex items-center gap-1">
               <span className="flex items-center gap-0.5 rounded-sm bg-emerald-600 px-1 py-px text-[10px] font-medium text-white">
                 {Number(rating).toFixed(1)} <Star className="size-2.5" fill="currentColor" stroke="none" />
@@ -172,7 +180,7 @@ export default function ProductCard({
               {reviews != null && <span className="text-[10px] text-[var(--text-muted)]">({reviews})</span>}
             </div>
           )}
-          <div className="mt-auto flex items-center justify-between gap-1 pt-1">
+          <div className={cn("mt-auto flex items-center gap-1 pt-1", cfg.align === "center" ? "flex-col" : "justify-between")}>
             <span className="flex items-baseline gap-1">
               <span className="text-sm font-semibold text-[var(--text-primary)]">
                 {currency}
@@ -185,30 +193,35 @@ export default function ProductCard({
                 </s>
               )}
             </span>
-            {onAdd && (
-              <button
-                onClick={onAdd}
-                disabled={stock === 0}
-                aria-label="Add to bag"
-                className="grid size-6 shrink-0 place-items-center rounded-full bg-gold-400 text-ink-950 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Plus className="size-3.5" />
-              </button>
-            )}
+            {onAdd &&
+              (cfg.cta === "link" ? (
+                <button onClick={onAdd} disabled={stock === 0} className="text-[11px] font-medium uppercase tracking-wide text-gold-600 hover:underline disabled:cursor-not-allowed disabled:opacity-40">
+                  {stock === 0 ? "Sold out" : "Add"}
+                </button>
+              ) : (
+                <button
+                  onClick={onAdd}
+                  disabled={stock === 0}
+                  aria-label="Add to bag"
+                  className="grid size-6 shrink-0 place-items-center rounded-[var(--radius-btn,999px)] bg-gold-400 text-ink-950 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Plus className="size-3.5" />
+                </button>
+              ))}
           </div>
           {stockStatus && <span className={cn("text-[10px] font-medium", stockStatus.tone)}>{stockStatus.label}</span>}
         </div>
       ) : (
-        <div className="flex flex-1 flex-col gap-1.5 p-4">
+        <div className={cn("flex flex-1 flex-col gap-1.5 p-4", cfg.align === "center" && "items-center text-center")}>
           {category && <span className="text-[10.5px] font-medium uppercase tracking-wider text-gold-500">{category}</span>}
           <Link to={href}>
-            <h3 className="text-[17px] font-medium leading-snug" style={{ fontFamily: "var(--font-display)" }}>
+            <h3 className={cn("font-medium leading-snug", cfg.tall ? "text-xl" : "text-[17px]")} style={{ fontFamily: "var(--font-display)" }}>
               {name}
             </h3>
           </Link>
           {brand && <p className="text-xs text-[var(--text-muted)]">{brand}</p>}
 
-          {rating != null && (
+          {cfg.showRating && rating != null && (
             <div className="mt-0.5 flex items-center gap-1.5">
               <span className="flex items-center gap-0.5">
                 {[1, 2, 3, 4, 5].map((n) => (
@@ -228,7 +241,7 @@ export default function ProductCard({
 
           {stockStatus && <span className={cn("text-[11px] font-medium", stockStatus.tone)}>{stockStatus.label}</span>}
 
-          <div className="mt-auto flex items-center justify-between pt-3">
+          <div className={cn("mt-auto flex pt-3", cfg.cta === "pill-full" ? "flex-col gap-3" : "items-center justify-between")}>
             <span className="text-base text-[var(--text-primary)]">
               {oldPrice && (
                 <s className="mr-1.5 text-[13px] font-normal text-[var(--text-muted)]">
@@ -239,19 +252,25 @@ export default function ProductCard({
               {currency}
               {Number(price).toLocaleString()}
             </span>
-            {onAdd && (
-              <button
-                onClick={onAdd}
-                disabled={stock === 0}
-                className={cn(
-                  "rounded-full border border-[var(--border)] px-4 py-2 text-[11px] font-medium uppercase tracking-wider",
-                  "transition-colors hover:border-gold-400 hover:bg-gradient-to-r hover:from-gold-400 hover:to-gold-100 hover:text-ink-950",
-                  "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:bg-none disabled:hover:text-[var(--text-primary)]"
-                )}
-              >
-                {stock === 0 ? "Sold out" : "Add to bag"}
-              </button>
-            )}
+            {onAdd &&
+              (cfg.cta === "link" ? (
+                <button onClick={onAdd} disabled={stock === 0} className="text-[11px] font-medium uppercase tracking-wide text-gold-600 hover:underline disabled:cursor-not-allowed disabled:opacity-40">
+                  {stock === 0 ? "Sold out" : "Add to bag"}
+                </button>
+              ) : (
+                <button
+                  onClick={onAdd}
+                  disabled={stock === 0}
+                  className={cn(
+                    "rounded-[var(--radius-btn,999px)] border border-[var(--border)] px-4 py-2 text-[11px] font-medium uppercase tracking-wider",
+                    cfg.cta === "pill-full" && "w-full py-2.5",
+                    "transition-colors hover:border-gold-400 hover:bg-gradient-to-r hover:from-gold-400 hover:to-gold-100 hover:text-ink-950",
+                    "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:bg-none disabled:hover:text-[var(--text-primary)]"
+                  )}
+                >
+                  {stock === 0 ? "Sold out" : "Add to bag"}
+                </button>
+              ))}
           </div>
         </div>
       )}

@@ -75,6 +75,7 @@ import { StatCard } from "../../components/ui/Cards";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { AnimatedCard, ANIMATION_PRESETS, DEFAULT_ANIMATION_CONFIG } from "../../lib/animations";
 import { DEFAULT_THEME, FONT_PRESETS, applyTheme } from "../../lib/themePresets";
+import { CARD_TEMPLATES } from "../../lib/cardTemplates";
 import { cn } from "../../lib/utils";
 import { useAuth } from "../../context/AuthContext";
 import { adminApi } from "../../api/admin";
@@ -1773,6 +1774,13 @@ function HomepageCmsSection() {
                   options={[2, 3, 4, 5, 6, 8].map((n) => ({ value: String(n), label: `${n} columns` }))}
                 />
               </div>
+              <Select
+                label="Card template"
+                helperText="Leave as default to follow the site-wide template set in Settings > Theme & Design."
+                value={form.config.cardTemplate || ""}
+                onChange={(e) => setConfig("cardTemplate", e.target.value || undefined)}
+                options={[{ value: "", label: "Default (site-wide)" }, ...Object.entries(CARD_TEMPLATES).map(([value, t]) => ({ value, label: t.label }))]}
+              />
             </>
           )}
           {TITLE_ONLY_TYPES.has(form.type) && (
@@ -2181,6 +2189,12 @@ function SettingsSection() {
                 { value: "pill", label: "Pill" },
                 { value: "square", label: "Square" },
               ]}
+            />
+            <Select
+              label="Product card template"
+              value={currentTheme.cardTemplate}
+              onChange={(e) => setTheme("cardTemplate", e.target.value)}
+              options={Object.entries(CARD_TEMPLATES).map(([value, t]) => ({ value, label: t.label }))}
             />
           </div>
 

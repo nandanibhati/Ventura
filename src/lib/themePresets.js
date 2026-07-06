@@ -17,6 +17,7 @@ export const DEFAULT_THEME = {
   surfaceDark: "#10101a",
   font: "classic",
   buttonStyle: "rounded",
+  cardTemplate: "marketplace",
 };
 
 const BUTTON_RADIUS = {

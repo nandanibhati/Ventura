@@ -32,7 +32,7 @@ import {
   Smartphone,
   Laptop,
 } from "lucide-react";
-import { categoriesApi, brandsApi, statsApi, promotionsApi, homepageApi } from "../../api/catalog";
+import { categoriesApi, brandsApi, statsApi, promotionsApi, homepageApi, settingsApi } from "../../api/catalog";
 import { productsApi, reviewsApi } from "../../api/products";
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
@@ -210,15 +210,24 @@ function toCardProduct(product) {
   };
 }
 
+/** The site-wide default product card template (Settings > Theme & Design). Individual
+ * homepage sections can still override it via `config.cardTemplate`. Shares the same
+ * react-query cache key as ThemeProvider's fetch, so this never triggers an extra request. */
+function useGlobalCardTemplate() {
+  const { data } = useQuery({ queryKey: ["settings", "public"], queryFn: settingsApi.getPublic, staleTime: 5 * 60 * 1000 });
+  return data?.themeColors?.cardTemplate || "marketplace";
+}
+
 /** Thin adapter so every Home.jsx grid can keep calling `<HomeProductCard product={product} />`
  * while wiring the shared component's onAdd through this page's cart context. */
-function HomeProductCard({ product, index, compact }) {
+function HomeProductCard({ product, index, compact, template }) {
   const { addItem, isMutating } = useCart();
   return (
     <ProductCard
       product={product}
       index={index}
       compact={compact}
+      template={template}
       onAdd={() => !isMutating && addItem({ productId: product.id, quantity: 1 })}
     />
   );
@@ -303,6 +312,8 @@ function useSectionVisible(config) {
 function ProductGridSection({ section, defaults }) {
   const config = section?.config || {};
   const visible = useSectionVisible(config);
+  const globalTemplate = useGlobalCardTemplate();
+  const template = config.cardTemplate || globalTemplate;
 
   const source = config.productSource || defaults.source;
   const title = config.title || defaults.title;
@@ -345,7 +356,7 @@ function ProductGridSection({ section, defaults }) {
           className={cn("grid gap-2.5", COLUMN_CLASS[columns] || COLUMN_CLASS[6])}
         >
           {products.map((product, i) => (
-            <HomeProductCard key={product.id} product={product} index={i} compact />
+            <HomeProductCard key={product.id} product={product} index={i} template={template} />
           ))}
         </motion.div>
       )}
@@ -561,6 +572,8 @@ function BestSellersSection({ section }) {
 function FlashSaleSection({ section }) {
   const config = section?.config || {};
   const visible = useSectionVisible(config);
+  const globalTemplate = useGlobalCardTemplate();
+  const template = config.cardTemplate || globalTemplate;
   const requestedCount = Number(config.productCount) || 12;
   const columns = Number(config.columns) || 6;
 
@@ -620,7 +633,7 @@ function FlashSaleSection({ section }) {
           className={cn("grid gap-2.5", COLUMN_CLASS[columns] || COLUMN_CLASS[6])}
         >
           {products.map((product, i) => (
-            <HomeProductCard key={product.id} product={product} index={i} compact />
+            <HomeProductCard key={product.id} product={product} index={i} template={template} />
           ))}
         </motion.div>
       )}
