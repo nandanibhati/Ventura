@@ -1571,7 +1571,12 @@ function HomepageCmsSection() {
   const { toast } = useToast();
 
   const { data: sections = [], isLoading, isError, refetch } = useQuery({ queryKey: ["admin-homepage"], queryFn: homepageApi.listAll });
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-homepage"] });
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin-homepage"] });
+    // Home.jsx's public section list is a separate cached query — without this, a
+    // published change wouldn't show up on the live site for up to its 5-minute staleTime.
+    queryClient.invalidateQueries({ queryKey: ["homepage-sections"] });
+  };
 
   // Substitutes the in-progress form into the section list so the preview reflects
   // unsaved edits the instant they're made — no save-then-reload round trip needed.
@@ -2276,6 +2281,8 @@ const FEATURE_FLAG_LABELS = {
   cookieConsent: "Cookie Consent Banner",
 };
 
+const DEFAULT_POPUP_BANNER = { enabled: false, title: "", body: "", imageUrl: null, ctaText: "", ctaLink: "" };
+
 const PRESET_LABELS = {
   apple: "Apple",
   nike: "Nike",
@@ -2295,6 +2302,7 @@ function SettingsSection() {
   const [form, setForm] = useState(null);
   const [logoUploading, setLogoUploading] = useState(false);
   const [faviconUploading, setFaviconUploading] = useState(false);
+  const [popupUploading, setPopupUploading] = useState(false);
 
   const { data: settings, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-settings"],
@@ -2306,10 +2314,23 @@ function SettingsSection() {
   }, [settings, form]);
 
   const current = form || settings;
+  const themePreviewRef = useRef(null);
+  useEffect(() => {
+    if (themePreviewRef.current) applyTheme(current?.themeColors, themePreviewRef.current);
+  }, [current?.themeColors]);
 
   const updateMutation = useMutation({
     mutationFn: (payload) => settingsApi.update(payload),
-    onSuccess: (s) => { setForm(s); queryClient.invalidateQueries({ queryKey: ["admin-settings"] }); toast({ title: "Settings saved", variant: "success" }); },
+    onSuccess: (s) => {
+      setForm(s);
+      queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
+      // Every storefront page (Navbar, ThemeProvider, animations, card templates, Home.jsx)
+      // reads the SAME "settings/public" query — without this, a saved change (theme color,
+      // card template, animation preset, popup banner...) silently doesn't show up anywhere
+      // outside this page until its 5-minute staleTime happens to expire on its own.
+      queryClient.invalidateQueries({ queryKey: ["settings", "public"] });
+      toast({ title: "Settings saved", variant: "success" });
+    },
     onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't save settings", variant: "error" }),
   });
 
@@ -2327,7 +2348,9 @@ function SettingsSection() {
   const setTheme = (key, value) => {
     const next = { ...DEFAULT_THEME, ...form.themeColors, [key]: value };
     setForm((f) => ({ ...f, themeColors: next }));
-    applyTheme(next); // live-preview immediately; only persisted once "Save settings" is clicked
+    // Scoped to the little preview card below, not the rest of the dashboard — actual
+    // storefront pages only pick this up once "Save settings" is clicked.
+    if (themePreviewRef.current) applyTheme(next, themePreviewRef.current);
   };
 
   const handleLogoUpload = async (files) => {
@@ -2353,6 +2376,22 @@ function SettingsSection() {
       toast({ title: "Favicon upload failed", variant: "error" });
     } finally {
       setFaviconUploading(false);
+    }
+  };
+
+  const currentPopup = { ...DEFAULT_POPUP_BANNER, ...(current.popupBanner || {}) };
+  const setPopup = (key, value) => setForm((f) => ({ ...f, popupBanner: { ...DEFAULT_POPUP_BANNER, ...f.popupBanner, [key]: value } }));
+
+  const handlePopupImageUpload = async (files) => {
+    if (!files.length) return;
+    setPopupUploading(true);
+    try {
+      const { urls } = await uploadsApi.uploadImages(Array.from(files));
+      setPopup("imageUrl", resolveMediaUrl(urls[0]));
+    } catch {
+      toast({ title: "Image upload failed", variant: "error" });
+    } finally {
+      setPopupUploading(false);
     }
   };
 
@@ -2564,7 +2603,7 @@ function SettingsSection() {
               <Checkbox label="Loop idle animation" checked={!!currentAnim.loop} onChange={(e) => setAnim("loop", e.target.checked)} />
             </div>
 
-            <div className="flex flex-col items-center gap-2">
+            <div ref={themePreviewRef} className="flex flex-col items-center gap-2">
               <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Live preview</span>
               <AnimatedCard settings={currentAnim} disableEntrance className="w-full max-w-[220px] p-6">
                 <div className="flex flex-col items-center gap-3 text-center">
@@ -2578,6 +2617,44 @@ function SettingsSection() {
               <PrimaryButton size="sm" className="mt-2 w-full">Button preview</PrimaryButton>
             </div>
           </div>
+        </div>
+
+        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-soft-sm lg:col-span-2">
+          <h3 className="mb-1 text-[15px] font-medium">Promotional popup</h3>
+          <p className="mb-4 text-xs text-[var(--text-muted)]">
+            Shows once per visitor session when enabled — good for a welcome offer or an announcement.
+          </p>
+          <Checkbox label="Enable popup" checked={!!currentPopup.enabled} onChange={(e) => setPopup("enabled", e.target.checked)} />
+          {currentPopup.enabled && (
+            <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="flex flex-col gap-4">
+                <Input label="Title" value={currentPopup.title} onChange={(e) => setPopup("title", e.target.value)} />
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Body</label>
+                  <textarea
+                    rows={3}
+                    value={currentPopup.body}
+                    onChange={(e) => setPopup("body", e.target.value)}
+                    className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input label="Button text" placeholder="Shop now" value={currentPopup.ctaText} onChange={(e) => setPopup("ctaText", e.target.value)} />
+                  <Input label="Button link" placeholder="/shop" value={currentPopup.ctaLink} onChange={(e) => setPopup("ctaLink", e.target.value)} />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Image (optional)</span>
+                {currentPopup.imageUrl && (
+                  <img src={currentPopup.imageUrl} alt="" className="h-32 w-full rounded-[var(--radius-md)] object-cover" />
+                )}
+                <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-xs font-medium">
+                  {popupUploading ? "Uploading…" : currentPopup.imageUrl ? "Replace" : "Upload image"}
+                  <input type="file" accept="image/*" hidden disabled={popupUploading} onChange={(e) => handlePopupImageUpload(e.target.files)} />
+                </label>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-soft-sm lg:col-span-2">

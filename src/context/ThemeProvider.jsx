@@ -1,10 +1,12 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { settingsApi } from "../api/catalog";
-import { applyTheme } from "../lib/themePresets";
+import { applyFavicon } from "../lib/themePresets";
 
-/** Applies the admin-configured theme (Settings > Theme) to the document root on load
- * and whenever it changes — no visual change if the admin has never customized it. */
+/** Applies the admin-configured favicon (Settings > Theme & Design) — a browser-tab concern,
+ * so unlike colors/fonts/card templates it's genuinely app-wide, not storefront-only. The rest
+ * of the theme (colors, fonts, button style, card template) is applied by MainLayout instead,
+ * scoped to the storefront subtree so it never bleeds into the Admin/Seller dashboards. */
 export default function ThemeProvider({ children }) {
   const { data } = useQuery({
     queryKey: ["settings", "public"],
@@ -13,7 +15,7 @@ export default function ThemeProvider({ children }) {
   });
 
   useEffect(() => {
-    applyTheme(data?.themeColors);
+    applyFavicon(data?.themeColors?.faviconUrl);
   }, [data]);
 
   return children;
