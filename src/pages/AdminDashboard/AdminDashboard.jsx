@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Users as UsersIcon,
   Package,
@@ -39,6 +42,7 @@ import {
   Monitor,
   Tablet,
   Smartphone,
+  GripVertical,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -1465,6 +1469,45 @@ function toDatetimeLocal(value) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/** One draggable row in the Homepage CMS section list — drag the handle to reorder;
+ * the up/down arrows stay alongside as a keyboard/no-drag fallback. */
+function SortableSectionRow({ section: s, onMoveUp, onMoveDown, onEdit, onToggle, onRemove }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: s.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-soft-sm"
+    >
+      <div className="flex items-center gap-3">
+        <button type="button" className="cursor-grab text-[var(--text-muted)] active:cursor-grabbing" aria-label="Drag to reorder" {...attributes} {...listeners}>
+          <GripVertical className="size-4.5" />
+        </button>
+        <span className="grid size-10 place-items-center rounded-[var(--radius-sm)] bg-gold-400/12 text-gold-500">
+          <Layout className="size-4.5" />
+        </span>
+        <div>
+          <p className="text-sm font-medium text-[var(--text-primary)]">{s.title || s.type.replace(/_/g, " ")}</p>
+          <p className="text-xs text-[var(--text-muted)]">{s.type.replace(/_/g, " ")}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Badge variant={s.enabled ? "success" : "neutral"}>{s.enabled ? "Enabled" : "Disabled"}</Badge>
+        <IconButton icon={ArrowUp} size="sm" aria-label="Move up" onClick={onMoveUp} />
+        <IconButton icon={ArrowDown} size="sm" aria-label="Move down" onClick={onMoveDown} />
+        <IconButton icon={Pencil} size="sm" aria-label="Edit" onClick={onEdit} />
+        <IconButton icon={s.enabled ? Ban : CheckCircle2} size="sm" aria-label="Toggle" onClick={onToggle} />
+        <IconButton icon={Trash2} size="sm" aria-label="Remove" onClick={onRemove} />
+      </div>
+    </div>
+  );
+}
+
 const PREVIEW_VIEWPORTS = [
   { value: "desktop", icon: Monitor, width: "100%" },
   { value: "tablet", icon: Tablet, width: 460 },
@@ -1532,6 +1575,17 @@ function HomepageCmsSection() {
     reorderMutation.mutate(next.map((s, i) => ({ id: s.id, position: i })));
   };
 
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = sections.findIndex((s) => s.id === active.id);
+    const newIndex = sections.findIndex((s) => s.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const next = arrayMove(sections, oldIndex, newIndex);
+    reorderMutation.mutate(next.map((s, i) => ({ id: s.id, position: i })));
+  };
+
   const openCreate = () => { setEditing(null); setForm({ type: "announcement", title: "", config: {}, startsAt: "", endsAt: "" }); setModalOpen(true); };
   const openEdit = (s) => {
     setEditing(s);
@@ -1575,7 +1629,7 @@ function HomepageCmsSection() {
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_460px]">
+    <div className="grid gap-6 lg:grid-cols-[380px_1fr] xl:grid-cols-[420px_1fr]">
     <div>
       <SectionTitle
         eyebrow="Manage"
@@ -1591,29 +1645,23 @@ function HomepageCmsSection() {
       ) : sections.length === 0 ? (
         <EmptyState icon={Layout} title="No sections configured" description="Add a section to control the homepage." />
       ) : (
-        <div className="flex flex-col gap-3">
-          {sections.map((s, i) => (
-            <div key={s.id} className="flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-soft-sm">
-              <div className="flex items-center gap-4">
-                <span className="grid size-10 place-items-center rounded-[var(--radius-sm)] bg-gold-400/12 text-gold-500">
-                  <Layout className="size-4.5" />
-                </span>
-                <div>
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{s.title || s.type.replace(/_/g, " ")}</p>
-                  <p className="text-xs text-[var(--text-muted)]">{s.type.replace(/_/g, " ")}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={s.enabled ? "success" : "neutral"}>{s.enabled ? "Enabled" : "Disabled"}</Badge>
-                <IconButton icon={ArrowUp} size="sm" aria-label="Move up" onClick={() => move(i, -1)} />
-                <IconButton icon={ArrowDown} size="sm" aria-label="Move down" onClick={() => move(i, 1)} />
-                <IconButton icon={Pencil} size="sm" aria-label="Edit" onClick={() => openEdit(s)} />
-                <IconButton icon={s.enabled ? Ban : CheckCircle2} size="sm" aria-label="Toggle" onClick={() => updateMutation.mutate({ id: s.id, payload: { enabled: !s.enabled } })} />
-                <IconButton icon={Trash2} size="sm" aria-label="Remove" onClick={() => removeMutation.mutate(s.id)} />
-              </div>
+        <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+            <div className="flex flex-col gap-3">
+              {sections.map((s, i) => (
+                <SortableSectionRow
+                  key={s.id}
+                  section={s}
+                  onMoveUp={() => move(i, -1)}
+                  onMoveDown={() => move(i, 1)}
+                  onEdit={() => openEdit(s)}
+                  onToggle={() => updateMutation.mutate({ id: s.id, payload: { enabled: !s.enabled } })}
+                  onRemove={() => removeMutation.mutate(s.id)}
+                />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {modalOpen && (
