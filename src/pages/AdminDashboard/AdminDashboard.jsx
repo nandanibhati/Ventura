@@ -949,8 +949,10 @@ function ProductsSection() {
 function CategoriesSection() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", slug: "" });
+  const [form, setForm] = useState({ name: "", slug: "", imageUrl: null });
+  const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: categories = [], isLoading, isError, refetch } = useQuery({ queryKey: ["categories"], queryFn: categoriesApi.list });
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["categories"] });
@@ -968,9 +970,22 @@ function CategoriesSection() {
     reorderMutation.mutate(next.map((c, i) => ({ id: c.id, position: i })));
   };
 
-  const openCreate = () => { setEditing(null); setForm({ name: "", slug: "" }); setModalOpen(true); };
-  const openEdit = (c) => { setEditing(c); setForm({ name: c.name, slug: c.slug }); setModalOpen(true); };
+  const openCreate = () => { setEditing(null); setForm({ name: "", slug: "", imageUrl: null }); setModalOpen(true); };
+  const openEdit = (c) => { setEditing(c); setForm({ name: c.name, slug: c.slug, imageUrl: c.imageUrl ? resolveMediaUrl(c.imageUrl) : null }); setModalOpen(true); };
   const submitForm = () => (editing ? updateMutation.mutate({ id: editing.id, payload: form }) : createMutation.mutate(form));
+
+  const handleImageUpload = async (files) => {
+    if (!files.length) return;
+    setUploading(true);
+    try {
+      const { urls } = await uploadsApi.uploadImages([files[0]]);
+      setForm((f) => ({ ...f, imageUrl: resolveMediaUrl(urls[0]) }));
+    } catch {
+      toast({ title: "Image upload failed", variant: "error" });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <div>
@@ -990,9 +1005,13 @@ function CategoriesSection() {
           {categories.map((c, i) => (
             <div key={c.id} className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-soft-sm">
               <div className="flex items-center gap-3">
-                <span className="grid size-10 place-items-center rounded-full bg-gold-400/12 text-gold-500">
-                  <Tags className="size-4.5" />
-                </span>
+                {c.imageUrl ? (
+                  <img src={resolveMediaUrl(c.imageUrl)} alt="" className="size-10 shrink-0 rounded-[var(--radius-sm)] border border-[var(--border)] object-cover" />
+                ) : (
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-gold-400/12 text-gold-500">
+                    <Tags className="size-4.5" />
+                  </span>
+                )}
                 <div>
                   <p className="text-sm font-medium text-[var(--text-primary)]">{c.name}</p>
                   <p className="text-xs text-[var(--text-muted)]">{c.productCount} products</p>
@@ -1018,6 +1037,19 @@ function CategoriesSection() {
         <div className="flex flex-col gap-4">
           <Input label="Category name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
           <Input label="Slug (optional)" helperText="Used in the storefront URL." value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} />
+          <div className="flex flex-col gap-2">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Photo</span>
+            <p className="text-xs text-[var(--text-muted)]">Shown on the homepage category strip in place of the generic icon.</p>
+            <div className="flex items-center gap-3">
+              {form.imageUrl && (
+                <img src={form.imageUrl} alt="" className="size-16 rounded-[var(--radius-md)] border border-[var(--border)] object-cover" />
+              )}
+              <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-xs font-medium">
+                {uploading ? "Uploading…" : form.imageUrl ? "Replace" : "Upload photo"}
+                <input type="file" accept="image/*" hidden disabled={uploading} onChange={(e) => handleImageUpload(e.target.files)} />
+              </label>
+            </div>
+          </div>
         </div>
       </Modal>
     </div>

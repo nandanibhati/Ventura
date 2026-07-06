@@ -479,18 +479,29 @@ function PromoTilesRow() {
               key={cat.id}
               to={`/shop?category=${cat.slug}`}
               className={cn(
-                "group relative flex h-24 items-center justify-between overflow-hidden rounded-md bg-gradient-to-br px-5 sm:h-28",
-                gradientClassFor(cat.id)
+                "group relative flex h-24 items-center justify-between overflow-hidden rounded-md px-5 sm:h-28",
+                !cat.imageUrl && "bg-gradient-to-br",
+                !cat.imageUrl && gradientClassFor(cat.id)
               )}
             >
-              <div>
+              {cat.imageUrl && (
+                <>
+                  <img
+                    src={resolveMediaUrl(cat.imageUrl)}
+                    alt=""
+                    className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+                </>
+              )}
+              <div className="relative z-10">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-white/60">{cat.productCount}+ items</p>
                 <h3 className="mt-0.5 text-base font-bold text-white sm:text-lg">{cat.name}</h3>
                 <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-white/80">
                   Shop now <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
                 </span>
               </div>
-              <Icon className="h-12 w-12 shrink-0 text-white/15 sm:h-14 sm:w-14" strokeWidth={1} />
+              {!cat.imageUrl && <Icon className="relative z-10 h-12 w-12 shrink-0 text-white/15 sm:h-14 sm:w-14" strokeWidth={1} />}
             </Link>
           );
         })}
@@ -514,36 +525,57 @@ function WhyVeluntraSection() {
   );
 }
 
-/** Circular icon strip, horizontally scrollable on mobile — the primary category nav. */
+/** Photo-tile strip, horizontally scrollable — the primary category nav. Shows the
+ * admin-uploaded category photo when set (Admin > Categories), falling back to a
+ * generic icon on a gradient tile when a category has no photo yet. */
 function CategoriesSection() {
   const { data: categories = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["categories"],
     queryFn: categoriesApi.list,
   });
+  const scrollRef = useRef(null);
+  const scrollBy = (dir) => scrollRef.current?.scrollBy({ left: dir * 240, behavior: "smooth" });
 
   return (
     <SectionCard>
       <SectionStatus isLoading={isLoading} isError={isError} isEmpty={categories.length === 0} onRetry={refetch} />
       {!isLoading && !isError && categories.length > 0 && (
-        <div className="flex items-start gap-5 overflow-x-auto pb-1 [scrollbar-width:none] sm:gap-8 sm:overflow-visible [&::-webkit-scrollbar]:hidden">
-          {categories.slice(0, 10).map((cat) => {
-            const Icon = iconFor(cat.name);
-            return (
-              <Link key={cat.id} to={`/shop?category=${cat.slug}`} className="group flex shrink-0 flex-col items-center gap-2 text-center">
-                <div
-                  className={cn(
-                    "flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br transition-transform group-hover:scale-105 sm:h-[72px] sm:w-[72px]",
-                    gradientClassFor(cat.id)
-                  )}
-                >
-                  <Icon className="h-6 w-6 text-white sm:h-7 sm:w-7" strokeWidth={1.5} />
-                </div>
-                <span className="w-16 truncate text-[11px] font-medium text-neutral-700 dark:text-neutral-300 sm:w-20 sm:text-xs">
-                  {cat.name}
-                </span>
-              </Link>
-            );
-          })}
+        <div className="relative">
+          <div ref={scrollRef} className="flex items-start gap-4 overflow-x-auto pb-1 [scrollbar-width:none] sm:gap-5 [&::-webkit-scrollbar]:hidden">
+            {categories.slice(0, 12).map((cat) => {
+              const Icon = iconFor(cat.name);
+              return (
+                <Link key={cat.id} to={`/shop?category=${cat.slug}`} className="group flex shrink-0 flex-col items-center gap-2 text-center">
+                  <div
+                    className={cn(
+                      "flex h-16 w-16 items-center justify-center overflow-hidden rounded-[var(--radius-lg)] bg-[var(--surface-inset)] transition-transform group-hover:scale-105 sm:h-20 sm:w-20",
+                      !cat.imageUrl && "bg-gradient-to-br",
+                      !cat.imageUrl && gradientClassFor(cat.id)
+                    )}
+                  >
+                    {cat.imageUrl ? (
+                      <img src={resolveMediaUrl(cat.imageUrl)} alt="" className="size-full object-cover" />
+                    ) : (
+                      <Icon className="h-6 w-6 text-white sm:h-7 sm:w-7" strokeWidth={1.5} />
+                    )}
+                  </div>
+                  <span className="w-16 truncate text-[11px] font-medium text-neutral-700 dark:text-neutral-300 sm:w-20 sm:text-xs">
+                    {cat.name}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+          {categories.length > 6 && (
+            <button
+              type="button"
+              onClick={() => scrollBy(1)}
+              aria-label="Scroll categories right"
+              className="absolute right-0 top-6 hidden size-9 items-center justify-center rounded-full bg-gold-400 text-white shadow-soft-md hover:bg-gold-500 sm:flex"
+            >
+              <ChevronRight className="size-5" />
+            </button>
+          )}
         </div>
       )}
     </SectionCard>
