@@ -1573,6 +1573,22 @@ function HomepageCmsSection() {
   const removeMutation = useMutation({ mutationFn: (id) => homepageApi.remove(id), onSuccess: invalidate });
   const reorderMutation = useMutation({ mutationFn: (items) => homepageApi.reorder(items), onSuccess: invalidate });
 
+  const [view, setView] = useState("sections"); // "sections" | "history"
+  const { data: history, isLoading: historyLoading } = useQuery({
+    queryKey: ["admin-homepage-history"],
+    queryFn: () => homepageApi.getHistory(),
+    enabled: view === "history",
+  });
+  const restoreMutation = useMutation({
+    mutationFn: (logId) => homepageApi.restoreSection(logId),
+    onSuccess: () => {
+      invalidate();
+      queryClient.invalidateQueries({ queryKey: ["admin-homepage-history"] });
+      toast({ title: "Section restored", variant: "success" });
+    },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't restore that entry", variant: "error" }),
+  });
+
   const move = (index, dir) => {
     const next = [...sections];
     const swap = index + dir;
@@ -1643,7 +1659,53 @@ function HomepageCmsSection() {
         description="Control which merchandising sections appear on the homepage, their order, visibility, and content."
       />
 
-      {isLoading ? (
+      <div className="mb-4 flex gap-1 rounded-full bg-[var(--surface-inset)] p-1 w-fit">
+        {[
+          { value: "sections", label: "Sections" },
+          { value: "history", label: "History" },
+        ].map((t) => (
+          <button
+            key={t.value}
+            type="button"
+            onClick={() => setView(t.value)}
+            className={cn(
+              "rounded-full px-4 py-1.5 text-xs font-medium transition-colors",
+              view === t.value ? "bg-[var(--surface)] text-[var(--text-primary)] shadow-soft-sm" : "text-[var(--text-muted)]"
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {view === "history" ? (
+        historyLoading ? (
+          <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading history…</div>
+        ) : !history?.items?.length ? (
+          <EmptyState icon={History} title="No changes yet" description="Every add, edit, removal, and reorder will show up here." />
+        ) : (
+          <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] divide-y divide-[var(--border)]">
+            {history.items.map((log) => {
+              const canRestore = log.entityId !== "bulk" && log.previousValue;
+              return (
+                <div key={log.id} className="flex items-center gap-3 p-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-[var(--text-primary)]">{log.action}</p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {log.actorName} &middot; {new Date(log.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  {canRestore && (
+                    <SecondaryButton size="sm" loading={restoreMutation.isPending} onClick={() => restoreMutation.mutate(log.id)}>
+                      Restore
+                    </SecondaryButton>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )
+      ) : isLoading ? (
         <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading sections…</div>
       ) : isError ? (
         <ErrorNotice onRetry={refetch} />

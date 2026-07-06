@@ -55,4 +55,6 @@ export const homepageApi = {
   update: (id, payload) => api.patch(`/homepage/admin/sections/${id}`, payload).then(unwrap),
   remove: (id) => api.delete(`/homepage/admin/sections/${id}`).then(unwrap),
   reorder: (items) => api.patch("/homepage/admin/sections/reorder", { items }).then(unwrap),
+  getHistory: (params) => api.get("/homepage/admin/history", { params }).then(unwrap),
+  restoreSection: (logId, reason) => api.post(`/homepage/admin/history/${logId}/restore`, { reason }).then(unwrap),
 };
