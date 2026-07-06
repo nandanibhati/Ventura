@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -36,6 +36,9 @@ import {
   UserPlus,
   ShieldOff,
   Award,
+  Monitor,
+  Tablet,
+  Smartphone,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -1411,7 +1414,47 @@ function ReviewsSection() {
 
 const SECTION_TYPES = ["hero_banner", "slider", "categories", "featured_products", "trending_products", "best_sellers", "flash_sale", "collections", "brands", "testimonials", "announcement", "ad_banner", "custom"];
 
-const CONFIGURABLE_SECTION_TYPES = new Set(["hero_banner", "announcement", "ad_banner"]);
+// Section types whose product grid is driven by a selectable "product source" (Home.jsx's
+// resolveProductSourceParams) — flash_sale shows the grid too but is always tied to the
+// active promotion, so it gets count/columns but not a source picker.
+const PRODUCT_SOURCE_TYPES = new Set(["featured_products", "trending_products", "best_sellers"]);
+const GRID_SETTINGS_TYPES = new Set([...PRODUCT_SOURCE_TYPES, "flash_sale"]);
+const TITLE_ONLY_TYPES = new Set(["collections", "brands", "testimonials"]);
+
+const CONFIGURABLE_SECTION_TYPES = new Set([
+  "hero_banner",
+  "announcement",
+  "ad_banner",
+  ...GRID_SETTINGS_TYPES,
+  ...TITLE_ONLY_TYPES,
+]);
+
+const PRODUCT_SOURCE_OPTIONS = [
+  { value: "featured", label: "Featured products" },
+  { value: "trending", label: "Trending products" },
+  { value: "bestSeller", label: "Best sellers" },
+  { value: "newest", label: "Newest arrivals" },
+  { value: "rating", label: "Top rated" },
+  { value: "price-asc", label: "Price: low to high" },
+  { value: "price-desc", label: "Price: high to low" },
+  { value: "category", label: "Specific category" },
+  { value: "brand", label: "Specific brand" },
+  { value: "seller", label: "Specific seller" },
+  { value: "manual", label: "Manual selection (product IDs)" },
+];
+
+const SOURCE_VALUE_LABEL = {
+  category: "Category slug",
+  brand: "Brand slug",
+  seller: "Seller store ID",
+  manual: "Product IDs (comma-separated)",
+};
+
+const DEVICE_OPTIONS = [
+  { value: "desktop", label: "Desktop" },
+  { value: "tablet", label: "Tablet" },
+  { value: "mobile", label: "Mobile" },
+];
 
 /** Formats a Date/ISO-string for a <input type="datetime-local"> value, or "" if unset. */
 function toDatetimeLocal(value) {
@@ -1422,16 +1465,59 @@ function toDatetimeLocal(value) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+const PREVIEW_VIEWPORTS = [
+  { value: "desktop", icon: Monitor, width: "100%" },
+  { value: "tablet", icon: Tablet, width: 460 },
+  { value: "mobile", icon: Smartphone, width: 320 },
+];
+
 function HomepageCmsSection() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ type: "announcement", title: "", config: {}, startsAt: "", endsAt: "" });
   const [heroUploading, setHeroUploading] = useState(false);
+  const [previewViewport, setPreviewViewport] = useState("desktop");
+  const [previewReady, setPreviewReady] = useState(false);
+  const previewFrameRef = useRef(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const { data: sections = [], isLoading, isError, refetch } = useQuery({ queryKey: ["admin-homepage"], queryFn: homepageApi.listAll });
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-homepage"] });
+
+  // Substitutes the in-progress form into the section list so the preview reflects
+  // unsaved edits the instant they're made — no save-then-reload round trip needed.
+  const previewSections = useMemo(() => {
+    if (!modalOpen) return sections;
+    const usesConfigTitle = GRID_SETTINGS_TYPES.has(form.type) || TITLE_ONLY_TYPES.has(form.type);
+    const draft = {
+      id: editing?.id || "__draft__",
+      type: form.type,
+      title: form.title,
+      config: usesConfigTitle ? { ...form.config, title: form.title || undefined } : form.config,
+      enabled: editing ? editing.enabled : true,
+      startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
+      endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
+    };
+    return editing ? sections.map((s) => (s.id === editing.id ? draft : s)) : [...sections, draft];
+  }, [sections, modalOpen, editing, form]);
+
+  useEffect(() => {
+    const onMessage = (e) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type === "veluntra-cms-preview-ready") setPreviewReady(true);
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  useEffect(() => {
+    if (!previewReady) return;
+    previewFrameRef.current?.contentWindow?.postMessage(
+      { type: "veluntra-cms-preview", sections: previewSections },
+      window.location.origin
+    );
+  }, [previewReady, previewSections]);
 
   const createMutation = useMutation({ mutationFn: (payload) => homepageApi.create(payload), onSuccess: () => { invalidate(); setModalOpen(false); } });
   const updateMutation = useMutation({ mutationFn: ({ id, payload }) => homepageApi.update(id, payload), onSuccess: () => { invalidate(); setModalOpen(false); } });
@@ -1459,9 +1545,14 @@ function HomepageCmsSection() {
     setModalOpen(true);
   };
   const submitForm = () => {
+    // Home.jsx reads the heading for these section types from `config.title`, not the
+    // top-level `title` column — mirror the one "Title" field the admin actually sees
+    // into config so it shows up on the live page without a second, confusing input.
+    const usesConfigTitle = GRID_SETTINGS_TYPES.has(form.type) || TITLE_ONLY_TYPES.has(form.type);
+    const config = usesConfigTitle ? { ...form.config, title: form.title || undefined } : form.config;
     const payload = {
       title: form.title,
-      config: form.config,
+      config,
       startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
       endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
     };
@@ -1484,6 +1575,7 @@ function HomepageCmsSection() {
   };
 
   return (
+    <div className="grid gap-6 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_460px]">
     <div>
       <SectionTitle
         eyebrow="Manage"
@@ -1524,14 +1616,12 @@ function HomepageCmsSection() {
         </div>
       )}
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit section" : "Add homepage section"} footer={
-        <>
-          <SecondaryButton onClick={() => setModalOpen(false)}>Cancel</SecondaryButton>
-          <PrimaryButton onClick={submitForm} loading={createMutation.isPending || updateMutation.isPending}>
-            {editing ? "Save changes" : "Add section"}
-          </PrimaryButton>
-        </>
-      }>
+      {modalOpen && (
+      <div className="mt-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-soft-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">{editing ? "Edit section" : "Add homepage section"}</h3>
+          <IconButton icon={X} size="sm" aria-label="Close" onClick={() => setModalOpen(false)} />
+        </div>
         <div className="flex flex-col gap-4">
           {!editing && (
             <Select label="Section type" value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value, config: {} }))} options={SECTION_TYPES.map((t) => ({ value: t, label: t.replace(/_/g, " ") }))} />
@@ -1579,8 +1669,87 @@ function HomepageCmsSection() {
               />
             </>
           )}
+          {GRID_SETTINGS_TYPES.has(form.type) && (
+            <>
+              {PRODUCT_SOURCE_TYPES.has(form.type) && (
+                <>
+                  <Select
+                    label="Product source"
+                    value={form.config.productSource || "featured"}
+                    onChange={(e) => setConfig("productSource", e.target.value)}
+                    options={PRODUCT_SOURCE_OPTIONS}
+                  />
+                  {SOURCE_VALUE_LABEL[form.config.productSource] && (
+                    <Input
+                      label={SOURCE_VALUE_LABEL[form.config.productSource]}
+                      value={form.config.sourceValue || ""}
+                      onChange={(e) => setConfig("sourceValue", e.target.value)}
+                    />
+                  )}
+                  <Input label="Subtitle (optional)" value={form.config.subtitle || ""} onChange={(e) => setConfig("subtitle", e.target.value)} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input label="Button text" placeholder="View all" value={form.config.buttonText || ""} onChange={(e) => setConfig("buttonText", e.target.value)} />
+                    <Input label="Button link" placeholder="/products" value={form.config.buttonLink || ""} onChange={(e) => setConfig("buttonLink", e.target.value)} />
+                  </div>
+                </>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  type="number"
+                  min={1}
+                  max={24}
+                  label="Product count"
+                  value={form.config.productCount || ""}
+                  onChange={(e) => setConfig("productCount", e.target.value)}
+                />
+                <Select
+                  label="Columns"
+                  value={String(form.config.columns || 6)}
+                  onChange={(e) => setConfig("columns", e.target.value)}
+                  options={[2, 3, 4, 5, 6, 8].map((n) => ({ value: String(n), label: `${n} columns` }))}
+                />
+              </div>
+            </>
+          )}
+          {TITLE_ONLY_TYPES.has(form.type) && (
+            <p className="text-xs text-[var(--text-muted)]">Set the "Title" field above to override this section's default heading.</p>
+          )}
           {!CONFIGURABLE_SECTION_TYPES.has(form.type) && (
             <p className="text-xs text-[var(--text-muted)]">This section pulls live data automatically — nothing else to configure.</p>
+          )}
+
+          {CONFIGURABLE_SECTION_TYPES.has(form.type) && (
+            <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-4">
+              <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Visibility</span>
+              <div className="flex flex-wrap gap-4">
+                {DEVICE_OPTIONS.map((d) => {
+                  const devices = form.config.visibility?.devices || [];
+                  const checked = devices.length === 0 || devices.includes(d.value);
+                  return (
+                    <Checkbox
+                      key={d.value}
+                      label={d.label}
+                      checked={checked}
+                      onChange={(e) => {
+                        const current = form.config.visibility?.devices || DEVICE_OPTIONS.map((o) => o.value);
+                        const next = e.target.checked ? [...new Set([...current, d.value])] : current.filter((v) => v !== d.value);
+                        setConfig("visibility", { ...form.config.visibility, devices: next.length === DEVICE_OPTIONS.length ? [] : next });
+                      }}
+                    />
+                  );
+                })}
+              </div>
+              <Select
+                label="Show to"
+                value={form.config.visibility?.audience || "all"}
+                onChange={(e) => setConfig("visibility", { ...form.config.visibility, audience: e.target.value })}
+                options={[
+                  { value: "all", label: "Everyone" },
+                  { value: "guest", label: "Guests only (logged out)" },
+                  { value: "loggedIn", label: "Logged-in customers only" },
+                ]}
+              />
+            </div>
           )}
 
           <div className="grid grid-cols-2 gap-4 border-t border-[var(--border)] pt-4">
@@ -1598,7 +1767,54 @@ function HomepageCmsSection() {
             />
           </div>
         </div>
-      </Modal>
+        <div className="mt-5 flex justify-end gap-2 border-t border-[var(--border)] pt-4">
+          <SecondaryButton onClick={() => setModalOpen(false)}>Cancel</SecondaryButton>
+          <PrimaryButton onClick={submitForm} loading={createMutation.isPending || updateMutation.isPending}>
+            {editing ? "Save changes" : "Add section"}
+          </PrimaryButton>
+        </div>
+      </div>
+      )}
+    </div>
+
+    <div className="lg:sticky lg:top-20 lg:self-start">
+      <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-soft-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Live preview</span>
+          <div className="flex items-center gap-1 rounded-full bg-[var(--surface-muted,rgba(0,0,0,0.04))] p-1">
+            {PREVIEW_VIEWPORTS.map(({ value, icon: Icon }) => (
+              <button
+                key={value}
+                type="button"
+                aria-label={value}
+                onClick={() => setPreviewViewport(value)}
+                className={cn(
+                  "grid size-7 place-items-center rounded-full transition-colors",
+                  previewViewport === value ? "bg-[var(--surface)] text-gold-500 shadow-soft-sm" : "text-[var(--text-muted)]"
+                )}
+              >
+                <Icon className="size-3.5" />
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="mb-2 text-[11px] text-[var(--text-muted)]">
+          Updates instantly as you edit below — no need to open the live site to check.
+        </p>
+        <div
+          className="mx-auto overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-neutral-100"
+          style={{ width: PREVIEW_VIEWPORTS.find((v) => v.value === previewViewport)?.width, height: 640, maxWidth: "100%" }}
+        >
+          <iframe
+            ref={previewFrameRef}
+            src="/?cms_preview=1"
+            title="Homepage live preview"
+            className="h-full w-full border-0"
+            onLoad={() => setPreviewReady(false)}
+          />
+        </div>
+      </div>
+    </div>
     </div>
   );
 }

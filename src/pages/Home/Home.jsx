@@ -1095,13 +1095,41 @@ const DEFAULT_CMS_SECTION_ORDER = [
   "testimonials",
 ];
 
+/** When embedded as `/?cms_preview=1` inside the admin's Homepage CMS editor (see
+ * AdminDashboard.jsx's HomepageCmsSection), this listens for the parent window's
+ * postMessage carrying the in-progress draft section list and renders that instead of
+ * the saved DB data — so an admin sees edits reflected on the real page instantly,
+ * without saving and reopening the live site. No-ops entirely outside preview mode. */
+function useCmsPreviewSections() {
+  const [draftSections, setDraftSections] = useState(null);
+  const isPreview = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("cms_preview") === "1";
+
+  useEffect(() => {
+    if (!isPreview) return;
+    const onMessage = (event) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== "veluntra-cms-preview") return;
+      setDraftSections(event.data.sections);
+    };
+    window.addEventListener("message", onMessage);
+    window.parent?.postMessage({ type: "veluntra-cms-preview-ready" }, window.location.origin);
+    return () => window.removeEventListener("message", onMessage);
+  }, [isPreview]);
+
+  return draftSections;
+}
+
 function Home() {
   useDocumentTitle();
-  const { data: cmsSections } = useQuery({
+  const isCmsPreview = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("cms_preview") === "1";
+  const previewSections = useCmsPreviewSections();
+  const { data: fetchedSections } = useQuery({
     queryKey: ["homepage-sections"],
     queryFn: homepageApi.listPublic,
     staleTime: 5 * 60 * 1000,
+    enabled: !isCmsPreview,
   });
+  const cmsSections = isCmsPreview ? previewSections : fetchedSections;
 
   // Until the admin configures the Homepage CMS (or if it's unreachable), fall back to the
   // default section order so the storefront never renders an empty page.
