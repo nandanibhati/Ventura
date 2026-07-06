@@ -7,7 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import { Input, Checkbox } from "../../components/ui/Input";
 import { PrimaryButton, SecondaryButton, IconButton } from "../../components/ui/Button";
 import { Modal, Dropdown } from "../../components/ui/Overlay";
-import { LoadingSpinner, EmptyState, ErrorState } from "../../components/ui/Feedback";
+import { LoadingSpinner, EmptyState, ErrorState, Badge } from "../../components/ui/Feedback";
 import { Breadcrumb } from "../../components/ui/Navigation";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 
@@ -141,9 +141,16 @@ export default function Account() {
           <span className="grid size-11 place-items-center rounded-full bg-gold-400/12 text-gold-500">
             <Award className="size-5" />
           </span>
-          <div>
-            <p className="text-sm font-medium text-[var(--text-primary)]">{user?.rewardPoints ?? 0} reward points</p>
-            <p className="text-xs text-[var(--text-muted)]">Earned automatically when your orders are delivered.</p>
+          <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-medium text-[var(--text-primary)]">{user?.rewardPoints ?? 0} reward points</p>
+              {user?.vipTier && (
+                <Badge variant="gold">{user.vipTier} member</Badge>
+              )}
+            </div>
+            <p className="text-xs text-[var(--text-muted)]">
+              {user?.vipTier ? "Reward points and free shipping on every order." : "Earned automatically when your orders are delivered."}
+            </p>
           </div>
         </div>
 

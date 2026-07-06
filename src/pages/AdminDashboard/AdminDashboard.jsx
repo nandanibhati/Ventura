@@ -2283,6 +2283,8 @@ const FEATURE_FLAG_LABELS = {
 
 const DEFAULT_POPUP_BANNER = { enabled: false, title: "", body: "", imageUrl: null, ctaText: "", ctaLink: "" };
 
+const DEFAULT_VIP_TIERS = { enabled: false, silverThreshold: 100, goldThreshold: 500, platinumThreshold: 1000 };
+
 const PRESET_LABELS = {
   apple: "Apple",
   nike: "Nike",
@@ -2381,6 +2383,9 @@ function SettingsSection() {
 
   const currentPopup = { ...DEFAULT_POPUP_BANNER, ...(current.popupBanner || {}) };
   const setPopup = (key, value) => setForm((f) => ({ ...f, popupBanner: { ...DEFAULT_POPUP_BANNER, ...f.popupBanner, [key]: value } }));
+
+  const currentVip = { ...DEFAULT_VIP_TIERS, ...(current.vipTiers || {}) };
+  const setVip = (key, value) => setForm((f) => ({ ...f, vipTiers: { ...DEFAULT_VIP_TIERS, ...f.vipTiers, [key]: value } }));
 
   const handlePopupImageUpload = async (files) => {
     if (!files.length) return;
@@ -2653,6 +2658,40 @@ function SettingsSection() {
                   <input type="file" accept="image/*" hidden disabled={popupUploading} onChange={(e) => handlePopupImageUpload(e.target.files)} />
                 </label>
               </div>
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-soft-sm lg:col-span-2">
+          <h3 className="mb-1 text-[15px] font-medium">VIP tiers</h3>
+          <p className="mb-4 text-xs text-[var(--text-muted)]">
+            Silver / Gold / Platinum, assigned automatically by lifetime spend once an order is marked delivered.
+            Any tier gets free shipping on every order.
+          </p>
+          <Checkbox label="Enable VIP tiers" checked={!!currentVip.enabled} onChange={(e) => setVip("enabled", e.target.checked)} />
+          {currentVip.enabled && (
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Input
+                label={`Silver threshold (${current.currencySymbol || "£"})`}
+                type="number"
+                min={0}
+                value={currentVip.silverThreshold}
+                onChange={(e) => setVip("silverThreshold", e.target.value)}
+              />
+              <Input
+                label={`Gold threshold (${current.currencySymbol || "£"})`}
+                type="number"
+                min={0}
+                value={currentVip.goldThreshold}
+                onChange={(e) => setVip("goldThreshold", e.target.value)}
+              />
+              <Input
+                label={`Platinum threshold (${current.currencySymbol || "£"})`}
+                type="number"
+                min={0}
+                value={currentVip.platinumThreshold}
+                onChange={(e) => setVip("platinumThreshold", e.target.value)}
+              />
             </div>
           )}
         </div>
