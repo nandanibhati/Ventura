@@ -69,13 +69,12 @@ export function AuthProvider({ children }) {
   );
 
   const logout = useCallback(async () => {
-    const refreshToken = tokenStorage.getRefreshToken();
     tokenStorage.clear();
     setUser(null);
     setStatus("guest");
-    if (refreshToken) {
-      authApi.logout(refreshToken).catch(() => {});
-    }
+    // The refresh token itself lives in an httpOnly cookie the browser attaches automatically —
+    // best-effort revoke server-side; the local session is already cleared either way.
+    authApi.logout().catch(() => {});
   }, []);
 
   const refreshUser = useCallback(async () => {

@@ -2,20 +2,19 @@
  * Token persistence, isolated behind a small interface so a future React
  * Native app can swap this module for SecureStore/AsyncStorage without
  * touching anything that calls it.
+ *
+ * The refresh token is NOT stored here — it lives in an httpOnly cookie the browser manages
+ * on its own, never readable by JS. Only the short-lived access token is kept in localStorage.
  */
 const ACCESS_KEY = "Veluntra.accessToken";
-const REFRESH_KEY = "Veluntra.refreshToken";
 
 export const tokenStorage = {
   getAccessToken: () => localStorage.getItem(ACCESS_KEY),
-  getRefreshToken: () => localStorage.getItem(REFRESH_KEY),
-  setTokens: ({ accessToken, refreshToken }) => {
+  setTokens: ({ accessToken }) => {
     if (accessToken) localStorage.setItem(ACCESS_KEY, accessToken);
-    if (refreshToken) localStorage.setItem(REFRESH_KEY, refreshToken);
   },
   clear: () => {
     localStorage.removeItem(ACCESS_KEY);
-    localStorage.removeItem(REFRESH_KEY);
   },
 };
 

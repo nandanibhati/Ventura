@@ -4,7 +4,9 @@ import { tokenStorage, getGuestSessionId } from "./tokenStorage";
 const baseURL = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
 const apiOrigin = baseURL.replace(/\/api\/v1\/?$/, "");
 
-export const api = axios.create({ baseURL });
+// Required so the browser sends/receives the httpOnly refresh-token cookie — the API is on a
+// different origin (Render) than the SPA (Vercel) in production, so cookies need this opt-in.
+export const api = axios.create({ baseURL, withCredentials: true });
 
 /**
  * Uploaded file URLs come back from the backend as origin-relative paths
@@ -33,14 +35,12 @@ api.interceptors.request.use((config) => {
 
 let refreshPromise = null;
 
-/** Exchanges the stored refresh token for a new pair. De-duplicated so parallel 401s only refresh once. */
+/** Exchanges the httpOnly refresh-token cookie for a new token pair. De-duplicated so parallel
+ * 401s only refresh once. */
 async function refreshTokens() {
-  const refreshToken = tokenStorage.getRefreshToken();
-  if (!refreshToken) throw new Error("No refresh token available");
-
   if (!refreshPromise) {
     refreshPromise = axios
-      .post(`${baseURL}/auth/refresh`, { refreshToken })
+      .post(`${baseURL}/auth/refresh`, null, { withCredentials: true })
       .then(({ data }) => {
         tokenStorage.setTokens(data.data);
         return data.data;
