@@ -177,6 +177,10 @@ function Navbar() {
   const queryClient = useQueryClient();
 
   const { data: storeSettings } = useQuery({ queryKey: ["settings", "public"], queryFn: settingsApi.getPublic, staleTime: 5 * 60 * 1000 });
+  // Falls back to the store name as text if the logo file is missing (e.g. wiped by a redeploy
+  // on hosts with non-persistent disk) instead of showing a broken-image icon.
+  const [logoFailed, setLogoFailed] = useState(false);
+  const showLogo = storeSettings?.logoUrl && !logoFailed;
 
   const { data: wishlist = [] } = useQuery({
     queryKey: ["wishlist"],
@@ -312,10 +316,11 @@ function Navbar() {
           }`}
         >
           <Link to="/" className="shrink-0">
-            {storeSettings?.logoUrl ? (
+            {showLogo ? (
               <img
                 src={resolveMediaUrl(storeSettings.logoUrl)}
                 alt={storeSettings.storeName || "Store logo"}
+                onError={() => setLogoFailed(true)}
                 className={`w-auto max-w-[220px] object-contain transition-all duration-300 ${scrolled ? "h-12" : "h-16"}`}
               />
             ) : (
@@ -627,8 +632,13 @@ function Navbar() {
               className="fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col overflow-y-auto bg-white shadow-2xl dark:bg-neutral-950 lg:hidden"
             >
               <div className="flex items-center justify-between border-b border-black/5 px-5 py-4 dark:border-white/10">
-                {storeSettings?.logoUrl ? (
-                  <img src={resolveMediaUrl(storeSettings.logoUrl)} alt={storeSettings.storeName || "Store logo"} className="h-10 w-auto max-w-[180px] object-contain" />
+                {showLogo ? (
+                  <img
+                    src={resolveMediaUrl(storeSettings.logoUrl)}
+                    alt={storeSettings.storeName || "Store logo"}
+                    onError={() => setLogoFailed(true)}
+                    className="h-10 w-auto max-w-[180px] object-contain"
+                  />
                 ) : (
                   <span className="text-xl font-bold uppercase tracking-[0.15em] text-neutral-900 dark:text-white">
                     {storeSettings?.storeName || "Veluntra"}

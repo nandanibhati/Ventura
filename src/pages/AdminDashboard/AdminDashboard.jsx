@@ -2467,6 +2467,11 @@ function SettingsSection() {
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
   const setFlag = (key, value) => setForm((f) => ({ ...f, featureFlags: { ...f.featureFlags, [key]: value } }));
   const setSocialLink = (platform, value) => setForm((f) => ({ ...f, socialLinks: { ...f.socialLinks, [platform]: value } }));
+  const setCloudinary = (key, value) => setForm((f) => ({ ...f, cloudinaryConfig: { ...f.cloudinaryConfig, [key]: value } }));
+  const cloudinaryConfigured =
+    current.cloudinaryConfig?.cloudName === "••••••••" ||
+    current.cloudinaryConfig?.apiKey === "••••••••" ||
+    current.cloudinaryConfig?.apiSecret === "••••••••";
   const currentAnim = { ...DEFAULT_ANIMATION_CONFIG, ...(current.animationConfig || {}) };
   const setAnim = (key, value) => setForm((f) => ({ ...f, animationConfig: { ...DEFAULT_ANIMATION_CONFIG, ...f.animationConfig, [key]: value } }));
   const applyPreset = (presetName) =>
@@ -2597,6 +2602,41 @@ function SettingsSection() {
               value={current.socialLinks?.youtube || ""}
               onChange={(e) => setSocialLink("youtube", e.target.value)}
               placeholder="https://youtube.com/@yourstore"
+            />
+          </div>
+        </div>
+
+        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-soft-sm">
+          <h3 className="mb-1 text-[15px] font-medium">Image storage (Cloudinary)</h3>
+          <p className="mb-4 text-xs text-[var(--text-muted)]">
+            {cloudinaryConfigured ? (
+              "Configured — uploaded images (logo, products, categories, banners) are stored permanently on Cloudinary."
+            ) : (
+              <>
+                Without this, uploaded images are stored on the server's local disk, which is wiped every time the
+                site is redeployed — this is why logos or photos you upload can suddenly disappear. Create a free
+                account at cloudinary.com, copy your Cloud name / API key / API secret from its dashboard, and paste
+                them below to fix this permanently. All three fields are masked once saved — if you need to change
+                one, re-enter all three together.
+              </>
+            )}
+          </p>
+          <div className="grid grid-cols-3 gap-4">
+            <Input
+              label="Cloud name"
+              value={current.cloudinaryConfig?.cloudName || ""}
+              onChange={(e) => setCloudinary("cloudName", e.target.value)}
+            />
+            <Input
+              label="API key"
+              value={current.cloudinaryConfig?.apiKey || ""}
+              onChange={(e) => setCloudinary("apiKey", e.target.value)}
+            />
+            <Input
+              label="API secret"
+              type="password"
+              value={current.cloudinaryConfig?.apiSecret || ""}
+              onChange={(e) => setCloudinary("apiSecret", e.target.value)}
             />
           </div>
         </div>
