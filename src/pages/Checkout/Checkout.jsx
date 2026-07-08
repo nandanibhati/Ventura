@@ -8,7 +8,6 @@ import {
   Truck,
   Zap,
   CreditCard,
-  Wallet,
   Banknote,
   Tag,
   ChevronDown,
@@ -29,21 +28,11 @@ import { addressesApi, ordersApi } from "../../api/orders";
 import { shippingApi, settingsApi } from "../../api/catalog";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 
-const ICON_BY_PAYMENT = { card: CreditCard, paypal: Wallet, applepay: Wallet, cod: Banknote };
-const LABEL_BY_PAYMENT = { card: "Card", paypal: "PayPal", applepay: "Apple Pay", cod: "Cash on Delivery" };
+const ICON_BY_PAYMENT = { card: CreditCard, cod: Banknote };
+const LABEL_BY_PAYMENT = { card: "Card", cod: "Cash on Delivery" };
 
 const CURRENCY = "£";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function formatCardNumber(value) {
-  const digits = value.replace(/\D/g, "").slice(0, 16);
-  return digits.replace(/(.{4})/g, "$1 ").trim();
-}
-function formatExpiry(value) {
-  const digits = value.replace(/\D/g, "").slice(0, 4);
-  if (digits.length <= 2) return digits;
-  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-}
 
 export default function Checkout() {
   useDocumentTitle("Checkout");
@@ -62,7 +51,6 @@ export default function Checkout() {
   const [saveInfo, setSaveInfo] = useState(true);
   const [delivery, setDelivery] = useState(null);
   const [payment, setPayment] = useState("card");
-  const [card, setCard] = useState({ number: "", name: "", expiry: "", cvc: "" });
 
   const [couponInput, setCouponInput] = useState("");
 
@@ -90,10 +78,16 @@ export default function Checkout() {
   const setAddr = (field) => (e) => setAddress((a) => ({ ...a, [field]: e.target.value }));
 
   const codEnabled = settings?.featureFlags?.cod !== false;
+  const cardEnabled = settings?.stripeEnabled === true;
   const paymentOptions = useMemo(
-    () => ["card", "paypal", "applepay", ...(codEnabled ? ["cod"] : [])],
-    [codEnabled]
+    () => [...(cardEnabled ? ["card"] : []), ...(codEnabled ? ["cod"] : [])],
+    [cardEnabled, codEnabled]
   );
+  // Card is the default, but if it turns out to be unavailable once settings load (Stripe not
+  // configured yet) and COD is the only real option, switch to it automatically.
+  useEffect(() => {
+    if (settings && payment === "card" && !cardEnabled && codEnabled) setPayment("cod");
+  }, [settings, cardEnabled, codEnabled, payment]);
 
   /* — Pricing (subtotal/discount authoritative from the live cart; delivery/tax/COD are previews — the
      server recomputes everything from scratch when the order is actually placed) — */
@@ -126,12 +120,6 @@ export default function Checkout() {
     if (!address.city) e.city = "Required.";
     if (!address.postalCode) e.postalCode = "Required.";
 
-    if (payment === "card") {
-      if (card.number.replace(/\s/g, "").length < 16) e.cardNumber = "Enter a valid card number.";
-      if (!card.name) e.cardName = "Name on card is required.";
-      if (card.expiry.length < 5) e.cardExpiry = "MM/YY";
-      if (card.cvc.length < 3) e.cardCvc = "CVC";
-    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -150,10 +138,17 @@ export default function Checkout() {
         guestAddress: address,
       });
     },
-    onSuccess: (orders) => {
-      setPlacedOrder(orders[0]);
+    onSuccess: ({ orders, checkoutUrl }) => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       refetchCart();
+      // Card payment: hand off to Stripe's hosted checkout to actually collect the payment —
+      // the order already exists (payment-pending) and only gets marked paid once Stripe
+      // confirms it via webhook. COD: nothing left to pay, show the confirmation immediately.
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+      } else {
+        setPlacedOrder(orders[0]);
+      }
     },
     onError: (err) => {
       const message = err.response?.data?.error?.message || "Something went wrong placing your order. Please try again.";
@@ -337,7 +332,7 @@ export default function Checkout() {
             {/* Payment */}
             <section>
               <SectionHeader step="04" title="Payment" icon={CreditCard} />
-              <div className="grid grid-cols-2 gap-3 mb-5 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 mb-5 sm:max-w-sm">
                 {paymentOptions.map((id) => {
                   const Icon = ICON_BY_PAYMENT[id];
                   const selected = payment === id;
@@ -361,65 +356,18 @@ export default function Checkout() {
               </div>
 
               <AnimatePresence mode="wait">
-                {payment === "card" ? (
-                  <motion.div
-                    key="card"
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 6 }}
-                    transition={{ duration: 0.2 }}
-                    className="grid grid-cols-1 gap-4 sm:grid-cols-2"
-                  >
-                    <div className="sm:col-span-2">
-                      <Input
-                        label="Card number"
-                        placeholder="1234 1234 1234 1234"
-                        value={card.number}
-                        onChange={(e) => setCard((c) => ({ ...c, number: formatCardNumber(e.target.value) }))}
-                        error={errors.cardNumber}
-                        rightIcon={CreditCard}
-                        inputMode="numeric"
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <Input
-                        label="Name on card"
-                        value={card.name}
-                        onChange={(e) => setCard((c) => ({ ...c, name: e.target.value }))}
-                        error={errors.cardName}
-                      />
-                    </div>
-                    <Input
-                      label="Expiry"
-                      placeholder="MM/YY"
-                      value={card.expiry}
-                      onChange={(e) => setCard((c) => ({ ...c, expiry: formatExpiry(e.target.value) }))}
-                      error={errors.cardExpiry}
-                      inputMode="numeric"
-                    />
-                    <Input
-                      label="CVC"
-                      placeholder="123"
-                      value={card.cvc}
-                      onChange={(e) => setCard((c) => ({ ...c, cvc: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
-                      error={errors.cardCvc}
-                      inputMode="numeric"
-                    />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="redirect"
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 6 }}
-                    transition={{ duration: 0.2 }}
-                    className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-inset)] p-4 text-sm text-[var(--text-muted)]"
-                  >
-                    {payment === "cod"
-                      ? `Pay in cash when your order arrives.${codCharge > 0 ? ` A ${CURRENCY}${codCharge.toFixed(2)} cash-on-delivery charge applies.` : ""}`
-                      : `You'll be redirected to ${LABEL_BY_PAYMENT[payment]} to complete this payment securely after placing your order.`}
-                  </motion.div>
-                )}
+                <motion.div
+                  key={payment}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }}
+                  transition={{ duration: 0.2 }}
+                  className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-inset)] p-4 text-sm text-[var(--text-muted)]"
+                >
+                  {payment === "cod"
+                    ? `Pay in cash when your order arrives.${codCharge > 0 ? ` A ${CURRENCY}${codCharge.toFixed(2)} cash-on-delivery charge applies.` : ""}`
+                    : "You'll be taken to Stripe's secure checkout to pay by card, Apple Pay, or Google Pay after placing your order — we never see or store your card details."}
+                </motion.div>
               </AnimatePresence>
             </section>
 
