@@ -128,6 +128,8 @@ const NAV_GROUPS = [
 ];
 const ALL_NAV_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
 
+const EDIT_ENTITY_TAB = { category: "categories", product: "products", brand: "brands" };
+
 export default function AdminDashboard() {
   useDocumentTitle("Admin Dashboard");
   const [activeTab, setActiveTab] = useState("users");
@@ -141,6 +143,24 @@ export default function AdminDashboard() {
     [role]
   );
   const activeItem = ALL_NAV_ITEMS.find((n) => n.id === activeTab);
+
+  // Homepage CMS's live preview iframe posts this when an admin clicks an image directly in
+  // the preview (e.g. a category tile) — jump straight to that exact item's editor instead of
+  // making them find it in the nav. See Home.jsx's useCmsEditClick / CmsEditOverlay.
+  const [pendingEdit, setPendingEdit] = useState(null);
+  useEffect(() => {
+    const onMessage = (e) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type !== "veluntra-cms-edit-request") return;
+      const tab = EDIT_ENTITY_TAB[e.data.entityType];
+      if (!tab) return;
+      setActiveTab(tab);
+      setPendingEdit({ entityType: e.data.entityType, entityId: e.data.entityId });
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+  const clearPendingEdit = () => setPendingEdit(null);
 
   return (
     <div className="min-h-screen bg-[var(--surface-muted)]">
@@ -175,9 +195,24 @@ export default function AdminDashboard() {
               {activeTab === "users" && <UsersSection />}
               {activeTab === "sellers" && <SellersSection />}
               {activeTab === "orders" && <OrdersSection />}
-              {activeTab === "products" && <ProductsSection />}
-              {activeTab === "categories" && <CategoriesSection />}
-              {activeTab === "brands" && <BrandsSection />}
+              {activeTab === "products" && (
+                <ProductsSection
+                  pendingEditId={pendingEdit?.entityType === "product" ? pendingEdit.entityId : null}
+                  onConsumePendingEdit={clearPendingEdit}
+                />
+              )}
+              {activeTab === "categories" && (
+                <CategoriesSection
+                  pendingEditId={pendingEdit?.entityType === "category" ? pendingEdit.entityId : null}
+                  onConsumePendingEdit={clearPendingEdit}
+                />
+              )}
+              {activeTab === "brands" && (
+                <BrandsSection
+                  pendingEditId={pendingEdit?.entityType === "brand" ? pendingEdit.entityId : null}
+                  onConsumePendingEdit={clearPendingEdit}
+                />
+              )}
               {activeTab === "coupons" && <CouponsSection />}
               {activeTab === "promotions" && <PromotionsSection />}
               {activeTab === "reviews" && <ReviewsSection />}
@@ -678,7 +713,7 @@ function OrdersSection() {
 
 const PRODUCT_STATUSES = ["draft", "published", "archived", "hidden", "upcoming", "discontinued"];
 
-function ProductsSection() {
+function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
@@ -748,6 +783,21 @@ function ProductsSection() {
       setUploading(false);
     }
   };
+
+  // Clicked straight through from the Homepage CMS live preview — the target product might
+  // not be on the currently-loaded/filtered page of the list, so fetch it directly by id
+  // rather than searching `products`.
+  useEffect(() => {
+    if (!pendingEditId) return;
+    let cancelled = false;
+    productsApi.getByIdForManage(pendingEditId).then((p) => {
+      if (!cancelled) openEdit(p);
+      onConsumePendingEdit?.();
+    }).catch(() => onConsumePendingEdit?.());
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingEditId]);
+
   const submitForm = () => {
     const merchandising = {
       isFeatured: form.isFeatured, isTrending: form.isTrending, isBestSeller: form.isBestSeller, isNew: form.isNew,
@@ -946,7 +996,7 @@ function ProductsSection() {
 
 /* — Categories — */
 
-function CategoriesSection() {
+function CategoriesSection({ pendingEditId, onConsumePendingEdit } = {}) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", slug: "", imageUrl: null });
@@ -973,6 +1023,15 @@ function CategoriesSection() {
   const openCreate = () => { setEditing(null); setForm({ name: "", slug: "", imageUrl: null }); setModalOpen(true); };
   const openEdit = (c) => { setEditing(c); setForm({ name: c.name, slug: c.slug, imageUrl: c.imageUrl ? resolveMediaUrl(c.imageUrl) : null }); setModalOpen(true); };
   const submitForm = () => (editing ? updateMutation.mutate({ id: editing.id, payload: form }) : createMutation.mutate(form));
+
+  // Clicked straight through from the Homepage CMS live preview.
+  useEffect(() => {
+    if (!pendingEditId || categories.length === 0) return;
+    const match = categories.find((c) => c.id === pendingEditId);
+    if (match) openEdit(match);
+    onConsumePendingEdit?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingEditId, categories]);
 
   const handleImageUpload = async (files) => {
     if (!files.length) return;
@@ -1063,7 +1122,7 @@ function CategoriesSection() {
 
 /* — Brands — */
 
-function BrandsSection() {
+function BrandsSection({ pendingEditId, onConsumePendingEdit } = {}) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", slug: "", logoUrl: null });
@@ -1098,6 +1157,15 @@ function BrandsSection() {
   const openCreate = () => { setEditing(null); setForm({ name: "", slug: "", logoUrl: null }); setModalOpen(true); };
   const openEdit = (b) => { setEditing(b); setForm({ name: b.name, slug: b.slug, logoUrl: b.logoUrl ? resolveMediaUrl(b.logoUrl) : null }); setModalOpen(true); };
   const submitForm = () => (editing ? updateMutation.mutate({ id: editing.id, payload: form }) : createMutation.mutate(form));
+
+  // Clicked straight through from the Homepage CMS live preview.
+  useEffect(() => {
+    if (!pendingEditId || brands.length === 0) return;
+    const match = brands.find((b) => b.id === pendingEditId);
+    if (match) openEdit(match);
+    onConsumePendingEdit?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingEditId, brands]);
 
   const handleLogoUpload = async (files) => {
     if (!files.length) return;

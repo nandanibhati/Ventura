@@ -313,7 +313,11 @@ function Navbar() {
         >
           <Link to="/" className="shrink-0">
             {storeSettings?.logoUrl ? (
-              <img src={resolveMediaUrl(storeSettings.logoUrl)} alt={storeSettings.storeName || "Store logo"} className="h-9 w-auto object-contain" />
+              <img
+                src={resolveMediaUrl(storeSettings.logoUrl)}
+                alt={storeSettings.storeName || "Store logo"}
+                className={`w-auto max-w-[220px] object-contain transition-all duration-300 ${scrolled ? "h-12" : "h-16"}`}
+              />
             ) : (
               <span className="text-[1.6rem] font-bold uppercase tracking-[0.15em] text-neutral-900 dark:text-white">
                 {storeSettings?.storeName || "Veluntra"}
@@ -624,7 +628,7 @@ function Navbar() {
             >
               <div className="flex items-center justify-between border-b border-black/5 px-5 py-4 dark:border-white/10">
                 {storeSettings?.logoUrl ? (
-                  <img src={resolveMediaUrl(storeSettings.logoUrl)} alt={storeSettings.storeName || "Store logo"} className="h-7 w-auto object-contain" />
+                  <img src={resolveMediaUrl(storeSettings.logoUrl)} alt={storeSettings.storeName || "Store logo"} className="h-10 w-auto max-w-[180px] object-contain" />
                 ) : (
                   <span className="text-xl font-bold uppercase tracking-[0.15em] text-neutral-900 dark:text-white">
                     {storeSettings?.storeName || "Veluntra"}

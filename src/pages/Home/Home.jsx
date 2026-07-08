@@ -31,6 +31,7 @@ import {
   Lamp,
   Smartphone,
   Laptop,
+  Pencil,
 } from "lucide-react";
 import { categoriesApi, brandsApi, statsApi, promotionsApi, homepageApi, settingsApi } from "../../api/catalog";
 import { productsApi, reviewsApi } from "../../api/products";
@@ -314,6 +315,7 @@ function ProductGridSection({ section, defaults }) {
   const visible = useSectionVisible(config);
   const globalTemplate = useGlobalCardTemplate();
   const template = config.cardTemplate || globalTemplate;
+  const { isPreview, requestEdit } = useCmsEditClick();
 
   const source = config.productSource || defaults.source;
   const title = config.title || defaults.title;
@@ -356,7 +358,10 @@ function ProductGridSection({ section, defaults }) {
           className={cn("grid gap-2.5", COLUMN_CLASS[columns] || COLUMN_CLASS[6])}
         >
           {products.map((product, i) => (
-            <HomeProductCard key={product.id} product={product} index={i} template={template} />
+            <div key={product.id} className="relative">
+              <HomeProductCard product={product} index={i} template={template} />
+              {isPreview && <CmsEditOverlay onEdit={() => requestEdit("product", product.id)} />}
+            </div>
           ))}
         </motion.div>
       )}
@@ -535,6 +540,7 @@ function CategoriesSection() {
   });
   const scrollRef = useRef(null);
   const scrollBy = (dir) => scrollRef.current?.scrollBy({ left: dir * 240, behavior: "smooth" });
+  const { isPreview, requestEdit } = useCmsEditClick();
 
   return (
     <SectionCard>
@@ -548,7 +554,7 @@ function CategoriesSection() {
                 <Link key={cat.id} to={`/shop?category=${cat.slug}`} className="group flex shrink-0 flex-col items-center gap-2 text-center">
                   <div
                     className={cn(
-                      "flex h-16 w-16 items-center justify-center overflow-hidden rounded-[var(--radius-lg)] bg-[var(--surface-inset)] transition-transform group-hover:scale-105 sm:h-20 sm:w-20",
+                      "relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-[var(--radius-lg)] bg-[var(--surface-inset)] transition-transform group-hover:scale-105 sm:h-20 sm:w-20",
                       !cat.imageUrl && "bg-gradient-to-br",
                       !cat.imageUrl && gradientClassFor(cat.id)
                     )}
@@ -558,6 +564,7 @@ function CategoriesSection() {
                     ) : (
                       <Icon className="h-6 w-6 text-white sm:h-7 sm:w-7" strokeWidth={1.5} />
                     )}
+                    {isPreview && <CmsEditOverlay onEdit={() => requestEdit("category", cat.id)} />}
                   </div>
                   <span className="w-16 truncate text-[11px] font-medium text-neutral-700 dark:text-neutral-300 sm:w-20 sm:text-xs">
                     {cat.name}
@@ -606,6 +613,7 @@ function FlashSaleSection({ section }) {
   const visible = useSectionVisible(config);
   const globalTemplate = useGlobalCardTemplate();
   const template = config.cardTemplate || globalTemplate;
+  const { isPreview, requestEdit } = useCmsEditClick();
   const requestedCount = Number(config.productCount) || 12;
   const columns = Number(config.columns) || 6;
 
@@ -665,7 +673,10 @@ function FlashSaleSection({ section }) {
           className={cn("grid gap-2.5", COLUMN_CLASS[columns] || COLUMN_CLASS[6])}
         >
           {products.map((product, i) => (
-            <HomeProductCard key={product.id} product={product} index={i} template={template} />
+            <div key={product.id} className="relative">
+              <HomeProductCard product={product} index={i} template={template} />
+              {isPreview && <CmsEditOverlay onEdit={() => requestEdit("product", product.id)} />}
+            </div>
           ))}
         </motion.div>
       )}
@@ -740,6 +751,7 @@ function CollectionsSection({ section }) {
 function BrandsSection({ section }) {
   const config = section?.config || {};
   const visible = useSectionVisible(config);
+  const { isPreview, requestEdit } = useCmsEditClick();
   const { data: brands = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["brands"],
     queryFn: brandsApi.list,
@@ -757,13 +769,14 @@ function BrandsSection({ section }) {
           {brands.slice(0, 12).map((brand) => (
             <div
               key={brand.id}
-              className="flex items-center justify-center rounded-sm border border-black/5 p-3 opacity-60 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0 dark:border-white/10"
+              className="relative flex items-center justify-center rounded-sm border border-black/5 p-3 opacity-60 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0 dark:border-white/10"
             >
               {brand.logoUrl ? (
                 <img src={resolveMediaUrl(brand.logoUrl)} alt={brand.name} className="h-8 max-w-full object-contain sm:h-10" />
               ) : (
                 <span className="text-xs font-bold tracking-wide text-neutral-900 dark:text-white sm:text-sm">{brand.name.toUpperCase()}</span>
               )}
+              {isPreview && <CmsEditOverlay onEdit={() => requestEdit("brand", brand.id)} />}
             </div>
           ))}
         </div>
@@ -1175,6 +1188,41 @@ function useCmsPreviewSections() {
   }, [isPreview]);
 
   return draftSections;
+}
+
+/** In CMS preview mode only: returns { isPreview, requestEdit } so a component can both
+ * conditionally render an edit affordance and, on click, ask the parent admin window to jump
+ * straight to that specific item's edit screen (e.g. clicking a category tile in the live
+ * preview opens that exact category's editor in Admin > Categories). requestEdit no-ops
+ * outside preview mode, so it's always safe to call on the real, customer-facing site. */
+function useCmsEditClick() {
+  const isPreview = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("cms_preview") === "1";
+  const requestEdit = (entityType, entityId) => {
+    if (!isPreview) return;
+    window.parent?.postMessage({ type: "veluntra-cms-edit-request", entityType, entityId }, window.location.origin);
+  };
+  return { isPreview, requestEdit };
+}
+
+/** Hover-to-reveal "Edit" pencil overlay — only ever rendered by a caller that already
+ * checked `isPreview`, so this has no visibility logic of its own beyond opacity-on-hover. */
+function CmsEditOverlay({ onEdit }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onEdit();
+      }}
+      className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 opacity-0 transition-opacity hover:opacity-100"
+      aria-label="Edit this item"
+    >
+      <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-neutral-900">
+        <Pencil className="size-3.5" /> Edit
+      </span>
+    </button>
+  );
 }
 
 function Home() {
