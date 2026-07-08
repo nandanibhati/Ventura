@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { settingsApi } from "../../api/catalog";
 
 /* ─────────────────────────────────────────────────────────
    Veluntra — Premium Footer
@@ -301,7 +303,7 @@ const css = `
 const socials = [
   {
     label: "Instagram",
-    href: "#",
+    platform: "instagram",
     path: (
       <>
         <rect x="2" y="2" width="20" height="20" rx="5.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
@@ -312,12 +314,12 @@ const socials = [
   },
   {
     label: "X",
-    href: "#",
+    platform: "twitter",
     path: <path d="M3 3l8.1 10.4L3.4 21h2.5l6.3-6.2L17 21h4l-8.5-10.9L20.3 3h-2.5l-5.6 5.6L7 3H3z" fill="currentColor" />,
   },
   {
     label: "Pinterest",
-    href: "#",
+    platform: "pinterest",
     path: (
       <path
         d="M12 2.5a9.5 9.5 0 0 0-3.6 18.3c-.1-.8-.2-2 0-2.9l1.2-5s-.3-.6-.3-1.5c0-1.4.8-2.5 1.9-2.5.9 0 1.3.7 1.3 1.5 0 .9-.6 2.2-.9 3.5-.2 1 .5 1.9 1.6 1.9 1.9 0 3.3-2 3.3-4.8 0-2.5-1.8-4.3-4.4-4.3a4.6 4.6 0 0 0-4.8 4.6c0 .9.4 1.9.8 2.4l-.3 1.2c-.1.4-.3.5-.6.3-1.2-.6-2-2.4-2-3.9 0-3.2 2.3-6.1 6.7-6.1 3.5 0 6.2 2.5 6.2 5.8 0 3.5-2.2 6.3-5.2 6.3-1 0-2-.5-2.3-1.2l-.6 2.4c-.2.9-.8 1.9-1.2 2.6A9.5 9.5 0 1 0 12 2.5z"
@@ -327,7 +329,7 @@ const socials = [
   },
   {
     label: "YouTube",
-    href: "#",
+    platform: "youtube",
     path: (
       <>
         <rect x="2" y="5.5" width="20" height="13" rx="3.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
@@ -352,6 +354,12 @@ const countries = [
 export default function Footer() {
   const [email, setEmail] = useState("");
   const [joined, setJoined] = useState(false);
+  const { data: storeSettings } = useQuery({
+    queryKey: ["settings", "public"],
+    queryFn: settingsApi.getPublic,
+    staleTime: 5 * 60 * 1000,
+  });
+  const storeName = storeSettings?.storeName || "Veluntra";
 
   const subscribe = () => {
     if (email.trim()) setJoined(true);
@@ -360,13 +368,13 @@ export default function Footer() {
   return (
     <footer className="vf-root" aria-label="Site footer">
       <style>{css}</style>
-      <div aria-hidden="true" className="vf-ghost">Veluntra</div>
+      <div aria-hidden="true" className="vf-ghost">{storeName}</div>
 
       <div className="vf-shell">
         {/* Brand + Newsletter */}
         <div className="vf-top">
           <div>
-            <h2 className="vf-brand">Veluntra</h2>
+            <h2 className="vf-brand">{storeName}</h2>
             <p className="vf-tagline">
               Considered design, enduring materials. Crafted in small ateliers and
               delivered to sixty countries worldwide.
@@ -374,7 +382,7 @@ export default function Footer() {
           </div>
 
           <div>
-            <span className="vf-news-label">The Veluntra Letter</span>
+            <span className="vf-news-label">The {storeName} Letter</span>
             {joined ? (
               <p className="vf-news-done">Welcome to the house. Your first letter arrives soon.</p>
             ) : (
@@ -433,21 +441,29 @@ export default function Footer() {
           </nav>
 
           <div className="vf-atelier">
-            <h3 className="vf-col-title">Atelier</h3>
-            <p>
-              12 Via Serrano, Milano 20121
-              <br />
-              Mon – Sat, 10:00 – 19:00
-            </p>
-            <p>
-              <a href="mailto:concierge@Veluntra.com">concierge@Veluntra.com</a>
-            </p>
+            <h3 className="vf-col-title">Get in touch</h3>
+            {storeSettings?.contactAddress && <p>{storeSettings.contactAddress}</p>}
+            {storeSettings?.contactPhone && <p>{storeSettings.contactPhone}</p>}
+            {storeSettings?.contactEmail && (
+              <p>
+                <a href={`mailto:${storeSettings.contactEmail}`}>{storeSettings.contactEmail}</a>
+              </p>
+            )}
             <div className="vf-social">
-              {socials.map((s) => (
-                <a key={s.label} href={s.href} aria-label={s.label}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true">{s.path}</svg>
-                </a>
-              ))}
+              {socials.map((s) => {
+                const href = storeSettings?.socialLinks?.[s.platform] || "#";
+                return (
+                  <a
+                    key={s.label}
+                    href={href}
+                    aria-label={s.label}
+                    target={href !== "#" ? "_blank" : undefined}
+                    rel={href !== "#" ? "noopener noreferrer" : undefined}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">{s.path}</svg>
+                  </a>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -475,7 +491,7 @@ export default function Footer() {
             ))}
           </div>
 
-          <p className="vf-copy">© {new Date().getFullYear()} Veluntra S.p.A. All rights reserved.</p>
+          <p className="vf-copy">© {new Date().getFullYear()} {storeName}. All rights reserved.</p>
         </div>
       </div>
     </footer>

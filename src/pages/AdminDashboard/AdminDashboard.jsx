@@ -2466,6 +2466,7 @@ function SettingsSection() {
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
   const setFlag = (key, value) => setForm((f) => ({ ...f, featureFlags: { ...f.featureFlags, [key]: value } }));
+  const setSocialLink = (platform, value) => setForm((f) => ({ ...f, socialLinks: { ...f.socialLinks, [platform]: value } }));
   const currentAnim = { ...DEFAULT_ANIMATION_CONFIG, ...(current.animationConfig || {}) };
   const setAnim = (key, value) => setForm((f) => ({ ...f, animationConfig: { ...DEFAULT_ANIMATION_CONFIG, ...f.animationConfig, [key]: value } }));
   const applyPreset = (presetName) =>
@@ -2556,6 +2557,47 @@ function SettingsSection() {
             <Input label="Currency" value={current.currency || ""} onChange={(e) => set("currency", e.target.value)} />
             <Input label="Contact email" value={current.contactEmail || ""} onChange={(e) => set("contactEmail", e.target.value)} />
             <Input label="Contact phone" value={current.contactPhone || ""} onChange={(e) => set("contactPhone", e.target.value)} />
+            <div className="col-span-2">
+              <Input
+                label="Contact address"
+                value={current.contactAddress || ""}
+                onChange={(e) => set("contactAddress", e.target.value)}
+                placeholder="Shown in the site footer, e.g. 123 High Street, London, E1 6AN"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-soft-sm">
+          <h3 className="mb-1 text-[15px] font-medium">Social links</h3>
+          <p className="mb-4 text-xs text-[var(--text-muted)]">
+            Shown as icons in the site footer. Leave any blank to hide that icon's link (it still shows, just unlinked).
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Instagram URL"
+              value={current.socialLinks?.instagram || ""}
+              onChange={(e) => setSocialLink("instagram", e.target.value)}
+              placeholder="https://instagram.com/yourstore"
+            />
+            <Input
+              label="X (Twitter) URL"
+              value={current.socialLinks?.twitter || ""}
+              onChange={(e) => setSocialLink("twitter", e.target.value)}
+              placeholder="https://x.com/yourstore"
+            />
+            <Input
+              label="Pinterest URL"
+              value={current.socialLinks?.pinterest || ""}
+              onChange={(e) => setSocialLink("pinterest", e.target.value)}
+              placeholder="https://pinterest.com/yourstore"
+            />
+            <Input
+              label="YouTube URL"
+              value={current.socialLinks?.youtube || ""}
+              onChange={(e) => setSocialLink("youtube", e.target.value)}
+              placeholder="https://youtube.com/@yourstore"
+            />
           </div>
         </div>
 
