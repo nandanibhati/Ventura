@@ -20,6 +20,9 @@ import {
   Package,
   Settings,
   LogOut,
+  Truck,
+  RotateCcw,
+  HelpCircle,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
@@ -259,6 +262,20 @@ function Navbar() {
           Complimentary shipping on orders over $150
         </p>
         <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 border-r border-black/10 pr-6 dark:border-white/10">
+            <Link to="/orders" className="flex items-center gap-1.5 hover:text-neutral-900 dark:hover:text-white">
+              <Truck className="h-3.5 w-3.5" /> Track Order
+            </Link>
+            <Link to="/orders" className="flex items-center gap-1.5 hover:text-neutral-900 dark:hover:text-white">
+              <RotateCcw className="h-3.5 w-3.5" /> Returns
+            </Link>
+            <a
+              href={storeSettings?.contactEmail ? `mailto:${storeSettings.contactEmail}` : "/orders"}
+              className="flex items-center gap-1.5 hover:text-neutral-900 dark:hover:text-white"
+            >
+              <HelpCircle className="h-3.5 w-3.5" /> Help
+            </a>
+          </div>
           <UtilityDropdown
             icon={Globe}
             options={LANGUAGES}
