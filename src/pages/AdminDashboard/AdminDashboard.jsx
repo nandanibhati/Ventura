@@ -1996,6 +1996,11 @@ function HomepageCmsSection() {
           )}
           {GRID_SETTINGS_TYPES.has(form.type) && (
             <>
+              <div className="rounded-[var(--radius-md)] border border-gold-400/30 bg-gold-400/5 p-3 text-xs text-[var(--text-muted)]">
+                <strong className="text-[var(--text-primary)]">No image field here on purpose</strong> — this section shows real product
+                photos automatically, pulled from whichever products match the source below. To change a photo, edit that
+                product directly: Admin → Products → open it → Images.
+              </div>
               {PRODUCT_SOURCE_TYPES.has(form.type) && (
                 <>
                   <Select
@@ -2044,7 +2049,14 @@ function HomepageCmsSection() {
             </>
           )}
           {TITLE_ONLY_TYPES.has(form.type) && (
-            <p className="text-xs text-[var(--text-muted)]">Set the "Title" field above to override this section's default heading.</p>
+            <>
+              <p className="text-xs text-[var(--text-muted)]">Set the "Title" field above to override this section's default heading.</p>
+              <div className="rounded-[var(--radius-md)] border border-gold-400/30 bg-gold-400/5 p-3 text-xs text-[var(--text-muted)]">
+                <strong className="text-[var(--text-primary)]">No image field here on purpose</strong> — this section shows real
+                {form.type === "brands" ? " brand logos" : form.type === "collections" ? " category photos" : " customer review data"} automatically.
+                To change a photo, edit it directly: Admin → {form.type === "brands" ? "Brands" : form.type === "collections" ? "Categories" : "Reviews"}.
+              </div>
+            </>
           )}
           {!CONFIGURABLE_SECTION_TYPES.has(form.type) && (
             <p className="text-xs text-[var(--text-muted)]">This section pulls live data automatically — nothing else to configure.</p>
@@ -2765,8 +2777,13 @@ function SettingsSection() {
         </div>
       </div>
 
-      <div className="mt-6 flex justify-end">
-        <PrimaryButton onClick={() => updateMutation.mutate(form)} loading={updateMutation.isPending}>Save settings</PrimaryButton>
+      <div className="sticky bottom-4 z-10 mt-6 flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-soft-lg">
+        <p className="text-xs text-[var(--text-muted)]">
+          Uploading a photo or picking a color doesn't save it by itself — click Save to make it permanent.
+        </p>
+        <PrimaryButton onClick={() => updateMutation.mutate(form)} loading={updateMutation.isPending} className="shrink-0">
+          Save settings
+        </PrimaryButton>
       </div>
     </div>
   );
