@@ -331,6 +331,8 @@ export default function Products() {
   const [brands, setBrands] = useState([]);
   const [price, setPrice] = useState([0, MAX_PRICE]);
   const [minRating, setMinRating] = useState(0);
+  const [isNewOnly, setIsNewOnly] = useState(false);
+  const [saleOnly, setSaleOnly] = useState(false);
   const [sortBy, setSortBy] = useState("featured");
   const [view, setView] = useState("grid");
   const [page, setPage] = useState(1);
@@ -344,10 +346,16 @@ export default function Products() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Sync the initial search term from the navbar's search redirect (/shop?search=...).
+  // Sync filters from links elsewhere in the app (navbar search, category mega-menu,
+  // "New Arrivals" / "Sale" nav items) — re-applies whenever the URL's query changes, so
+  // clicking a different navbar link while already on /shop updates the filters too.
   useEffect(() => {
     const q = searchParams.get("search");
     if (q) setSearch(q);
+    const category = searchParams.get("category");
+    if (category) setCats([category]);
+    if (searchParams.get("isNew") === "true") setIsNewOnly(true);
+    if (searchParams.get("sale") === "true") setSaleOnly(true);
   }, [searchParams]);
 
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: categoriesApi.list });
@@ -419,16 +427,26 @@ export default function Products() {
     return allProducts.filter((p) => {
       if (cats.length && !cats.includes(p.categorySlug)) return false;
       if (brands.length && !brands.includes(p.brandSlug)) return false;
+      if (isNewOnly && !p.isNew) return false;
+      if (saleOnly && !p.oldPrice) return false;
       return true;
     });
-  }, [allProducts, cats, brands]);
+  }, [allProducts, cats, brands, isNewOnly, saleOnly]);
 
-  useEffect(() => { setPage(1); }, [search, cats, brands, price, minRating, sortBy]);
+  useEffect(() => { setPage(1); }, [search, cats, brands, isNewOnly, saleOnly, price, minRating, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const clearAll = () => { setSearch(""); setCats([]); setBrands([]); setPrice([0, MAX_PRICE]); setMinRating(0); };
+  const clearAll = () => {
+    setSearch("");
+    setCats([]);
+    setBrands([]);
+    setPrice([0, MAX_PRICE]);
+    setMinRating(0);
+    setIsNewOnly(false);
+    setSaleOnly(false);
+  };
 
   const catLabel = (slug) => categories.find((c) => c.slug === slug)?.name || slug;
   const brandLabel = (slug) => brandsList.find((b) => b.slug === slug)?.name || slug;
@@ -436,6 +454,8 @@ export default function Products() {
   const activeChips = [
     ...cats.map((c) => ({ key: `c-${c}`, label: catLabel(c), clear: () => toggleIn(cats, setCats, c) })),
     ...brands.map((b) => ({ key: `b-${b}`, label: brandLabel(b), clear: () => toggleIn(brands, setBrands, b) })),
+    ...(isNewOnly ? [{ key: "new", label: "New arrivals", clear: () => setIsNewOnly(false) }] : []),
+    ...(saleOnly ? [{ key: "sale", label: "On sale", clear: () => setSaleOnly(false) }] : []),
     ...(minRating ? [{ key: "r", label: `${minRating}+ & up`, clear: () => setMinRating(0) }] : []),
     ...(price[0] > 0 || price[1] < MAX_PRICE ? [{ key: "p", label: `£${price[0]} - £${price[1]}`, clear: () => setPrice([0, MAX_PRICE]) }] : []),
   ];

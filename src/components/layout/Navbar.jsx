@@ -27,29 +27,8 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { wishlistApi, notificationsApi } from "../../api/orders";
-import { settingsApi } from "../../api/catalog";
+import { settingsApi, categoriesApi } from "../../api/catalog";
 import { resolveMediaUrl } from "../../lib/api";
-
-const NAV_LINKS = [
-  { label: "New Arrivals", to: "/new-arrivals" },
-  { label: "Men", to: "/men" },
-  { label: "Women", to: "/women" },
-  { label: "Accessories", to: "/accessories" },
-  { label: "Sale", to: "/sale", accent: true },
-];
-
-const MEGA_MENU = {
-  columns: [
-    { title: "Clothing", items: ["T-Shirts", "Hoodies", "Jackets", "Denim", "Activewear"] },
-    { title: "Footwear", items: ["Sneakers", "Boots", "Sandals", "Formal", "Sports"] },
-    { title: "Accessories", items: ["Bags", "Watches", "Sunglasses", "Belts", "Jewelry"] },
-  ],
-  promo: {
-    title: "Autumn Collection",
-    subtitle: "Up to 40% off new season essentials",
-    cta: "Shop Now",
-  },
-};
 
 const LANGUAGES = ["English", "Français", "Deutsch", "Español", "日本語"];
 const CURRENCIES = ["£", "EUR", "GBP", "JPY", "INR"];
@@ -181,6 +160,14 @@ function Navbar() {
   // on hosts with non-persistent disk) instead of showing a broken-image icon.
   const [logoFailed, setLogoFailed] = useState(false);
   const showLogo = storeSettings?.logoUrl && !logoFailed;
+
+  // Real categories from the store's actual catalog — the nav used to hardcode fashion-retail
+  // links (Men/Women/Accessories) and a "Clothing/Footwear" mega-menu that led nowhere (those
+  // routes never existed), completely disconnected from whatever this store actually sells.
+  const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: categoriesApi.list, staleTime: 5 * 60 * 1000 });
+  const categoriesWithStock = categories.filter((c) => c.productCount > 0);
+  const featuredCategories = categoriesWithStock.filter((c) => c.featured).slice(0, 3);
+  const quickNavCategories = (featuredCategories.length ? featuredCategories : categoriesWithStock).slice(0, 3);
 
   const { data: wishlist = [] } = useQuery({
     queryKey: ["wishlist"],
@@ -331,7 +318,7 @@ function Navbar() {
           </Link>
 
           <div className="hidden items-center gap-9 lg:flex">
-            <NavItem to="/new-arrivals" label="New Arrivals" />
+            <NavItem to="/shop?isNew=true" label="New Arrivals" />
 
             <div
               className="relative"
@@ -362,35 +349,39 @@ function Navbar() {
                     className="absolute left-1/2 top-full mt-3 w-[min(92vw,900px)] -translate-x-1/2 rounded-2xl border border-black/5 bg-white/95 p-8 shadow-2xl shadow-black/10 backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-900/95"
                   >
                     <div className="grid grid-cols-2 gap-8 xl:grid-cols-4">
-                      {MEGA_MENU.columns.map((col) => (
-                        <div key={col.title}>
-                          <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-                            {col.title}
-                          </h4>
-                          <ul className="space-y-3">
-                            {col.items.map((item) => (
-                              <li key={item}>
+                      <div className="col-span-2 xl:col-span-3">
+                        <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                          Shop by category
+                        </h4>
+                        {categoriesWithStock.length === 0 ? (
+                          <p className="text-sm text-neutral-500 dark:text-neutral-400">No categories yet.</p>
+                        ) : (
+                          <ul className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+                            {categoriesWithStock.map((cat) => (
+                              <li key={cat.id}>
                                 <Link
-                                  to="/categories"
+                                  to={`/shop?category=${cat.slug}`}
+                                  onClick={() => setOpenMenu(null)}
                                   className="group flex items-center gap-1 text-sm text-neutral-600 transition-colors hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
                                 >
-                                  {item}
+                                  {cat.name}
                                   <ChevronRight className="h-3 w-3 -translate-x-1 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
                                 </Link>
                               </li>
                             ))}
                           </ul>
-                        </div>
-                      ))}
+                        )}
+                      </div>
                       <div className="relative flex min-h-[200px] flex-col justify-end overflow-hidden rounded-xl bg-gradient-to-br from-neutral-900 to-neutral-700 p-6 dark:from-white/10 dark:to-white/5">
-                        <span className="text-xs uppercase tracking-wider text-white/60">Limited Edition</span>
-                        <h5 className="mt-1 text-lg font-semibold text-white">{MEGA_MENU.promo.title}</h5>
-                        <p className="mt-1 text-sm text-white/70">{MEGA_MENU.promo.subtitle}</p>
+                        <span className="text-xs uppercase tracking-wider text-white/60">Limited Time</span>
+                        <h5 className="mt-1 text-lg font-semibold text-white">Current Deals</h5>
+                        <p className="mt-1 text-sm text-white/70">Save on selected items, while stock lasts</p>
                         <Link
-                          to="/sale"
+                          to="/shop?sale=true"
+                          onClick={() => setOpenMenu(null)}
                           className="mt-4 inline-flex w-fit items-center gap-1 text-sm font-medium text-white underline underline-offset-4"
                         >
-                          {MEGA_MENU.promo.cta}
+                          Shop Sale
                           <ChevronRight className="h-3.5 w-3.5" />
                         </Link>
                       </div>
@@ -400,10 +391,10 @@ function Navbar() {
               </AnimatePresence>
             </div>
 
-            <NavItem to="/men" label="Men" />
-            <NavItem to="/women" label="Women" />
-            <NavItem to="/accessories" label="Accessories" />
-            <NavItem to="/sale" label="Sale" accent />
+            {quickNavCategories.map((cat) => (
+              <NavItem key={cat.id} to={`/shop?category=${cat.slug}`} label={cat.name} />
+            ))}
+            <NavItem to="/shop?sale=true" label="Sale" accent />
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
@@ -668,23 +659,30 @@ function Navbar() {
               </form>
 
               <nav className="mt-2 flex flex-col px-2">
-                {NAV_LINKS.map(({ label, to, accent }) => (
+                <NavLink
+                  to="/shop?isNew=true"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-xl px-3.5 py-3 text-[0.95rem] font-medium text-neutral-700 hover:bg-black/5 dark:text-neutral-200 dark:hover:bg-white/10"
+                >
+                  New Arrivals
+                </NavLink>
+                {quickNavCategories.map((cat) => (
                   <NavLink
-                    key={to}
-                    to={to}
-                    className={({ isActive }) =>
-                      `rounded-xl px-3.5 py-3 text-[0.95rem] font-medium transition-colors ${
-                        accent
-                          ? "text-rose-600 dark:text-rose-400"
-                          : isActive
-                          ? "bg-black/5 text-neutral-900 dark:bg-white/10 dark:text-white"
-                          : "text-neutral-700 hover:bg-black/5 dark:text-neutral-200 dark:hover:bg-white/10"
-                      }`
-                    }
+                    key={cat.id}
+                    to={`/shop?category=${cat.slug}`}
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-xl px-3.5 py-3 text-[0.95rem] font-medium text-neutral-700 hover:bg-black/5 dark:text-neutral-200 dark:hover:bg-white/10"
                   >
-                    {label}
+                    {cat.name}
                   </NavLink>
                 ))}
+                <NavLink
+                  to="/shop?sale=true"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-xl px-3.5 py-3 text-[0.95rem] font-medium text-rose-600 dark:text-rose-400"
+                >
+                  Sale
+                </NavLink>
 
                 <button
                   onClick={() => setMobileCategoriesOpen((v) => !v)}
@@ -706,15 +704,20 @@ function Navbar() {
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden pl-4"
                     >
-                      {MEGA_MENU.columns.flatMap((col) => col.items).map((item) => (
-                        <Link
-                          key={item}
-                          to="/categories"
-                          className="block rounded-xl px-3.5 py-2 text-sm text-neutral-500 hover:bg-black/5 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-white"
-                        >
-                          {item}
-                        </Link>
-                      ))}
+                      {categoriesWithStock.length === 0 ? (
+                        <p className="px-3.5 py-2 text-sm text-neutral-500 dark:text-neutral-400">No categories yet.</p>
+                      ) : (
+                        categoriesWithStock.map((cat) => (
+                          <Link
+                            key={cat.id}
+                            to={`/shop?category=${cat.slug}`}
+                            onClick={() => setMobileOpen(false)}
+                            className="block rounded-xl px-3.5 py-2 text-sm text-neutral-500 hover:bg-black/5 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-white"
+                          >
+                            {cat.name}
+                          </Link>
+                        ))
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
