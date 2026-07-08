@@ -705,14 +705,27 @@ function CollectionsSection({ section }) {
                 variants={fadeUp}
                 whileHover={{ scale: 1.01 }}
                 className={cn(
-                  "group relative flex min-h-[140px] flex-col justify-end overflow-hidden rounded-md bg-gradient-to-br p-5",
-                  gradientClassFor(cat.id)
+                  "group relative flex min-h-[140px] flex-col justify-end overflow-hidden rounded-md p-5",
+                  !cat.imageUrl && "bg-gradient-to-br",
+                  !cat.imageUrl && gradientClassFor(cat.id)
                 )}
               >
-                <Icon className="absolute right-5 top-5 h-12 w-12 text-white/10 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6" strokeWidth={1} />
-                <span className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/60">{cat.productCount}+ Products</span>
-                <h3 className="text-lg font-bold text-white sm:text-xl">{cat.name}</h3>
-                <Link to={`/shop?category=${cat.slug}`} className="mt-2 inline-flex w-fit items-center gap-1.5 text-xs font-semibold text-white">
+                {cat.imageUrl && (
+                  <>
+                    <img
+                      src={resolveMediaUrl(cat.imageUrl)}
+                      alt=""
+                      className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  </>
+                )}
+                {!cat.imageUrl && (
+                  <Icon className="absolute right-5 top-5 h-12 w-12 text-white/10 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6" strokeWidth={1} />
+                )}
+                <span className="relative z-10 mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/60">{cat.productCount}+ Products</span>
+                <h3 className="relative z-10 text-lg font-bold text-white sm:text-xl">{cat.name}</h3>
+                <Link to={`/shop?category=${cat.slug}`} className="relative z-10 mt-2 inline-flex w-fit items-center gap-1.5 text-xs font-semibold text-white">
                   Shop now <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                 </Link>
               </motion.div>

@@ -1048,6 +1048,11 @@ function CategoriesSection() {
                 {uploading ? "Uploading…" : form.imageUrl ? "Replace" : "Upload photo"}
                 <input type="file" accept="image/*" hidden disabled={uploading} onChange={(e) => handleImageUpload(e.target.files)} />
               </label>
+              {form.imageUrl && (
+                <SecondaryButton size="sm" onClick={() => setForm((f) => ({ ...f, imageUrl: null }))}>
+                  Remove
+                </SecondaryButton>
+              )}
             </div>
           </div>
         </div>
@@ -1963,10 +1968,17 @@ function HomepageCmsSection() {
                 {form.config.backgroundImage && (
                   <img src={form.config.backgroundImage} alt="" className="h-28 w-full rounded-[var(--radius-md)] object-cover" />
                 )}
-                <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-xs font-medium">
-                  {heroUploading ? "Uploading…" : "Upload image"}
-                  <input type="file" accept="image/*" hidden disabled={heroUploading} onChange={(e) => handleHeroImageUpload(e.target.files)} />
-                </label>
+                <div className="flex items-center gap-2">
+                  <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-xs font-medium">
+                    {heroUploading ? "Uploading…" : form.config.backgroundImage ? "Replace" : "Upload image"}
+                    <input type="file" accept="image/*" hidden disabled={heroUploading} onChange={(e) => handleHeroImageUpload(e.target.files)} />
+                  </label>
+                  {form.config.backgroundImage && (
+                    <SecondaryButton size="sm" onClick={() => setConfig("backgroundImage", null)}>
+                      Remove
+                    </SecondaryButton>
+                  )}
+                </div>
               </div>
               <Input label="Headline" value={form.config.headline || ""} onChange={(e) => setConfig("headline", e.target.value)} />
               <Input label="Subheadline" value={form.config.subheadline || ""} onChange={(e) => setConfig("subheadline", e.target.value)} />
@@ -2453,6 +2465,11 @@ function SettingsSection() {
                   {logoUploading ? "Uploading…" : current.logoUrl ? "Replace" : "Upload logo"}
                   <input type="file" accept="image/*" hidden disabled={logoUploading} onChange={(e) => handleLogoUpload(e.target.files)} />
                 </label>
+                {current.logoUrl && (
+                  <SecondaryButton size="sm" onClick={() => set("logoUrl", null)}>
+                    Remove
+                  </SecondaryButton>
+                )}
               </div>
             </div>
             <Input label="Currency" value={current.currency || ""} onChange={(e) => set("currency", e.target.value)} />
@@ -2559,6 +2576,11 @@ function SettingsSection() {
                 {faviconUploading ? "Uploading…" : currentTheme.faviconUrl ? "Replace" : "Upload favicon"}
                 <input type="file" accept="image/*" hidden disabled={faviconUploading} onChange={(e) => handleFaviconUpload(e.target.files)} />
               </label>
+              {currentTheme.faviconUrl && (
+                <SecondaryButton size="sm" onClick={() => setTheme("faviconUrl", null)}>
+                  Remove
+                </SecondaryButton>
+              )}
             </div>
           </div>
 
@@ -2689,6 +2711,11 @@ function SettingsSection() {
                   {popupUploading ? "Uploading…" : currentPopup.imageUrl ? "Replace" : "Upload image"}
                   <input type="file" accept="image/*" hidden disabled={popupUploading} onChange={(e) => handlePopupImageUpload(e.target.files)} />
                 </label>
+                {currentPopup.imageUrl && (
+                  <SecondaryButton size="sm" onClick={() => setPopup("imageUrl", null)}>
+                    Remove
+                  </SecondaryButton>
+                )}
               </div>
             </div>
           )}
