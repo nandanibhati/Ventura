@@ -356,16 +356,26 @@ function Navbar() {
                         {categoriesWithStock.length === 0 ? (
                           <p className="text-sm text-neutral-500 dark:text-neutral-400">No categories yet.</p>
                         ) : (
-                          <ul className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+                          <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">
                             {categoriesWithStock.map((cat) => (
                               <li key={cat.id}>
                                 <Link
                                   to={`/shop?category=${cat.slug}`}
                                   onClick={() => setOpenMenu(null)}
-                                  className="group flex items-center gap-1 text-sm text-neutral-600 transition-colors hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
+                                  className="group flex flex-col items-center gap-2 text-center"
                                 >
-                                  {cat.name}
-                                  <ChevronRight className="h-3 w-3 -translate-x-1 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+                                  <span className="block size-16 overflow-hidden rounded-full border border-black/5 bg-neutral-100 transition-transform duration-300 group-hover:scale-105 dark:border-white/10 dark:bg-white/5">
+                                    {cat.imageUrl && (
+                                      <img
+                                        src={resolveMediaUrl(cat.imageUrl)}
+                                        alt=""
+                                        className="size-full object-cover"
+                                      />
+                                    )}
+                                  </span>
+                                  <span className="text-xs font-medium text-neutral-600 transition-colors group-hover:text-neutral-900 dark:text-neutral-300 dark:group-hover:text-white">
+                                    {cat.name}
+                                  </span>
                                 </Link>
                               </li>
                             ))}
