@@ -2403,6 +2403,7 @@ const FEATURE_FLAG_LABELS = {
   emailNotifications: "Email Notifications",
   pushNotifications: "Push Notifications",
   cookieConsent: "Cookie Consent Banner",
+  demoCard: "Demo Card Payment (test checkout, no real gateway)",
 };
 
 const DEFAULT_POPUP_BANNER = { enabled: false, title: "", body: "", imageUrl: null, ctaText: "", ctaLink: "" };

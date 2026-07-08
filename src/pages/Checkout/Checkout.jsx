@@ -9,6 +9,7 @@ import {
   Zap,
   CreditCard,
   Banknote,
+  FlaskConical,
   Tag,
   ChevronDown,
   CheckCircle2,
@@ -28,8 +29,8 @@ import { addressesApi, ordersApi } from "../../api/orders";
 import { shippingApi, settingsApi } from "../../api/catalog";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 
-const ICON_BY_PAYMENT = { card: CreditCard, cod: Banknote };
-const LABEL_BY_PAYMENT = { card: "Card", cod: "Cash on Delivery" };
+const ICON_BY_PAYMENT = { card: CreditCard, cod: Banknote, demo_card: FlaskConical };
+const LABEL_BY_PAYMENT = { card: "Card", cod: "Cash on Delivery", demo_card: "Demo Card" };
 
 const CURRENCY = "£";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -79,15 +80,18 @@ export default function Checkout() {
 
   const codEnabled = settings?.featureFlags?.cod !== false;
   const cardEnabled = settings?.stripeEnabled === true;
+  const demoCardEnabled = settings?.featureFlags?.demoCard === true;
   const paymentOptions = useMemo(
-    () => [...(cardEnabled ? ["card"] : []), ...(codEnabled ? ["cod"] : [])],
-    [cardEnabled, codEnabled]
+    () => [...(cardEnabled ? ["card"] : []), ...(demoCardEnabled ? ["demo_card"] : []), ...(codEnabled ? ["cod"] : [])],
+    [cardEnabled, demoCardEnabled, codEnabled]
   );
   // Card is the default, but if it turns out to be unavailable once settings load (Stripe not
-  // configured yet) and COD is the only real option, switch to it automatically.
+  // configured yet), fall back to demo card if that's on, otherwise COD.
   useEffect(() => {
-    if (settings && payment === "card" && !cardEnabled && codEnabled) setPayment("cod");
-  }, [settings, cardEnabled, codEnabled, payment]);
+    if (!settings || payment !== "card" || cardEnabled) return;
+    if (demoCardEnabled) setPayment("demo_card");
+    else if (codEnabled) setPayment("cod");
+  }, [settings, cardEnabled, demoCardEnabled, codEnabled, payment]);
 
   /* — Pricing (subtotal/discount authoritative from the live cart; delivery/tax/COD are previews — the
      server recomputes everything from scratch when the order is actually placed) — */
@@ -332,7 +336,7 @@ export default function Checkout() {
             {/* Payment */}
             <section>
               <SectionHeader step="04" title="Payment" icon={CreditCard} />
-              <div className="grid grid-cols-2 gap-3 mb-5 sm:max-w-sm">
+              <div className={cn("grid gap-3 mb-5 sm:max-w-md", paymentOptions.length >= 3 ? "grid-cols-3" : "grid-cols-2")}>
                 {paymentOptions.map((id) => {
                   const Icon = ICON_BY_PAYMENT[id];
                   const selected = payment === id;
@@ -364,9 +368,16 @@ export default function Checkout() {
                   transition={{ duration: 0.2 }}
                   className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-inset)] p-4 text-sm text-[var(--text-muted)]"
                 >
-                  {payment === "cod"
-                    ? `Pay in cash when your order arrives.${codCharge > 0 ? ` A ${CURRENCY}${codCharge.toFixed(2)} cash-on-delivery charge applies.` : ""}`
-                    : "You'll be taken to Stripe's secure checkout to pay by card, Apple Pay, or Google Pay after placing your order — we never see or store your card details."}
+                  {payment === "cod" &&
+                    `Pay in cash when your order arrives.${codCharge > 0 ? ` A ${CURRENCY}${codCharge.toFixed(2)} cash-on-delivery charge applies.` : ""}`}
+                  {payment === "card" &&
+                    "You'll be taken to Stripe's secure checkout to pay by card, Apple Pay, or Google Pay after placing your order — we never see or store your card details."}
+                  {payment === "demo_card" && (
+                    <span className="flex items-start gap-2">
+                      <FlaskConical className="mt-0.5 size-4 shrink-0 text-gold-500" />
+                      Demo mode — no real payment gateway is used. The order will be placed and instantly marked as paid, for demonstration purposes only.
+                    </span>
+                  )}
                 </motion.div>
               </AnimatePresence>
             </section>
