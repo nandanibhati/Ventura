@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { sellerApi } from "../../api/seller";
+import { useAuth } from "../../context/AuthContext";
 import { productsApi } from "../../api/products";
 import { categoriesApi, brandsApi } from "../../api/catalog";
 import { uploadsApi } from "../../api/products";
@@ -1064,7 +1065,7 @@ function CustomersTab() {
   );
 }
 
-function Sidebar({ activeTab, onSelect, isOpen, onClose }) {
+function Sidebar({ activeTab, onSelect, isOpen, onClose, portalLabel }) {
   return (
     <>
       <AnimatePresence>
@@ -1086,7 +1087,7 @@ function Sidebar({ activeTab, onSelect, isOpen, onClose }) {
         <div className="flex h-16 items-center px-6">
           <span className="text-xl font-bold uppercase tracking-[0.15em] text-white">Veluntra</span>
         </div>
-        <p className="px-6 pb-4 text-[11px] font-medium uppercase tracking-wider text-neutral-500">Seller Dashboard</p>
+        <p className="px-6 pb-4 text-[11px] font-medium uppercase tracking-wider text-neutral-500">{portalLabel}</p>
         <nav className="flex-1 space-y-1 px-3">
           {NAV_ITEMS.map((item) => (
             <button
@@ -1116,7 +1117,7 @@ function Sidebar({ activeTab, onSelect, isOpen, onClose }) {
   );
 }
 
-function Topbar({ title, onMenuClick, isDark, onToggleDark }) {
+function Topbar({ title, onMenuClick, isDark, onToggleDark, accountLabel = "Veluntra Seller", accountInitials = "VS" }) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-black/5 bg-white/80 px-4 backdrop-blur-xl dark:border-white/10 dark:bg-neutral-950/80 sm:px-6">
       <button
@@ -1147,9 +1148,9 @@ function Topbar({ title, onMenuClick, isDark, onToggleDark }) {
         </button>
         <div className="flex items-center gap-2 border-l border-black/10 pl-3 dark:border-white/15">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-rose-400 text-xs font-bold text-white">
-            VS
+            {accountInitials}
           </div>
-          <span className="hidden text-sm font-medium text-neutral-700 dark:text-neutral-200 sm:block">Veluntra Seller</span>
+          <span className="hidden text-sm font-medium text-neutral-700 dark:text-neutral-200 sm:block">{accountLabel}</span>
         </div>
       </div>
     </header>
@@ -1157,7 +1158,9 @@ function Topbar({ title, onMenuClick, isDark, onToggleDark }) {
 }
 
 function SellerDashboard() {
-  useDocumentTitle("Seller Dashboard");
+  const { user } = useAuth();
+  const portalLabel = user?.role === "dropshipper" ? "Dropshipper Dashboard" : "Seller Dashboard";
+  useDocumentTitle(portalLabel);
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [range, setRange] = useState("month");
@@ -1180,13 +1183,21 @@ function SellerDashboard() {
 
   return (
     <div className="flex min-h-screen bg-neutral-50 dark:bg-neutral-950">
-      <Sidebar activeTab={activeTab} onSelect={setActiveTab} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        activeTab={activeTab}
+        onSelect={setActiveTab}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        portalLabel={portalLabel}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
           title={activeNavItem?.label ?? "Overview"}
           onMenuClick={() => setSidebarOpen(true)}
           isDark={isDark}
           onToggleDark={() => setIsDark((d) => !d)}
+          accountLabel={user?.role === "dropshipper" ? "Veluntra Dropshipper" : "Veluntra Seller"}
+          accountInitials={user?.role === "dropshipper" ? "VD" : "VS"}
         />
         <main className="flex-1 p-4 sm:p-6">
           {activeTab === "overview" && (
