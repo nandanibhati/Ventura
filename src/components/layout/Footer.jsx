@@ -1,304 +1,8 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { settingsApi } from "../../api/catalog";
 
-/* ─────────────────────────────────────────────────────────
-   Veluntra — Premium Footer
-   Deep-ink gradient field, champagne accents, ghost wordmark
-   ───────────────────────────────────────────────────────── */
-
-const css = `
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Jost:wght@300;400;500&display=swap');
-
-.vf-root {
-  --ink-0: #08080d;
-  --ink-1: #10101a;
-  --ink-2: #191926;
-  --line: rgba(216, 179, 106, 0.22);
-  --gold-0: #d8b36a;
-  --gold-1: #f4e6c3;
-  --ivory: #ece9e0;
-  --muted: #8f8d99;
-  --grad-gold: linear-gradient(96deg, var(--gold-0) 0%, var(--gold-1) 55%, var(--gold-0) 100%);
-
-  position: relative;
-  overflow: hidden;
-  background:
-    radial-gradient(1100px 480px at 82% -10%, rgba(216,179,106,0.10), transparent 60%),
-    radial-gradient(900px 420px at 8% 110%, rgba(93,82,140,0.16), transparent 62%),
-    linear-gradient(178deg, var(--ink-1) 0%, var(--ink-0) 78%);
-  color: var(--ivory);
-  font-family: 'Jost', system-ui, sans-serif;
-  font-weight: 300;
-  letter-spacing: 0.01em;
-}
-
-.vf-hairline {
-  height: 1px;
-  border: 0;
-  margin: 0;
-  background: linear-gradient(90deg, transparent, var(--line) 18%, rgba(244,230,195,0.5) 50%, var(--line) 82%, transparent);
-}
-
-.vf-shell {
-  position: relative;
-  z-index: 2;
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 0 clamp(20px, 4vw, 56px);
-}
-
-/* ── Top band: brand + newsletter ─────────────────────── */
-.vf-top {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: clamp(32px, 5vw, 96px);
-  padding: clamp(48px, 6vw, 80px) 0 clamp(36px, 5vw, 60px);
-  align-items: end;
-}
-
-.vf-brand {
-  font-family: 'Cormorant Garamond', serif;
-  font-weight: 500;
-  font-size: clamp(34px, 3.6vw, 48px);
-  letter-spacing: 0.30em;
-  text-indent: 0.30em;
-  margin: 0 0 14px;
-  background: var(--grad-gold);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.vf-tagline {
-  margin: 0;
-  max-width: 42ch;
-  color: var(--muted);
-  font-size: 15px;
-  line-height: 1.7;
-}
-
-.vf-news-label {
-  display: block;
-  font-size: 11px;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  color: var(--gold-0);
-  margin-bottom: 16px;
-}
-
-.vf-news-form {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  border-bottom: 1px solid var(--line);
-  transition: border-color 0.35s ease;
-}
-.vf-news-form:focus-within { border-color: var(--gold-0); }
-
-.vf-news-input {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: 0;
-  outline: none;
-  color: var(--ivory);
-  font: 300 15px 'Jost', system-ui, sans-serif;
-  letter-spacing: 0.04em;
-  padding: 14px 4px;
-}
-.vf-news-input::placeholder { color: var(--muted); }
-
-.vf-news-btn {
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  padding: 14px 4px 14px 18px;
-  font: 400 12px 'Jost', system-ui, sans-serif;
-  letter-spacing: 0.30em;
-  text-transform: uppercase;
-  background-image: var(--grad-gold);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  white-space: nowrap;
-  transition: opacity 0.3s ease, letter-spacing 0.3s ease;
-}
-.vf-news-btn:hover { letter-spacing: 0.36em; }
-.vf-news-btn:focus-visible,
-.vf-root a:focus-visible,
-.vf-root button:focus-visible,
-.vf-root select:focus-visible {
-  outline: 1px solid var(--gold-0);
-  outline-offset: 4px;
-  border-radius: 2px;
-}
-
-.vf-news-note { margin: 12px 0 0; font-size: 12.5px; color: var(--muted); }
-.vf-news-done { margin: 12px 0 0; font-size: 13px; color: var(--gold-1); letter-spacing: 0.06em; }
-
-/* ── Link columns ─────────────────────────────────────── */
-.vf-mid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.2fr);
-  gap: clamp(28px, 4vw, 72px);
-  padding: clamp(40px, 5vw, 64px) 0;
-}
-
-.vf-col-title {
-  margin: 0 0 22px;
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  color: var(--gold-0);
-}
-
-.vf-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 13px; }
-
-.vf-link {
-  position: relative;
-  color: var(--ivory);
-  text-decoration: none;
-  font-size: 15px;
-  opacity: 0.82;
-  transition: opacity 0.3s ease;
-}
-.vf-link::after {
-  content: "";
-  position: absolute;
-  left: 0; bottom: -3px;
-  width: 100%; height: 1px;
-  background: var(--grad-gold);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.vf-link:hover { opacity: 1; }
-.vf-link:hover::after { transform: scaleX(1); }
-
-/* Atelier / contact block */
-.vf-atelier p { margin: 0 0 10px; color: var(--muted); font-size: 14.5px; line-height: 1.75; }
-.vf-atelier a { color: var(--ivory); text-decoration: none; opacity: 0.85; }
-.vf-atelier a:hover { opacity: 1; }
-
-.vf-social { display: flex; gap: 10px; margin-top: 22px; }
-.vf-social a {
-  display: grid;
-  place-items: center;
-  width: 40px; height: 40px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--ivory);
-  transition: border-color 0.3s ease, color 0.3s ease, transform 0.3s ease, background 0.3s ease;
-}
-.vf-social a:hover {
-  border-color: var(--gold-0);
-  color: var(--gold-1);
-  transform: translateY(-2px);
-  background: rgba(216,179,106,0.06);
-}
-.vf-social svg { width: 16px; height: 16px; }
-
-/* ── Bottom bar ───────────────────────────────────────── */
-.vf-bottom {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px 32px;
-  padding: 26px 0 30px;
-}
-
-.vf-country {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 0 14px;
-  transition: border-color 0.3s ease;
-}
-.vf-country:hover, .vf-country:focus-within { border-color: var(--gold-0); }
-.vf-country svg { width: 14px; height: 14px; color: var(--gold-0); flex: none; }
-.vf-country select {
-  appearance: none;
-  -webkit-appearance: none;
-  background: transparent;
-  border: 0;
-  outline: none;
-  color: var(--ivory);
-  font: 300 13px 'Jost', system-ui, sans-serif;
-  letter-spacing: 0.06em;
-  padding: 11px 22px 11px 0;
-  cursor: pointer;
-}
-.vf-country select option { color: #111; }
-.vf-caret {
-  position: absolute;
-  right: 14px;
-  pointer-events: none;
-  color: var(--muted);
-  font-size: 10px;
-}
-
-.vf-pay { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.vf-pay-chip {
-  display: grid;
-  place-items: center;
-  min-width: 52px;
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid rgba(236,233,224,0.14);
-  border-radius: 6px;
-  background: linear-gradient(160deg, var(--ink-2), var(--ink-1));
-  color: var(--muted);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  transition: color 0.3s ease, border-color 0.3s ease;
-}
-.vf-pay-chip:hover { color: var(--ivory); border-color: var(--line); }
-
-.vf-copy { font-size: 12.5px; color: var(--muted); letter-spacing: 0.05em; }
-
-/* Ghost wordmark */
-.vf-ghost {
-  position: absolute;
-  left: 50%;
-  bottom: -0.28em;
-  transform: translateX(-50%);
-  z-index: 1;
-  font-family: 'Cormorant Garamond', serif;
-  font-weight: 600;
-  font-size: clamp(90px, 17vw, 240px);
-  letter-spacing: 0.18em;
-  line-height: 1;
-  white-space: nowrap;
-  user-select: none;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(216,179,106,0.09), rgba(216,179,106,0));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-/* ── Responsive ───────────────────────────────────────── */
-@media (max-width: 900px) {
-  .vf-top { grid-template-columns: 1fr; align-items: start; }
-  .vf-mid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 540px) {
-  .vf-mid { grid-template-columns: 1fr; gap: 36px; }
-  .vf-bottom { flex-direction: column; align-items: flex-start; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .vf-root *, .vf-root *::after { transition: none !important; }
-}
-`;
+/* Dense, marketplace-style footer (Flipkart/Argos-inspired) — matches the rest of the
+   storefront's dark chrome + sans-serif type instead of a standalone luxury-boutique style. */
 
 const socials = [
   {
@@ -339,21 +43,37 @@ const socials = [
   },
 ];
 
-const payments = ["Visa", "MC", "Amex", "PayPal", "Pay", "G Pay"];
-
-const countries = [
-    "United Kingdom (GBP £)",
-  "India (INR ₹)",
-  "United States (USD £)",
-  "European Union (EUR €)",
-  "United Arab Emirates (AED)",
-  "Japan (JPY ¥)",
-  "Australia (AUD £)",
+const LINK_COLUMNS = [
+  {
+    title: "Company",
+    links: [
+      { label: "About us", href: "#about" },
+      { label: "Careers", href: "#careers" },
+      { label: "Contact us", href: "#contact" },
+    ],
+  },
+  {
+    title: "Help",
+    links: [
+      { label: "Track order", href: "/orders" },
+      { label: "Returns & refunds", href: "#returns" },
+      { label: "Shipping info", href: "#shipping" },
+      { label: "FAQ", href: "#faq" },
+    ],
+  },
+  {
+    title: "Policy",
+    links: [
+      { label: "Privacy policy", href: "#privacy" },
+      { label: "Terms of use", href: "#terms" },
+      { label: "Cookie policy", href: "#cookies" },
+    ],
+  },
 ];
 
+const payments = ["Visa", "Mastercard", "Amex", "PayPal", "Apple Pay", "G Pay"];
+
 export default function Footer() {
-  const [email, setEmail] = useState("");
-  const [joined, setJoined] = useState(false);
   const { data: storeSettings } = useQuery({
     queryKey: ["settings", "public"],
     queryFn: settingsApi.getPublic,
@@ -361,95 +81,17 @@ export default function Footer() {
   });
   const storeName = storeSettings?.storeName || "Veluntra";
 
-  const subscribe = () => {
-    if (email.trim()) setJoined(true);
-  };
-
   return (
-    <footer className="vf-root" aria-label="Site footer">
-      <style>{css}</style>
-      <div aria-hidden="true" className="vf-ghost">{storeName}</div>
-
-      <div className="vf-shell">
-        {/* Brand + Newsletter */}
-        <div className="vf-top">
-          <div>
-            <h2 className="vf-brand">{storeName}</h2>
-            <p className="vf-tagline">
-              Considered design, enduring materials. Crafted in small ateliers and
-              delivered to sixty countries worldwide.
+    <footer className="bg-neutral-950 text-neutral-300" aria-label="Site footer">
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-[1.2fr_repeat(3,1fr)_1.2fr]">
+          {/* Brand */}
+          <div className="col-span-2 sm:col-span-3 lg:col-span-1">
+            <span className="text-lg font-bold uppercase tracking-wide text-white">{storeName}</span>
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-neutral-400">
+              Quality tech and everyday essentials, delivered fast — with easy returns and secure payments on every order.
             </p>
-          </div>
-
-          <div>
-            <span className="vf-news-label">The {storeName} Letter</span>
-            {joined ? (
-              <p className="vf-news-done">Welcome to the house. Your first letter arrives soon.</p>
-            ) : (
-              <>
-                <div className="vf-news-form">
-                  <input
-                    className="vf-news-input"
-                    type="email"
-                    placeholder="Email address"
-                    aria-label="Email address"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && subscribe()}
-                  />
-                  <button className="vf-news-btn" onClick={subscribe}>
-                    Subscribe
-                  </button>
-                </div>
-                <p className="vf-news-note">
-                  Private previews, atelier notes, and first access to new collections.
-                </p>
-              </>
-            )}
-          </div>
-        </div>
-
-        <hr className="vf-hairline" />
-
-        {/* Link columns */}
-        <div className="vf-mid">
-          <nav aria-label="Company">
-            <h3 className="vf-col-title">Company</h3>
-            <ul className="vf-list">
-              <li><a className="vf-link" href="#about">About</a></li>
-              <li><a className="vf-link" href="#careers">Careers</a></li>
-              <li><a className="vf-link" href="#contact">Contact</a></li>
-            </ul>
-          </nav>
-
-          <nav aria-label="Support">
-            <h3 className="vf-col-title">Support</h3>
-            <ul className="vf-list">
-              <li><a className="vf-link" href="#support">Client Care</a></li>
-              <li><a className="vf-link" href="#returns">Returns</a></li>
-              <li><a className="vf-link" href="#shipping">Shipping</a></li>
-            </ul>
-          </nav>
-
-          <nav aria-label="Legal">
-            <h3 className="vf-col-title">Legal</h3>
-            <ul className="vf-list">
-              <li><a className="vf-link" href="#privacy">Privacy</a></li>
-              <li><a className="vf-link" href="#terms">Terms</a></li>
-              <li><a className="vf-link" href="#cookies">Cookies</a></li>
-            </ul>
-          </nav>
-
-          <div className="vf-atelier">
-            <h3 className="vf-col-title">Get in touch</h3>
-            {storeSettings?.contactAddress && <p>{storeSettings.contactAddress}</p>}
-            {storeSettings?.contactPhone && <p>{storeSettings.contactPhone}</p>}
-            {storeSettings?.contactEmail && (
-              <p>
-                <a href={`mailto:${storeSettings.contactEmail}`}>{storeSettings.contactEmail}</a>
-              </p>
-            )}
-            <div className="vf-social">
+            <div className="mt-4 flex items-center gap-2">
               {socials.map((s) => {
                 const href = storeSettings?.socialLinks?.[s.platform] || "#";
                 return (
@@ -459,39 +101,62 @@ export default function Footer() {
                     aria-label={s.label}
                     target={href !== "#" ? "_blank" : undefined}
                     rel={href !== "#" ? "noopener noreferrer" : undefined}
+                    className="flex size-8 items-center justify-center rounded-full border border-white/10 text-neutral-400 transition-colors hover:border-white/30 hover:text-white"
                   >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">{s.path}</svg>
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">{s.path}</svg>
                   </a>
                 );
               })}
             </div>
           </div>
+
+          {LINK_COLUMNS.map((col) => (
+            <nav key={col.title} aria-label={col.title}>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-white">{col.title}</h3>
+              <ul className="mt-3 flex flex-col gap-2.5">
+                {col.links.map((link) => (
+                  <li key={link.label}>
+                    <a href={link.href} className="text-sm text-neutral-400 transition-colors hover:text-white">
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
+
+          {/* Contact */}
+          <div className="col-span-2 sm:col-span-3 lg:col-span-1">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-white">Get in touch</h3>
+            <ul className="mt-3 flex flex-col gap-2.5 text-sm text-neutral-400">
+              {storeSettings?.contactAddress && <li>{storeSettings.contactAddress}</li>}
+              {storeSettings?.contactPhone && <li>{storeSettings.contactPhone}</li>}
+              {storeSettings?.contactEmail && (
+                <li>
+                  <a href={`mailto:${storeSettings.contactEmail}`} className="hover:text-white">
+                    {storeSettings.contactEmail}
+                  </a>
+                </li>
+              )}
+            </ul>
+          </div>
         </div>
 
-        <hr className="vf-hairline" />
+        <hr className="my-8 border-white/10" />
 
         {/* Bottom bar */}
-        <div className="vf-bottom">
-          <div className="vf-country">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M3 12h18M12 3c2.6 2.6 3.9 5.6 3.9 9S14.6 18.4 12 21c-2.6-2.6-3.9-5.6-3.9-9S9.4 5.6 12 3z" />
-            </svg>
-            <select aria-label="Country and currency" defaultValue={countries[0]}>
-              {countries.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-            <span className="vf-caret">▾</span>
-          </div>
-
-          <div className="vf-pay" aria-label="Accepted payment methods">
+        <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+          <p className="text-xs text-neutral-500">© {new Date().getFullYear()} {storeName}. All rights reserved.</p>
+          <div className="flex flex-wrap items-center justify-center gap-2" aria-label="Accepted payment methods">
             {payments.map((p) => (
-              <span key={p} className="vf-pay-chip">{p}</span>
+              <span
+                key={p}
+                className="rounded-sm border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-neutral-400"
+              >
+                {p}
+              </span>
             ))}
           </div>
-
-          <p className="vf-copy">© {new Date().getFullYear()} {storeName}. All rights reserved.</p>
         </div>
       </div>
     </footer>

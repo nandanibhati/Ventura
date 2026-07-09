@@ -706,7 +706,7 @@ function CollectionsSection({ section }) {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.2 }}
-          className="grid gap-3 md:grid-cols-2"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
         >
           {featured.map((cat) => {
             const Icon = iconFor(cat.name);
