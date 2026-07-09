@@ -48,6 +48,10 @@ import {
   Upload,
   Undo2,
   Redo2,
+  LayoutDashboard,
+  PackageX,
+  ArrowRight,
+  Clock,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -96,6 +100,10 @@ const PAGE_SIZE = 10;
 /* — Nav — */
 const NAV_GROUPS = [
   {
+    label: "Overview",
+    items: [{ id: "dashboard", label: "Dashboard", icon: LayoutDashboard }],
+  },
+  {
     label: "Manage",
     items: [
       { id: "users", label: "Users", icon: UsersIcon },
@@ -132,7 +140,7 @@ const EDIT_ENTITY_TAB = { category: "categories", product: "products", brand: "b
 
 export default function AdminDashboard() {
   useDocumentTitle("Admin Dashboard");
-  const [activeTab, setActiveTab] = useState("users");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { role } = useAuth();
   const navGroups = useMemo(
@@ -192,6 +200,7 @@ export default function AdminDashboard() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             >
+              {activeTab === "dashboard" && <DashboardHomeSection onNavigate={setActiveTab} />}
               {activeTab === "users" && <UsersSection />}
               {activeTab === "sellers" && <SellersSection />}
               {activeTab === "orders" && <OrdersSection />}
@@ -2251,6 +2260,159 @@ function HomepageCmsSection() {
 }
 
 /* — Analytics — */
+
+/** Lands here on login instead of a raw user list — what an owner actually wants to see first:
+ * headline numbers, what needs action right now, and quick links into the sections that matter. */
+function DashboardHomeSection({ onNavigate }) {
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-dashboard-summary"],
+    queryFn: () => adminApi.dashboardSummary(),
+  });
+
+  if (isLoading) return <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading dashboard…</div>;
+  if (isError) return <ErrorNotice onRetry={refetch} />;
+
+  const d = data || {};
+  const needsAttention = d.needsAttention || 0;
+
+  return (
+    <div>
+      <SectionTitle eyebrow="Overview" title="Dashboard" description="What's happening in your store today." />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+        <StatCard label="Today's revenue" value={`${CURRENCY}${Number(d.todayRevenue || 0).toLocaleString()}`} icon={DollarSign} />
+        <StatCard label="Today's orders" value={d.todayOrders || 0} icon={ShoppingCart} />
+        <StatCard label="Total revenue" value={`${CURRENCY}${Number(d.totalRevenue || 0).toLocaleString()}`} icon={TrendingUp} />
+        <StatCard label="Total customers" value={d.totalCustomers || 0} icon={UsersIcon} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 mb-6">
+        {/* Needs attention */}
+        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-soft-sm lg:col-span-2">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-[15px] font-medium text-[var(--text-primary)]">
+              <AlertTriangle className="size-4 text-amber-500" /> Needs your attention
+            </h3>
+            {needsAttention > 0 && <Badge variant="warning">{needsAttention} orders</Badge>}
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <button
+              onClick={() => onNavigate?.("orders")}
+              className="rounded-[var(--radius-md)] border border-[var(--border)] p-4 text-left transition-colors hover:border-gold-400"
+            >
+              <p className="text-2xl font-semibold text-[var(--text-primary)]">{d.pendingOrders || 0}</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">Pending orders</p>
+            </button>
+            <button
+              onClick={() => onNavigate?.("orders")}
+              className="rounded-[var(--radius-md)] border border-[var(--border)] p-4 text-left transition-colors hover:border-gold-400"
+            >
+              <p className="text-2xl font-semibold text-[var(--text-primary)]">{d.processingOrders || 0}</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">Processing</p>
+            </button>
+            <button
+              onClick={() => onNavigate?.("products")}
+              className="rounded-[var(--radius-md)] border border-[var(--border)] p-4 text-left transition-colors hover:border-gold-400"
+            >
+              <p className="text-2xl font-semibold text-amber-600">{d.lowStockProducts?.length || 0}</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">Low stock</p>
+            </button>
+            <button
+              onClick={() => onNavigate?.("products")}
+              className="rounded-[var(--radius-md)] border border-[var(--border)] p-4 text-left transition-colors hover:border-gold-400"
+            >
+              <p className="text-2xl font-semibold text-error-500">{d.outOfStockCount || 0}</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">Out of stock</p>
+            </button>
+          </div>
+          {needsAttention === 0 && (d.lowStockProducts?.length || 0) === 0 && d.outOfStockCount === 0 && (
+            <p className="mt-4 flex items-center gap-2 text-sm text-[var(--text-muted)]">
+              <CheckCircle2 className="size-4 text-success-500" /> Nothing needs action right now.
+            </p>
+          )}
+        </div>
+
+        {/* Quick links */}
+        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-soft-sm">
+          <h3 className="mb-4 text-[15px] font-medium text-[var(--text-primary)]">Quick actions</h3>
+          <div className="flex flex-col gap-2">
+            {[
+              { label: "Add a product", tab: "products", icon: Package },
+              { label: "Edit homepage", tab: "homepage", icon: Layout },
+              { label: "View all orders", tab: "orders", icon: ShoppingCart },
+              { label: "Store settings", tab: "settings", icon: SettingsIcon },
+            ].map((action) => (
+              <button
+                key={action.tab}
+                onClick={() => onNavigate?.(action.tab)}
+                className="flex items-center justify-between rounded-[var(--radius-md)] px-3 py-2.5 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-inset)]"
+              >
+                <span className="flex items-center gap-2.5"><action.icon className="size-4 text-[var(--text-muted)]" /> {action.label}</span>
+                <ArrowRight className="size-3.5 text-[var(--text-muted)]" />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Recent orders */}
+        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] shadow-soft-sm">
+          <div className="flex items-center justify-between p-6 pb-4">
+            <h3 className="text-[15px] font-medium text-[var(--text-primary)]">Recent orders</h3>
+            <button onClick={() => onNavigate?.("orders")} className="text-xs font-medium text-gold-600 hover:underline dark:text-gold-400">
+              View all
+            </button>
+          </div>
+          {(d.recentOrders || []).length === 0 ? (
+            <p className="px-6 pb-6 text-sm text-[var(--text-muted)]">No orders yet.</p>
+          ) : (
+            <div className="divide-y divide-[var(--border)]">
+              {d.recentOrders.map((o) => (
+                <div key={o.id} className="flex items-center justify-between px-6 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[var(--text-primary)]">{o.orderNumber}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{o.customer}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="text-sm text-[var(--text-primary)]">{CURRENCY}{Number(o.total).toLocaleString()}</span>
+                    <Badge variant={ORDER_STATUS_VARIANT[o.status] || "neutral"}>{o.status.replace(/_/g, " ")}</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Low stock */}
+        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] shadow-soft-sm">
+          <div className="flex items-center justify-between p-6 pb-4">
+            <h3 className="flex items-center gap-2 text-[15px] font-medium text-[var(--text-primary)]">
+              <PackageX className="size-4 text-amber-500" /> Low stock products
+            </h3>
+            <button onClick={() => onNavigate?.("products")} className="text-xs font-medium text-gold-600 hover:underline dark:text-gold-400">
+              View all
+            </button>
+          </div>
+          {(d.lowStockProducts || []).length === 0 ? (
+            <p className="px-6 pb-6 text-sm text-[var(--text-muted)]">Everything is well stocked.</p>
+          ) : (
+            <div className="divide-y divide-[var(--border)]">
+              {d.lowStockProducts.map((p) => (
+                <div key={p.id} className="flex items-center justify-between px-6 py-3">
+                  <p className="truncate text-sm font-medium text-[var(--text-primary)]">{p.name}</p>
+                  <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-amber-600">
+                    <Clock className="size-3" /> {p.stock} left
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AnalyticsSection() {
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["admin-analytics"], queryFn: () => adminApi.analytics() });

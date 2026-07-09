@@ -26,6 +26,7 @@ export const adminApi = {
   listProducts: (params) => api.get("/admin/products", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
   listActivityLogs: (params) => api.get("/admin/activity-logs", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
   analytics: (params) => api.get("/admin/analytics", { params }).then(unwrap),
+  dashboardSummary: () => api.get("/admin/dashboard-summary").then(unwrap),
 
   resetUserPassword: (id) => api.post(`/admin/users/${id}/reset-password`).then(unwrap),
   listStores: (params) => api.get("/admin/sellers", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
