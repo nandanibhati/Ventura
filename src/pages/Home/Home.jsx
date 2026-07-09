@@ -491,7 +491,7 @@ function PromoTilesRow() {
               key={cat.id}
               to={`/shop?category=${cat.slug}`}
               className={cn(
-                "group relative flex h-24 items-center justify-between overflow-hidden rounded-md px-5 sm:h-28",
+                "group relative flex h-40 items-end overflow-hidden rounded-lg px-6 py-5 sm:h-56",
                 !cat.imageUrl && "bg-gradient-to-br",
                 !cat.imageUrl && gradientClassFor(cat.id)
               )}
@@ -503,17 +503,19 @@ function PromoTilesRow() {
                     alt=""
                     className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
                 </>
               )}
               <div className="relative z-10">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/60">{cat.productCount}+ items</p>
-                <h3 className="mt-0.5 text-base font-bold text-white sm:text-lg">{cat.name}</h3>
-                <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-white/80">
-                  Shop now <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+                <p className="text-xs font-semibold uppercase tracking-wider text-white/70">{cat.productCount}+ items</p>
+                <h3 className="mt-1 text-xl font-bold text-white sm:text-2xl">{cat.name}</h3>
+                <span className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-white/90">
+                  Shop now <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </span>
               </div>
-              {!cat.imageUrl && <Icon className="relative z-10 h-12 w-12 shrink-0 text-white/15 sm:h-14 sm:w-14" strokeWidth={1} />}
+              {!cat.imageUrl && (
+                <Icon className="absolute right-4 top-4 z-0 h-16 w-16 shrink-0 text-white/15 sm:h-20 sm:w-20" strokeWidth={1} />
+              )}
             </Link>
           );
         })}
