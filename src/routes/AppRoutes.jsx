@@ -73,7 +73,7 @@ function AppRoutes() {
           <Route
             path="/seller/dashboard"
             element={
-              <ProtectedRoute role={["seller", "admin"]}>
+              <ProtectedRoute role={["seller", "dropshipper", "admin"]}>
                 <SellerDashboard />
               </ProtectedRoute>
             }

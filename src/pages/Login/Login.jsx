@@ -32,7 +32,7 @@ export default function Login() {
     try {
       const user = await login(email, password);
       if (user.role === "admin" || user.role === "superadmin") navigate("/admin", { replace: true });
-      else if (user.role === "seller") navigate("/seller/dashboard", { replace: true });
+      else if (user.role === "seller" || user.role === "dropshipper") navigate("/seller/dashboard", { replace: true });
       else navigate(from, { replace: true });
     } catch (err) {
       setFormError(err.response?.data?.error?.message || "Something went wrong. Please try again.");

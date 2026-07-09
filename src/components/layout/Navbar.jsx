@@ -561,7 +561,10 @@ function Navbar() {
                         ...(user?.role === "admin" || user?.role === "superadmin"
                           ? [{ icon: Settings, label: "Admin Dashboard", to: "/admin" }]
                           : []),
-                        ...(user?.role === "seller" || user?.role === "admin" || user?.role === "superadmin"
+                        ...(user?.role === "seller" ||
+                        user?.role === "dropshipper" ||
+                        user?.role === "admin" ||
+                        user?.role === "superadmin"
                           ? [{ icon: Settings, label: "Seller Dashboard", to: "/seller/dashboard" }]
                           : []),
                       ].map(({ icon: Icon, label, to }) => (

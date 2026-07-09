@@ -5,6 +5,7 @@ import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import CookieConsentBanner from "../components/layout/CookieConsentBanner";
 import PopupBanner from "../components/layout/PopupBanner";
+import SuggestionBox from "../components/layout/SuggestionBox";
 import { settingsApi } from "../api/catalog";
 import { applyTheme } from "../lib/themePresets";
 
@@ -37,6 +38,7 @@ function MainLayout() {
       <Footer />
       <CookieConsentBanner />
       <PopupBanner />
+      <SuggestionBox />
 
     </div>
   );

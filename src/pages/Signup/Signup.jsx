@@ -31,7 +31,7 @@ export default function Signup() {
     setSubmitting(true);
     try {
       const user = await register(form);
-      navigate(user.role === "seller" ? "/seller/dashboard" : "/", { replace: true });
+      navigate(user.role === "seller" || user.role === "dropshipper" ? "/seller/dashboard" : "/", { replace: true });
     } catch (err) {
       setFormError(err.response?.data?.error?.message || "Something went wrong. Please try again.");
     } finally {
@@ -83,6 +83,7 @@ export default function Signup() {
             options={[
               { value: "customer", label: "Customer — shop on Veluntra" },
               { value: "seller", label: "Seller — sell on Veluntra" },
+              { value: "dropshipper", label: "Dropshipper — sell without holding stock" },
             ]}
           />
 

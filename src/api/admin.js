@@ -33,6 +33,10 @@ export const adminApi = {
   setStoreStatus: (id, status) => api.patch(`/admin/sellers/${id}/status`, { status }).then(unwrap),
   setStoreCommission: (id, commissionPercent) => api.patch(`/admin/sellers/${id}/commission`, { commissionPercent }).then(unwrap),
 
+  listSuggestions: (params) => api.get("/admin/suggestions", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
+  setSuggestionStatus: (id, status) => api.patch(`/admin/suggestions/${id}/status`, { status }).then(unwrap),
+  deleteSuggestion: (id) => api.delete(`/admin/suggestions/${id}`).then(unwrap),
+
   listReviews: (params) => api.get("/admin/reviews", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
   approveReview: (id) => api.post(`/admin/reviews/${id}/approve`).then(unwrap),
   rejectReview: (id) => api.post(`/admin/reviews/${id}/reject`).then(unwrap),

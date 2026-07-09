@@ -52,6 +52,9 @@ import {
   PackageX,
   ArrowRight,
   Clock,
+  MessageSquarePlus,
+  Archive,
+  Mail,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -115,6 +118,7 @@ const NAV_GROUPS = [
       { id: "coupons", label: "Coupons", icon: Ticket },
       { id: "promotions", label: "Offers", icon: PercentIcon },
       { id: "reviews", label: "Reviews", icon: Star },
+      { id: "suggestions", label: "Suggestions", icon: MessageSquarePlus },
       { id: "homepage", label: "Homepage CMS", icon: Layout },
     ],
   },
@@ -225,6 +229,7 @@ export default function AdminDashboard() {
               {activeTab === "coupons" && <CouponsSection />}
               {activeTab === "promotions" && <PromotionsSection />}
               {activeTab === "reviews" && <ReviewsSection />}
+              {activeTab === "suggestions" && <SuggestionsSection />}
               {activeTab === "homepage" && <HomepageCmsSection />}
               {activeTab === "analytics" && <AnalyticsSection />}
               {activeTab === "charts" && <ChartsSection />}
@@ -328,7 +333,7 @@ function ErrorNotice({ onRetry }) {
 
 /* — Users — */
 
-const USER_ROLES = ["all", "customer", "seller", "admin", "superadmin"];
+const USER_ROLES = ["all", "customer", "seller", "dropshipper", "admin", "superadmin"];
 
 function AddAdminModal({ open, onClose, onCreate, isPending }) {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
@@ -1531,6 +1536,109 @@ function ReviewsSection() {
       )}
 
       <div className="mt-6"><Pagination page={page} totalPages={totalPages} onChange={setPage} /></div>
+    </div>
+  );
+}
+
+/* — Suggestions — */
+
+function SuggestionsSection() {
+  const [statusFilter, setStatusFilter] = useState("new");
+  const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-suggestions", { statusFilter, page }],
+    queryFn: () => adminApi.listSuggestions({ status: statusFilter, page, limit: PAGE_SIZE }),
+  });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-suggestions"] });
+
+  const setStatusMutation = useMutation({
+    mutationFn: ({ id, status }) => adminApi.setSuggestionStatus(id, status),
+    onSuccess: invalidate,
+  });
+  const deleteMutation = useMutation({ mutationFn: (id) => adminApi.deleteSuggestion(id), onSuccess: invalidate });
+
+  const suggestions = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+  const newCount = data?.meta?.newCount || 0;
+
+  return (
+    <div>
+      <SectionTitle
+        eyebrow="Manage"
+        title="Suggestions"
+        description="Feedback and suggestions submitted by shoppers from the storefront."
+      />
+
+      <Toolbar search="" onSearch={() => {}}>
+        {["new", "reviewed", "archived", "all"].map((s) => (
+          <Chip
+            key={s}
+            selected={statusFilter === s}
+            onClick={() => {
+              setStatusFilter(s);
+              setPage(1);
+            }}
+          >
+            {s[0].toUpperCase() + s.slice(1)}
+            {s === "new" && newCount > 0 && ` (${newCount})`}
+          </Chip>
+        ))}
+      </Toolbar>
+
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading suggestions…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : suggestions.length === 0 ? (
+        <EmptyState icon={MessageSquarePlus} title="No suggestions here" description="Nothing in this filter yet." />
+      ) : (
+        <div className="flex flex-col gap-4">
+          {suggestions.map((s) => (
+            <div key={s.id} className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-soft-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{s.name || "Anonymous"}</p>
+                    {s.email && (
+                      <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+                        <Mail className="size-3" /> {s.email}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">{new Date(s.createdAt).toLocaleString()}</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--text-muted)]">{s.message}</p>
+                </div>
+                <Badge variant={s.status === "new" ? "warning" : s.status === "reviewed" ? "success" : "neutral"}>{s.status}</Badge>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                {s.status !== "reviewed" && (
+                  <OutlineButton
+                    size="sm"
+                    leftIcon={CheckCircle2}
+                    onClick={() => setStatusMutation.mutate({ id: s.id, status: "reviewed" })}
+                  >
+                    Mark reviewed
+                  </OutlineButton>
+                )}
+                {s.status !== "archived" && (
+                  <OutlineButton size="sm" leftIcon={Archive} onClick={() => setStatusMutation.mutate({ id: s.id, status: "archived" })}>
+                    Archive
+                  </OutlineButton>
+                )}
+                <OutlineButton size="sm" leftIcon={Trash2} onClick={() => deleteMutation.mutate(s.id)}>
+                  Delete
+                </OutlineButton>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-6">
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      </div>
     </div>
   );
 }
