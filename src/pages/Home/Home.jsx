@@ -727,21 +727,15 @@ function CollectionsSection({ section }) {
       </h2>
       <SectionStatus isLoading={isLoading} isError={isError} isEmpty={false} onRetry={refetch} />
       {!isLoading && !isError && (
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          className="grid grid-cols-2 gap-3 sm:grid-cols-4"
-        >
+        <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
           {featured.map((cat, i) => {
             const Icon = iconFor(cat.name);
             return (
-              <motion.div key={cat.id} variants={fadeUp}>
-                <Link to={`/shop?category=${cat.slug}`} className="group block">
+              <div key={cat.id} className="w-full">
+                <Link to={`/shop?category=${cat.slug}`} className="group block w-full">
                   <div
                     className={cn(
-                      "relative aspect-[4/3] overflow-hidden rounded-md",
+                      "relative aspect-[4/3] w-full overflow-hidden rounded-md",
                       !cat.imageUrl && "bg-gradient-to-br",
                       !cat.imageUrl && gradientClassFor(cat.id)
                     )}
@@ -765,10 +759,10 @@ function CollectionsSection({ section }) {
                     Shop now
                   </span>
                 </Link>
-              </motion.div>
+              </div>
             );
           })}
-        </motion.div>
+        </div>
       )}
     </div>
   );
