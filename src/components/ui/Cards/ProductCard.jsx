@@ -126,7 +126,14 @@ export default function ProductCard({
         {video ? (
           <video
             src={video}
-            className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+            // Absolute + inset-0 instead of size-full (width/height: 100%): a percentage-height
+            // child depends on its parent reporting a "definite" height, and a parent whose
+            // height comes from CSS aspect-ratio (not a fixed px value, unlike category tiles'
+            // h-16/w-16) is a known-fragile combination for that — confirmed on the live site via
+            // a right-click on a "blank" card landing on the wrapping <Link>, not an <img>,
+            // meaning the image had rendered at zero size. Absolute positioning fills the
+            // containing block directly and doesn't have this dependency.
+            className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
             autoPlay
             muted
             loop
@@ -136,16 +143,13 @@ export default function ProductCard({
           <img
             src={image}
             alt={name}
-            // Not lazy: this sits in a CSS aspect-ratio–sized grid child (no fixed pixel height,
-            // unlike category tiles' fixed h-16/w-16), and native lazy-loading's "is this in
-            // viewport" measurement can get stuck never triggering for images inside elements
-            // sized this way — the image is fully fetched and correct (verified independently
-            // via curl many times over), just never told to load. This card only ever renders a
-            // handful at a time, so eager loading has no real cost.
-            className={cn("size-full transition-transform duration-500 group-hover:scale-[1.06]", cfg.dense ? "object-contain" : "object-cover")}
+            className={cn(
+              "absolute inset-0 size-full transition-transform duration-500 group-hover:scale-[1.06]",
+              cfg.dense ? "object-contain" : "object-cover"
+            )}
           />
         ) : (
-          <div className="flex size-full items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center">
             <span
               className={cn(
                 "font-semibold text-white/10 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-2",
