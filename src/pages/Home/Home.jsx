@@ -69,10 +69,10 @@ function iconFor(categoryName) {
 }
 
 const FEATURES = [
-  { icon: Truck, title: "Free shipping over £150" },
-  { icon: ShieldCheck, title: "Secure payments" },
-  { icon: RotateCcw, title: "Easy 30-day returns" },
-  { icon: Headphones, title: "24/7 support" },
+  { icon: Truck, title: "Free shipping", subtitle: "On orders over £150" },
+  { icon: ShieldCheck, title: "Secure payments", subtitle: "100% protected checkout" },
+  { icon: RotateCcw, title: "Easy returns", subtitle: "30-day return window" },
+  { icon: Headphones, title: "24/7 support", subtitle: "We're always here to help" },
 ];
 
 const FAQS = [
@@ -527,11 +527,16 @@ function PromoTilesRow() {
 function WhyVeluntraSection() {
   return (
     <SectionCard>
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-3">
         {FEATURES.map((feature) => (
-          <div key={feature.title} className="flex items-center gap-2.5">
-            <feature.icon className="h-4.5 w-4.5 shrink-0 text-amber-600 dark:text-amber-400" strokeWidth={1.75} />
-            <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300 sm:text-sm">{feature.title}</span>
+          <div key={feature.title} className="flex items-center gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <feature.icon className="h-5 w-5" strokeWidth={1.75} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-neutral-900 dark:text-white">{feature.title}</p>
+              <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">{feature.subtitle}</p>
+            </div>
           </div>
         ))}
       </div>
