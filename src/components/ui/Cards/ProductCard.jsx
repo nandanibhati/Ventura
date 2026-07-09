@@ -63,6 +63,7 @@ export default function ProductCard({
   compact = false,
   template,
   className,
+  disableEntrance = false,
 }) {
   const { id, name, brand, category, price, oldPrice, rating, reviews, stock, lowStockThreshold } = product;
   const badge = autoBadge(product);
@@ -77,6 +78,7 @@ export default function ProductCard({
       settings={anim}
       index={index}
       as="article"
+      disableEntrance={disableEntrance}
       className={cn("group flex flex-col", cfg.bordered && "overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)]", className)}
     >
       <Link

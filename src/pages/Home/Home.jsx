@@ -229,6 +229,12 @@ function HomeProductCard({ product, index, compact, template }) {
       index={index}
       compact={compact}
       template={template}
+      // These grids already sit inside a whileInView-triggered stagger container — giving
+      // each individual card its own independent entrance animation on top of that is
+      // redundant, and nesting two separate scroll-triggered animations is a known source of
+      // cards getting stuck at their pre-animation opacity:0 (looks exactly like a missing
+      // image: the surface-inset placeholder color shows through forever).
+      disableEntrance
       onAdd={() => !isMutating && addItem({ productId: product.id, quantity: 1 })}
     />
   );
