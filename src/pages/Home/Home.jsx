@@ -711,7 +711,12 @@ function CollectionsSection({ section }) {
     queryFn: categoriesApi.list,
     enabled: visible,
   });
-  const featured = categories.filter((c) => c.featured);
+  // Prefer admin-flagged featured categories, but don't limit this section to just 4 tiles when
+  // there are more categories to show — a couple of sparse tiles in an otherwise dense page reads
+  // as broken/unfinished, not minimal.
+  const featuredFirst = categories.filter((c) => c.featured);
+  const rest = categories.filter((c) => !c.featured);
+  const featured = [...featuredFirst, ...rest].slice(0, 8);
 
   if (!visible || (!isLoading && !isError && featured.length === 0)) return null;
 
