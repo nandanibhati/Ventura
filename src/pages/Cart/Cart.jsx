@@ -484,6 +484,7 @@ function Cart() {
                 <div key={product.id} className="w-[190px] shrink-0 sm:w-[220px]">
                   <ProductCard
                     product={product}
+                    image={product.image}
                     index={i}
                     onAdd={() => addItem({ productId: product.id, quantity: 1 })}
                   />

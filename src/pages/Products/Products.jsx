@@ -687,6 +687,7 @@ export default function Products() {
                     <ProductCard
                       key={p.id}
                       product={p}
+                      image={p.image}
                       index={i}
                       wished={wishedIds.has(p.id)}
                       onWishlistToggle={() => toggleWish(p.id)}

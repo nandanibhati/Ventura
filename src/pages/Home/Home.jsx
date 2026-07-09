@@ -226,6 +226,7 @@ function HomeProductCard({ product, index, compact, template }) {
   return (
     <ProductCard
       product={product}
+      image={product.image}
       index={index}
       compact={compact}
       template={template}

@@ -849,7 +849,7 @@ function ProductDetails() {
             <div className="flex gap-4 overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {relatedProducts.map((p, i) => (
                 <div key={p.id} className="w-[190px] shrink-0 sm:w-[220px]">
-                  <ProductCard product={p} index={i} onAdd={() => addItem({ productId: p.id, quantity: 1 })} />
+                  <ProductCard product={p} image={p.image} index={i} onAdd={() => addItem({ productId: p.id, quantity: 1 })} />
                 </div>
               ))}
             </div>
