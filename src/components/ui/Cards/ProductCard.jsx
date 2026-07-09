@@ -91,7 +91,7 @@ export default function ProductCard({
         {cfg.showBadge &&
           (cfg.dense ? (
             discount != null && (
-              <span className="absolute left-2 top-2 z-10 rounded-sm bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+              <span className="absolute left-2 top-2 z-10 rounded-sm bg-rose-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
                 -{discount}%
               </span>
             )
@@ -136,8 +136,13 @@ export default function ProductCard({
           <img
             src={image}
             alt={name}
-            loading="lazy"
-            className={cn("size-full transition-transform duration-500 group-hover:scale-[1.06]", cfg.dense ? "object-contain p-2" : "object-cover")}
+            // Not lazy: this sits in a CSS aspect-ratio–sized grid child (no fixed pixel height,
+            // unlike category tiles' fixed h-16/w-16), and native lazy-loading's "is this in
+            // viewport" measurement can get stuck never triggering for images inside elements
+            // sized this way — the image is fully fetched and correct (verified independently
+            // via curl many times over), just never told to load. This card only ever renders a
+            // handful at a time, so eager loading has no real cost.
+            className={cn("size-full transition-transform duration-500 group-hover:scale-[1.06]", cfg.dense ? "object-contain" : "object-cover")}
           />
         ) : (
           <div className="flex size-full items-center justify-center">

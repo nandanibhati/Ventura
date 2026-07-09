@@ -4,7 +4,7 @@
  * rewrite — keeps every call site that only knows about `compact` working unchanged. */
 export const CARD_TEMPLATES = {
   minimal: { label: "Minimal", dense: false, bordered: false, align: "left", cta: "link", showRating: false, showBadge: false, tall: false },
-  marketplace: { label: "Marketplace", dense: true, bordered: false, align: "left", cta: "icon", showRating: true, showBadge: true, tall: false },
+  marketplace: { label: "Marketplace", dense: true, bordered: true, align: "left", cta: "icon", showRating: true, showBadge: true, tall: false },
   luxury: { label: "Luxury", dense: false, bordered: false, align: "left", cta: "pill", showRating: true, showBadge: true, tall: false },
   grid: { label: "Grid", dense: true, bordered: true, align: "center", cta: "icon", showRating: true, showBadge: true, tall: false },
   large: { label: "Large", dense: false, bordered: false, align: "left", cta: "pill-full", showRating: true, showBadge: true, tall: true },
