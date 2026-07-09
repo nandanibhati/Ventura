@@ -1161,7 +1161,7 @@ function SellerDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [range, setRange] = useState("month");
-  const [isDark, setIsDark] = useState(() => {
+  const [isDark, setIsDark] = useState(() => {                   
     if (typeof window === "undefined") return false;
     const stored = localStorage.getItem("Veluntra-theme");
     if (stored) return stored === "dark";

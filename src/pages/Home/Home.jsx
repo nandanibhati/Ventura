@@ -1179,6 +1179,7 @@ const DEFAULT_CMS_SECTION_ORDER = [
   "categories",
   "flash_sale",
   "featured_products",
+  "ad_banner",
   "trending_products",
   "best_sellers",
   "collections",
@@ -1273,7 +1274,7 @@ function Home() {
       <div className="mt-2 sm:mt-3">
         <BannerCarousel heroConfig={heroSection?.config} />
       </div>
-      <div className="flex flex-col gap-2 py-2 sm:gap-3 sm:py-3">
+      <div className="space-y-2 py-2 sm:space-y-3 sm:py-3">
         <PromoTilesRow />
         <WhyVeluntraSection />
         {merchandisingSections
