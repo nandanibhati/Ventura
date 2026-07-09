@@ -698,6 +698,11 @@ function FlashSaleSection({ section }) {
   );
 }
 
+const COLLECTION_BADGES = ["Popular", "New in", "Save", "Top rated"];
+
+/** Flat, image-forward tile grid (Argos "Seasonal inspiration" style) — deliberately NOT a
+ * boxed white SectionCard with white text over a dark image overlay. Image on top with a small
+ * colored badge, bold dark title + short description below it, on the bare page background. */
 function CollectionsSection({ section }) {
   const config = section?.config || {};
   const visible = useSectionVisible(config);
@@ -711,8 +716,10 @@ function CollectionsSection({ section }) {
   if (!visible || (!isLoading && !isError && featured.length === 0)) return null;
 
   return (
-    <SectionCard>
-      <SectionHeaderRow title={config.title || "Collections Worth Exploring"} />
+    <div className="mx-auto max-w-7xl px-2 sm:px-3">
+      <h2 className="mb-3 text-lg font-bold text-neutral-900 dark:text-white sm:text-xl">
+        {config.title || "Seasonal Inspiration"}
+      </h2>
       <SectionStatus isLoading={isLoading} isError={isError} isEmpty={false} onRetry={refetch} />
       {!isLoading && !isError && (
         <motion.div
@@ -720,45 +727,45 @@ function CollectionsSection({ section }) {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.2 }}
-          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+          className="grid grid-cols-2 gap-3 sm:grid-cols-4"
         >
-          {featured.map((cat) => {
+          {featured.map((cat, i) => {
             const Icon = iconFor(cat.name);
             return (
-              <motion.div
-                key={cat.id}
-                variants={fadeUp}
-                whileHover={{ scale: 1.01 }}
-                className={cn(
-                  "group relative flex min-h-[140px] flex-col justify-end overflow-hidden rounded-md p-5",
-                  !cat.imageUrl && "bg-gradient-to-br",
-                  !cat.imageUrl && gradientClassFor(cat.id)
-                )}
-              >
-                {cat.imageUrl && (
-                  <>
-                    <img
-                      src={resolveMediaUrl(cat.imageUrl)}
-                      alt=""
-                      className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                  </>
-                )}
-                {!cat.imageUrl && (
-                  <Icon className="absolute right-5 top-5 h-12 w-12 text-white/10 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6" strokeWidth={1} />
-                )}
-                <span className="relative z-10 mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/60">{cat.productCount}+ Products</span>
-                <h3 className="relative z-10 text-lg font-bold text-white sm:text-xl">{cat.name}</h3>
-                <Link to={`/shop?category=${cat.slug}`} className="relative z-10 mt-2 inline-flex w-fit items-center gap-1.5 text-xs font-semibold text-white">
-                  Shop now <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+              <motion.div key={cat.id} variants={fadeUp}>
+                <Link to={`/shop?category=${cat.slug}`} className="group block">
+                  <div
+                    className={cn(
+                      "relative aspect-[4/3] overflow-hidden rounded-md",
+                      !cat.imageUrl && "bg-gradient-to-br",
+                      !cat.imageUrl && gradientClassFor(cat.id)
+                    )}
+                  >
+                    {cat.imageUrl ? (
+                      <img
+                        src={resolveMediaUrl(cat.imageUrl)}
+                        alt=""
+                        className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <Icon className="absolute right-3 top-3 h-10 w-10 text-white/20" strokeWidth={1} />
+                    )}
+                    <span className="absolute left-2.5 top-2.5 rounded-sm bg-rose-600 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                      {COLLECTION_BADGES[i % COLLECTION_BADGES.length]}
+                    </span>
+                  </div>
+                  <h3 className="mt-2.5 text-sm font-bold text-neutral-900 dark:text-white sm:text-base">{cat.name}</h3>
+                  <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">{cat.productCount}+ items to explore</p>
+                  <span className="mt-1 inline-block text-xs font-semibold text-amber-600 underline underline-offset-2 dark:text-amber-400">
+                    Shop now
+                  </span>
                 </Link>
               </motion.div>
             );
           })}
         </motion.div>
       )}
-    </SectionCard>
+    </div>
   );
 }
 
