@@ -55,6 +55,7 @@ import {
   MessageSquarePlus,
   Archive,
   Mail,
+  Warehouse,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -119,6 +120,7 @@ const NAV_GROUPS = [
       { id: "promotions", label: "Offers", icon: PercentIcon },
       { id: "reviews", label: "Reviews", icon: Star },
       { id: "suggestions", label: "Suggestions", icon: MessageSquarePlus },
+      { id: "warehouse", label: "Warehouse Stock", icon: Warehouse },
       { id: "homepage", label: "Homepage CMS", icon: Layout },
     ],
   },
@@ -230,6 +232,7 @@ export default function AdminDashboard() {
               {activeTab === "promotions" && <PromotionsSection />}
               {activeTab === "reviews" && <ReviewsSection />}
               {activeTab === "suggestions" && <SuggestionsSection />}
+              {activeTab === "warehouse" && <WarehouseStockSection />}
               {activeTab === "homepage" && <HomepageCmsSection />}
               {activeTab === "analytics" && <AnalyticsSection />}
               {activeTab === "charts" && <ChartsSection />}
@@ -1638,6 +1641,166 @@ function SuggestionsSection() {
 
       <div className="mt-6">
         <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      </div>
+    </div>
+  );
+}
+
+/* — Warehouse Stock — */
+
+function WarehouseStockSection() {
+  const [search, setSearch] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [delta, setDelta] = useState("");
+  const [reason, setReason] = useState("");
+  const queryClient = useQueryClient();
+  const toast = useToast();
+
+  const {
+    data: stockList = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({ queryKey: ["admin-warehouse-stock"], queryFn: () => adminApi.listWarehouseStock() });
+
+  const { data: searchResults } = useQuery({
+    queryKey: ["admin-products-search-warehouse", search],
+    queryFn: () => adminApi.listProducts({ search, limit: 6 }),
+    enabled: search.trim().length > 1,
+  });
+
+  const { data: history = [] } = useQuery({
+    queryKey: ["admin-warehouse-history", selectedProduct?.id],
+    queryFn: () => adminApi.warehouseStockHistory(selectedProduct.id),
+    enabled: Boolean(selectedProduct),
+  });
+
+  const adjustMutation = useMutation({
+    mutationFn: () => adminApi.adjustWarehouseStock(selectedProduct.id, { delta: Number(delta), reason: reason || undefined }),
+    onSuccess: () => {
+      toast({ title: "Warehouse stock updated", variant: "success" });
+      setDelta("");
+      setReason("");
+      queryClient.invalidateQueries({ queryKey: ["admin-warehouse-stock"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-warehouse-history", selectedProduct.id] });
+    },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't update stock", variant: "error" }),
+  });
+
+  return (
+    <div>
+      <SectionTitle
+        eyebrow="Manage"
+        title="Warehouse Stock"
+        description="Provision or correct the Veluntra warehouse's own stock pool — separate from each seller's own inventory. Nothing is fulfillable from the warehouse until stock is set here."
+      />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+        <div>
+          {isLoading ? (
+            <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading warehouse stock…</div>
+          ) : isError ? (
+            <ErrorNotice onRetry={refetch} />
+          ) : stockList.length === 0 ? (
+            <EmptyState icon={Warehouse} title="No warehouse stock provisioned yet" description="Search for a product on the right to provision stock for it." />
+          ) : (
+            <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)]">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--border)] text-xs uppercase tracking-wider text-[var(--text-muted)]">
+                    <th className="px-4 py-3 font-medium">Product</th>
+                    <th className="px-4 py-3 font-medium">Variant</th>
+                    <th className="px-4 py-3 font-medium">Stock</th>
+                    <th className="px-4 py-3 font-medium">Updated</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stockList.map((row) => (
+                    <tr
+                      key={row.id}
+                      className="cursor-pointer border-b border-[var(--border)] last:border-b-0 hover:bg-gold-400/5"
+                      onClick={() => setSelectedProduct(row.product)}
+                    >
+                      <td className="px-4 py-3 font-medium text-[var(--text-primary)]">{row.product?.name}</td>
+                      <td className="px-4 py-3 text-[var(--text-muted)]">
+                        {row.variant ? Object.values(row.variant.combination || {}).join(" / ") : "—"}
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-[var(--text-primary)]">{row.stock}</td>
+                      <td className="px-4 py-3 text-[var(--text-muted)]">{new Date(row.updatedAt).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
+            <h3 className="text-sm font-bold text-[var(--text-primary)]">Provision / adjust stock</h3>
+            <div className="mt-3">
+              <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} onClear={() => setSearch("")} placeholder="Search products…" />
+              {searchResults?.items?.length > 0 && (
+                <div className="mt-2 max-h-48 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--border)]">
+                  {searchResults.items.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className="block w-full truncate px-3 py-2 text-left text-sm hover:bg-gold-400/10"
+                      onClick={() => {
+                        setSelectedProduct(p);
+                        setSearch("");
+                      }}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {selectedProduct && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  adjustMutation.mutate();
+                }}
+                className="mt-4 flex flex-col gap-3 border-t border-[var(--border)] pt-4"
+              >
+                <p className="text-sm font-medium text-[var(--text-primary)]">{selectedProduct.name}</p>
+                <Input
+                  label="Delta (+ to add, - to remove)"
+                  type="number"
+                  value={delta}
+                  onChange={(e) => setDelta(e.target.value)}
+                  placeholder="e.g. 50 or -10"
+                  required
+                />
+                <Input label="Reason (optional)" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. initial provision" />
+                <PrimaryButton type="submit" size="sm" loading={adjustMutation.isPending}>
+                  Save
+                </PrimaryButton>
+              </form>
+            )}
+          </div>
+
+          {selectedProduct && history.length > 0 && (
+            <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">Recent history</h3>
+              <div className="mt-3 flex flex-col gap-2">
+                {history.map((h) => (
+                  <div key={h.id} className="flex items-center justify-between text-xs">
+                    <span className="text-[var(--text-muted)]">{h.type.replace(/_/g, " ")}</span>
+                    <span className={cn("font-semibold", h.delta > 0 ? "text-success-600" : "text-error-500")}>
+                      {h.delta > 0 ? "+" : ""}
+                      {h.delta}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -43,4 +43,9 @@ export const adminApi = {
   setReviewFeatured: (id, isFeatured) => api.patch(`/admin/reviews/${id}/featured`, { isFeatured }).then(unwrap),
   replyToReview: (id, reply) => api.post(`/admin/reviews/${id}/reply`, { reply }).then(unwrap),
   deleteReview: (id) => api.delete(`/admin/reviews/${id}`).then(unwrap),
+
+  listWarehouseStock: (params) => api.get("/admin/warehouse-stock", { params }).then(unwrap),
+  adjustWarehouseStock: (productId, payload) => api.post(`/admin/warehouse-stock/${productId}/adjust`, payload).then(unwrap),
+  warehouseStockHistory: (productId, variantId) =>
+    api.get(`/admin/warehouse-stock/${productId}/history`, { params: variantId ? { variantId } : {} }).then(unwrap),
 };
