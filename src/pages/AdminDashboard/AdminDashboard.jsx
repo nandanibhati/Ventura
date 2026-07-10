@@ -120,6 +120,7 @@ const NAV_GROUPS = [
       { id: "promotions", label: "Offers", icon: PercentIcon },
       { id: "reviews", label: "Reviews", icon: Star },
       { id: "suggestions", label: "Suggestions", icon: MessageSquarePlus },
+      { id: "fulfillmentRequests", label: "Fulfillment Requests", icon: PackageX },
       { id: "warehouse", label: "Warehouse Stock", icon: Warehouse },
       { id: "homepage", label: "Homepage CMS", icon: Layout },
     ],
@@ -232,6 +233,7 @@ export default function AdminDashboard() {
               {activeTab === "promotions" && <PromotionsSection />}
               {activeTab === "reviews" && <ReviewsSection />}
               {activeTab === "suggestions" && <SuggestionsSection />}
+              {activeTab === "fulfillmentRequests" && <FulfillmentRequestsSection />}
               {activeTab === "warehouse" && <WarehouseStockSection />}
               {activeTab === "homepage" && <HomepageCmsSection />}
               {activeTab === "analytics" && <AnalyticsSection />}
@@ -1634,6 +1636,112 @@ function SuggestionsSection() {
                   Delete
                 </OutlineButton>
               </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-6">
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      </div>
+    </div>
+  );
+}
+
+/* — Fulfillment Requests — */
+
+function FulfillmentRequestsSection() {
+  const [statusFilter, setStatusFilter] = useState("pending");
+  const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-fulfillment-requests", { statusFilter, page }],
+    queryFn: () => adminApi.listFulfillmentRequests({ status: statusFilter, page, limit: PAGE_SIZE }),
+  });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-fulfillment-requests"] });
+
+  const approveMutation = useMutation({
+    mutationFn: ({ id, adminNote }) => adminApi.approveFulfillmentRequest(id, adminNote),
+    onSuccess: invalidate,
+  });
+  const rejectMutation = useMutation({
+    mutationFn: ({ id, adminNote }) => adminApi.rejectFulfillmentRequest(id, adminNote),
+    onSuccess: invalidate,
+  });
+
+  const requests = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+  const pendingCount = data?.meta?.pendingCount || 0;
+
+  return (
+    <div>
+      <SectionTitle
+        eyebrow="Manage"
+        title="Fulfillment Requests"
+        description="Seller requests to fulfill an order item from the Veluntra warehouse instead of their own stock. Approving decrements warehouse stock — top it up first from Warehouse Stock if needed."
+      />
+
+      <Toolbar search="" onSearch={() => {}}>
+        {["pending", "fulfilled", "rejected", "all"].map((s) => (
+          <Chip
+            key={s}
+            selected={statusFilter === s}
+            onClick={() => {
+              setStatusFilter(s);
+              setPage(1);
+            }}
+          >
+            {s[0].toUpperCase() + s.slice(1)}
+            {s === "pending" && pendingCount > 0 && ` (${pendingCount})`}
+          </Chip>
+        ))}
+      </Toolbar>
+
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading fulfillment requests…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : requests.length === 0 ? (
+        <EmptyState icon={PackageX} title="No fulfillment requests here" description="Nothing in this filter yet." />
+      ) : (
+        <div className="flex flex-col gap-4">
+          {requests.map((r) => (
+            <div key={r.id} className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-soft-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                      {r.itemName} <span className="font-normal text-[var(--text-muted)]">× {r.quantity}</span>
+                    </p>
+                  </div>
+                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                    Order {r.orderNumber} &middot; {r.storeName} &middot; requested by {r.requestedByName}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">{new Date(r.createdAt).toLocaleString()}</p>
+                  {r.sellerNote && <p className="mt-2 text-sm text-[var(--text-muted)]">"{r.sellerNote}"</p>}
+                  {r.adminNote && <p className="mt-2 text-xs text-[var(--text-muted)]">Admin note: {r.adminNote}</p>}
+                </div>
+                <Badge
+                  variant={r.status === "pending" ? "warning" : r.status === "fulfilled" ? "success" : "neutral"}
+                >
+                  {r.status}
+                </Badge>
+              </div>
+              {r.status === "pending" && (
+                <div className="mt-3 flex items-center gap-2">
+                  <OutlineButton
+                    size="sm"
+                    leftIcon={CheckCircle2}
+                    onClick={() => approveMutation.mutate({ id: r.id })}
+                  >
+                    Approve (fulfill from warehouse)
+                  </OutlineButton>
+                  <OutlineButton size="sm" leftIcon={Ban} onClick={() => rejectMutation.mutate({ id: r.id })}>
+                    Reject
+                  </OutlineButton>
+                </div>
+              )}
             </div>
           ))}
         </div>

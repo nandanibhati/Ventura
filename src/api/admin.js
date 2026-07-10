@@ -48,4 +48,9 @@ export const adminApi = {
   adjustWarehouseStock: (productId, payload) => api.post(`/admin/warehouse-stock/${productId}/adjust`, payload).then(unwrap),
   warehouseStockHistory: (productId, variantId) =>
     api.get(`/admin/warehouse-stock/${productId}/history`, { params: variantId ? { variantId } : {} }).then(unwrap),
+
+  listFulfillmentRequests: (params) =>
+    api.get("/admin/fulfillment-requests", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
+  approveFulfillmentRequest: (id, adminNote) => api.post(`/admin/fulfillment-requests/${id}/approve`, { adminNote }).then(unwrap),
+  rejectFulfillmentRequest: (id, adminNote) => api.post(`/admin/fulfillment-requests/${id}/reject`, { adminNote }).then(unwrap),
 };
