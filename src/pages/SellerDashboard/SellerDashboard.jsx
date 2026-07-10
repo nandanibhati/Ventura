@@ -53,6 +53,7 @@ import {
   Plus,
   History,
   X,
+  Download,
 } from "lucide-react";
 import { PrimaryButton, SecondaryButton, OutlineButton, IconButton } from "../../components/ui/Button";
 import { Input, Select, Checkbox } from "../../components/ui/Input";
@@ -576,6 +577,15 @@ function OrdersTab() {
                       <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
                         <Dropdown.Item icon={Package} onClick={() => setDetailOrder(order)}>
                           View items
+                        </Dropdown.Item>
+                        <Dropdown.Item icon={Download} onClick={() => sellerApi.downloadInvoice(order.id, order.orderNumber)}>
+                          Download invoice
+                        </Dropdown.Item>
+                        <Dropdown.Item icon={Download} onClick={() => sellerApi.downloadPackingSlip(order.id, order.orderNumber)}>
+                          Download packing slip
+                        </Dropdown.Item>
+                        <Dropdown.Item icon={Download} onClick={() => sellerApi.downloadShippingLabel(order.id, order.orderNumber)}>
+                          Download shipping label
                         </Dropdown.Item>
                         {ORDER_STATUSES.filter((s) => s !== order.status).map((s) => (
                           <Dropdown.Item key={s} icon={CheckCircle2} onClick={() => statusMutation.mutate({ id: order.id, status: s })}>

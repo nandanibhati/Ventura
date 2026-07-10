@@ -709,6 +709,8 @@ function OrdersSection() {
                 <Td className="text-right">
                   <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
                     <Dropdown.Item icon={Download} onClick={() => adminApi.downloadInvoice(o.id, o.orderNumber)}>Download invoice</Dropdown.Item>
+                    <Dropdown.Item icon={Download} onClick={() => adminApi.downloadPackingSlip(o.id, o.orderNumber)}>Download packing slip</Dropdown.Item>
+                    <Dropdown.Item icon={Download} onClick={() => adminApi.downloadShippingLabel(o.id, o.orderNumber)}>Download shipping label</Dropdown.Item>
                     <Dropdown.Separator />
                     {ORDER_STATUSES.filter((s) => s !== o.status).map((s) => (
                       <Dropdown.Item key={s} icon={CheckCircle2} onClick={() => statusMutation.mutate({ id: o.id, status: s })}>

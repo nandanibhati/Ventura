@@ -1,4 +1,5 @@
 import api, { unwrap } from "../lib/api";
+import { downloadOrderDoc } from "./admin";
 
 export const sellerApi = {
   overview: (params) => api.get("/seller/overview", { params }).then(unwrap),
@@ -10,4 +11,8 @@ export const sellerApi = {
   updateStoreBranding: (payload) => api.patch("/seller/store", payload).then(unwrap),
   requestFulfillment: (orderId, orderItemId, sellerNote) =>
     api.post("/seller/fulfillment-requests", { orderId, orderItemId, sellerNote }).then(unwrap),
+
+  downloadInvoice: (id, orderNumber) => downloadOrderDoc(`/seller/orders/${id}/invoice`, `invoice-${orderNumber}.pdf`),
+  downloadPackingSlip: (id, orderNumber) => downloadOrderDoc(`/seller/orders/${id}/packing-slip`, `packing-slip-${orderNumber}.pdf`),
+  downloadShippingLabel: (id, orderNumber) => downloadOrderDoc(`/seller/orders/${id}/shipping-label`, `shipping-label-${orderNumber}.pdf`),
 };

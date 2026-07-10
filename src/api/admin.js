@@ -1,5 +1,19 @@
 import api, { unwrap } from "../lib/api";
 
+/** Fetches a PDF as a blob and triggers a browser download — shared by invoice/packing-slip/
+ * shipping-label downloads, which all hit the same kind of endpoint. */
+export async function downloadOrderDoc(path, filename) {
+  const response = await api.get(path, { responseType: "blob" });
+  const url = window.URL.createObjectURL(response.data);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 export const adminApi = {
   listUsers: (params) => api.get("/admin/users", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
   getCustomerDetail: (id) => api.get(`/admin/users/${id}`).then(unwrap),
@@ -11,17 +25,9 @@ export const adminApi = {
   listOrders: (params) => api.get("/admin/orders", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
   updateOrderStatus: (id, payload) => api.patch(`/admin/orders/${id}/status`, payload).then(unwrap),
   assignSeller: (id, storeId) => api.patch(`/admin/orders/${id}/assign-seller`, { storeId }).then(unwrap),
-  downloadInvoice: async (id, orderNumber) => {
-    const response = await api.get(`/admin/orders/${id}/invoice`, { responseType: "blob" });
-    const url = window.URL.createObjectURL(response.data);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `invoice-${orderNumber}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-  },
+  downloadInvoice: (id, orderNumber) => downloadOrderDoc(`/admin/orders/${id}/invoice`, `invoice-${orderNumber}.pdf`),
+  downloadPackingSlip: (id, orderNumber) => downloadOrderDoc(`/admin/orders/${id}/packing-slip`, `packing-slip-${orderNumber}.pdf`),
+  downloadShippingLabel: (id, orderNumber) => downloadOrderDoc(`/admin/orders/${id}/shipping-label`, `shipping-label-${orderNumber}.pdf`),
 
   listProducts: (params) => api.get("/admin/products", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
   listActivityLogs: (params) => api.get("/admin/activity-logs", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
