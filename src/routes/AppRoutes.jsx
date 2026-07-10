@@ -8,14 +8,15 @@ import ProductDetails from "../pages/ProductDetails/ProductDetails";
 import Products from "../pages/Products/Products";
 import Login from "../pages/Login/Login";
 import Signup from "../pages/Signup/Signup";
-import ForgotPassword from "../pages/ForgotPassword/ForgotPassword";
-import ResetPassword from "../pages/ResetPassword/ResetPassword";
-import Account from "../pages/Account/Account";
-import Wishlist from "../pages/Wishlist/Wishlist";
-import Orders from "../pages/Orders/Orders";
 import ProtectedRoute from "./ProtectedRoute";
 import { LoadingSpinner } from "../components/ui/Feedback";
 
+// Not first-paint-critical — loaded on demand instead of bloating the initial bundle.
+const ForgotPassword = lazy(() => import("../pages/ForgotPassword/ForgotPassword"));
+const ResetPassword = lazy(() => import("../pages/ResetPassword/ResetPassword"));
+const Account = lazy(() => import("../pages/Account/Account"));
+const Wishlist = lazy(() => import("../pages/Wishlist/Wishlist"));
+const Orders = lazy(() => import("../pages/Orders/Orders"));
 const SellerDashboard = lazy(() => import("../pages/SellerDashboard/SellerDashboard"));
 const AdminDashboard = lazy(() => import("../pages/AdminDashboard/AdminDashboard"));
 const Checkout = lazy(() => import("../pages/Checkout/Checkout"));
