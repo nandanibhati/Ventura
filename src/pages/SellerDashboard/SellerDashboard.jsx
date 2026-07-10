@@ -94,6 +94,7 @@ const NAV_ITEMS = [
   { id: "products", label: "Products", icon: Package },
   { id: "inventory", label: "Inventory", icon: Boxes },
   { id: "customers", label: "Customers", icon: Users },
+  { id: "settings", label: "Store Settings", icon: Store },
 ];
 
 const RANGE_OPTIONS = [
@@ -1065,6 +1066,79 @@ function CustomersTab() {
   );
 }
 
+/** Shown on customer-facing documents (invoice, packing slip, shipping label) instead of
+ * platform branding — see backend/src/utils/invoice.js. */
+function StoreSettingsTab() {
+  const { data: store, isLoading } = useQuery({ queryKey: ["seller-store"], queryFn: sellerApi.getStore });
+  const [form, setForm] = useState(null);
+  const toast = useToast();
+
+  useEffect(() => {
+    if (store) {
+      setForm({
+        name: store.name || "",
+        logoUrl: store.logoUrl || "",
+        contactEmail: store.contactEmail || "",
+        contactPhone: store.contactPhone || "",
+        addressLine1: store.addressLine1 || "",
+        addressLine2: store.addressLine2 || "",
+        city: store.city || "",
+        state: store.state || "",
+        postalCode: store.postalCode || "",
+        country: store.country || "GB",
+      });
+    }
+  }, [store]);
+
+  const mutation = useMutation({
+    mutationFn: () => sellerApi.updateStoreBranding(form),
+    onSuccess: () => toast({ title: "Store branding saved", variant: "success" }),
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't save branding", variant: "error" }),
+  });
+
+  const setField = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  if (isLoading || !form) return <div className="py-16 text-center text-sm text-neutral-400">Loading store settings…</div>;
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <div className="rounded-2xl border border-black/5 bg-white p-6 dark:border-white/10 dark:bg-neutral-900">
+        <h3 className="text-base font-bold text-neutral-900 dark:text-white">Store Branding</h3>
+        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+          Shown on your invoices, packing slips, and shipping labels — customers only ever see your store's own branding.
+        </p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            mutation.mutate();
+          }}
+          className="mt-5 flex flex-col gap-4"
+        >
+          <Input label="Store name" value={form.name} onChange={setField("name")} />
+          <Input label="Logo URL" placeholder="https://…" value={form.logoUrl} onChange={setField("logoUrl")} />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input label="Contact email" type="email" value={form.contactEmail} onChange={setField("contactEmail")} />
+            <Input label="Contact phone" value={form.contactPhone} onChange={setField("contactPhone")} />
+          </div>
+          <Input label="Address line 1" value={form.addressLine1} onChange={setField("addressLine1")} />
+          <Input label="Address line 2" value={form.addressLine2} onChange={setField("addressLine2")} />
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <Input label="City" value={form.city} onChange={setField("city")} />
+            <Input label="State" value={form.state} onChange={setField("state")} />
+            <Input label="Postal code" value={form.postalCode} onChange={setField("postalCode")} />
+            <Input label="Country" maxLength={2} value={form.country} onChange={setField("country")} />
+          </div>
+          <div className="mt-2">
+            <PrimaryButton type="submit" loading={mutation.isPending}>
+              Save branding
+            </PrimaryButton>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function Sidebar({ activeTab, onSelect, isOpen, onClose, portalLabel }) {
   return (
     <>
@@ -1207,6 +1281,7 @@ function SellerDashboard() {
           {activeTab === "products" && <ProductsTab tokens={tokens} categoryColors={categoryColors} />}
           {activeTab === "inventory" && <InventoryTab />}
           {activeTab === "customers" && <CustomersTab />}
+          {activeTab === "settings" && <StoreSettingsTab />}
         </main>
       </div>
     </div>
