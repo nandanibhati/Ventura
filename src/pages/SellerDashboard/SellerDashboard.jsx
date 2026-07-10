@@ -56,7 +56,7 @@ import {
 } from "lucide-react";
 import { PrimaryButton, SecondaryButton, OutlineButton, IconButton } from "../../components/ui/Button";
 import { Input, Select, Checkbox } from "../../components/ui/Input";
-import { EmptyState } from "../../components/ui/Feedback";
+import { EmptyState, Badge } from "../../components/ui/Feedback";
 import { Modal, Drawer, Dropdown } from "../../components/ui/Overlay";
 import { Pagination } from "../../components/ui/Navigation";
 
@@ -494,6 +494,7 @@ function ErrorNotice({ onRetry }) {
 function OrdersTab() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [detailOrder, setDetailOrder] = useState(null);
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -573,6 +574,9 @@ function OrdersTab() {
                     </td>
                     <td className="px-5 py-4 text-right">
                       <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
+                        <Dropdown.Item icon={Package} onClick={() => setDetailOrder(order)}>
+                          View items
+                        </Dropdown.Item>
                         {ORDER_STATUSES.filter((s) => s !== order.status).map((s) => (
                           <Dropdown.Item key={s} icon={CheckCircle2} onClick={() => statusMutation.mutate({ id: order.id, status: s })}>
                             Mark as {ORDER_STATUS_CONFIG[s].label}
@@ -588,7 +592,74 @@ function OrdersTab() {
         )}
       </div>
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      <OrderItemsModal order={detailOrder} onClose={() => setDetailOrder(null)} />
     </div>
+  );
+}
+
+/** Item-level view of one order — where a seller requests warehouse fulfillment for an item
+ * they can't ship themselves (e.g. their own stock doesn't match reality, damage, other
+ * channels). Only offered on pending/processing orders, for items not already
+ * warehouse-fulfilled. Admin reviews every request — see AdminDashboard's Fulfillment
+ * Requests queue. */
+function OrderItemsModal({ order, onClose }) {
+  const [noteByItem, setNoteByItem] = useState({});
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const requestMutation = useMutation({
+    mutationFn: ({ itemId }) => sellerApi.requestFulfillment(order.id, itemId, noteByItem[itemId]),
+    onSuccess: () => {
+      toast({ title: "Fulfillment request sent to admin", variant: "success" });
+      queryClient.invalidateQueries({ queryKey: ["seller-orders"] });
+    },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't send request", variant: "error" }),
+  });
+
+  if (!order) return null;
+  const canRequest = order.status === "pending" || order.status === "processing";
+
+  return (
+    <Modal open={Boolean(order)} onClose={onClose} title={`Order ${order.orderNumber}`} size="md">
+      <div className="flex flex-col gap-4">
+        {(order.items || []).map((item) => {
+          const alreadyWarehouse = item.fulfillmentSource === "veluntra_warehouse";
+          return (
+            <div key={item.id} className="rounded-xl border border-black/5 p-4 dark:border-white/10">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-neutral-900 dark:text-white">{item.nameSnapshot}</p>
+                  <p className="text-xs text-neutral-400">Qty {item.quantity}</p>
+                </div>
+                {alreadyWarehouse ? (
+                  <Badge variant="success">Fulfilled by Veluntra</Badge>
+                ) : (
+                  <Badge variant="neutral">Your stock</Badge>
+                )}
+              </div>
+              {canRequest && !alreadyWarehouse && (
+                <div className="mt-3 flex items-end gap-2 border-t border-black/5 pt-3 dark:border-white/10">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Note for admin (optional)"
+                      value={noteByItem[item.id] || ""}
+                      onChange={(e) => setNoteByItem((n) => ({ ...n, [item.id]: e.target.value }))}
+                    />
+                  </div>
+                  <SecondaryButton
+                    size="sm"
+                    loading={requestMutation.isPending && requestMutation.variables?.itemId === item.id}
+                    onClick={() => requestMutation.mutate({ itemId: item.id })}
+                  >
+                    Fulfill from Veluntra
+                  </SecondaryButton>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Modal>
   );
 }
 

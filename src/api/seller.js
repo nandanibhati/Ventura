@@ -8,4 +8,6 @@ export const sellerApi = {
   listCustomers: () => api.get("/seller/customers").then(unwrap),
   getStore: () => api.get("/seller/store").then(unwrap),
   updateStoreBranding: (payload) => api.patch("/seller/store", payload).then(unwrap),
+  requestFulfillment: (orderId, orderItemId, sellerNote) =>
+    api.post("/seller/fulfillment-requests", { orderId, orderItemId, sellerNote }).then(unwrap),
 };
