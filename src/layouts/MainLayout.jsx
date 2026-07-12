@@ -6,6 +6,7 @@ import Footer from "../components/layout/Footer";
 import CookieConsentBanner from "../components/layout/CookieConsentBanner";
 import PopupBanner from "../components/layout/PopupBanner";
 import SuggestionBox from "../components/layout/SuggestionBox";
+import ChatbotWidget from "../components/layout/ChatbotWidget";
 import { settingsApi } from "../api/catalog";
 import { applyTheme } from "../lib/themePresets";
 
@@ -39,6 +40,7 @@ function MainLayout() {
       <CookieConsentBanner />
       <PopupBanner />
       <SuggestionBox />
+      <ChatbotWidget />
 
     </div>
   );

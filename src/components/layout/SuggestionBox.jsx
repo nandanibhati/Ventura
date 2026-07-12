@@ -48,7 +48,7 @@ export default function SuggestionBox() {
       <button
         onClick={() => setOpen(true)}
         aria-label="Send us a suggestion"
-        className="fixed bottom-20 right-4 z-[70] flex items-center gap-2 rounded-full bg-gold-500 px-4 py-3 text-sm font-medium text-white shadow-soft-lg transition-transform hover:scale-105 hover:bg-gold-600 sm:bottom-6"
+        className="fixed bottom-24 right-4 z-[70] flex items-center gap-2 rounded-full bg-gold-500 px-4 py-3 text-sm font-medium text-white shadow-soft-lg transition-transform hover:scale-105 hover:bg-gold-600"
       >
         <MessageSquarePlus className="size-4.5" />
         <span className="hidden sm:inline">Suggestions</span>

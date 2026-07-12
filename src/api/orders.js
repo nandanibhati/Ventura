@@ -2,6 +2,9 @@ import api, { unwrap } from "../lib/api";
 
 export const ordersApi = {
   create: (payload) => api.post("/orders", payload).then(unwrap),
+  /** Public, unauthenticated order-status lookup by order number + email — for the storefront
+   * chatbot's "track my order" flow, works for guest and logged-in orders alike. */
+  track: (orderNumber, email) => api.post("/orders/track", { orderNumber, email }).then(unwrap),
   list: (params) => api.get("/orders", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
   getById: (id) => api.get(`/orders/${id}`).then(unwrap),
   cancel: (id, reason) => api.post(`/orders/${id}/cancel`, { reason }).then(unwrap),
