@@ -57,7 +57,7 @@ import {
 } from "lucide-react";
 import { PrimaryButton, SecondaryButton, OutlineButton, IconButton } from "../../components/ui/Button";
 import { Input, Select, Checkbox } from "../../components/ui/Input";
-import { EmptyState, Badge } from "../../components/ui/Feedback";
+import { EmptyState, Badge, Chip } from "../../components/ui/Feedback";
 import { Modal, Drawer, Dropdown } from "../../components/ui/Overlay";
 import { Pagination } from "../../components/ui/Navigation";
 import VariantsEditor, { variantsFormStateFromProduct, buildOptionsAndVariantsPayload } from "../../components/product/VariantsEditor";
@@ -725,6 +725,7 @@ function ProductsTab({ tokens, categoryColors }) {
     setEditing(p);
     setForm({
       name: p.name, description: p.description || "", price: p.price, stock: p.stock, status: p.status, images: p.images?.map((i) => resolveMediaUrl(i.url)) || [],
+      categoryId: p.categoryId, brandId: p.brandId,
       isFeatured: !!p.isFeatured, isTrending: !!p.isTrending, isBestSeller: !!p.isBestSeller, isNew: !!p.isNew,
       badge: p.badge || "",
       animationOverride: p.animationOverride || null,
@@ -778,6 +779,10 @@ function ProductsTab({ tokens, categoryColors }) {
       createMutation.mutate({ ...formRest, ...merchandising, ...catalog, ...identifiers, ...variantsPayload, price: Number(form.price), stock: Number(form.stock) });
     }
   };
+
+  // The RAM/Processor/MPN-style spec presets are mobile-specific — only suggest them when
+  // that's the product's category, so a furniture or kitchen listing doesn't see them.
+  const isMobileCategory = categories.find((c) => c.id === form.categoryId)?.slug === "mobile-tablets";
 
   return (
     <div className="space-y-6">
@@ -940,12 +945,24 @@ function ProductsTab({ tokens, categoryColors }) {
             <p className="mb-2 text-sm font-medium text-neutral-900 dark:text-white">
               Specifications <span className="font-normal text-neutral-400">(shown on the product's Specifications tab)</span>
             </p>
+            {isMobileCategory && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {SPEC_LABEL_PRESETS.filter((label) => !(form.specifications || []).some((s) => s.label === label)).map((label) => (
+                  <Chip
+                    key={label}
+                    onClick={() => setForm((f) => ({ ...f, specifications: [...(f.specifications || []), { label, value: "" }] }))}
+                  >
+                    + {label}
+                  </Chip>
+                ))}
+              </div>
+            )}
             <div className="flex flex-col gap-2">
               {(form.specifications || []).map((spec, i) => (
                 <div key={i} className="flex items-end gap-2">
                   <div className="flex-1">
                     <Input
-                      list="spec-label-presets"
+                      list={isMobileCategory ? "spec-label-presets" : undefined}
                       placeholder="Label (e.g. Screen Size)"
                       value={spec.label}
                       onChange={(e) =>

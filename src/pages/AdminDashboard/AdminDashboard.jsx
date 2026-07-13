@@ -862,6 +862,10 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
     }
   };
 
+  // The RAM/Processor/MPN-style spec presets are mobile-specific — only suggest them when
+  // that's the product's category, so a furniture or kitchen listing doesn't see them.
+  const isMobileCategory = categories.find((c) => c.id === form.categoryId)?.slug === "mobile-tablets";
+
   return (
     <div>
       <SectionTitle
@@ -1019,12 +1023,24 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
             <p className="mb-2 text-sm font-medium text-[var(--text-primary)]">
               Specifications <span className="font-normal text-[var(--text-muted)]">(shown on the product's Specifications tab)</span>
             </p>
+            {isMobileCategory && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {SPEC_LABEL_PRESETS.filter((label) => !(form.specifications || []).some((s) => s.label === label)).map((label) => (
+                  <Chip
+                    key={label}
+                    onClick={() => setForm((f) => ({ ...f, specifications: [...(f.specifications || []), { label, value: "" }] }))}
+                  >
+                    + {label}
+                  </Chip>
+                ))}
+              </div>
+            )}
             <div className="flex flex-col gap-2">
               {(form.specifications || []).map((spec, i) => (
                 <div key={i} className="flex items-end gap-2">
                   <div className="flex-1">
                     <Input
-                      list="spec-label-presets"
+                      list={isMobileCategory ? "spec-label-presets" : undefined}
                       placeholder="Label (e.g. Screen Size)"
                       value={spec.label}
                       onChange={(e) =>
