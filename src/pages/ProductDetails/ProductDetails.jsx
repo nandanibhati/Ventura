@@ -529,8 +529,25 @@ function ProductDetails() {
           <Link to="/" className="hover:text-neutral-900 dark:hover:text-white">
             Home
           </Link>
-          <ChevronRight className="h-3 w-3" />
-          <span>{product.category?.name}</span>
+          {product.category?.slug && (
+            <>
+              <ChevronRight className="h-3 w-3" />
+              <Link to={`/shop?category=${product.category.slug}`} className="hover:text-neutral-900 dark:hover:text-white">
+                {product.category.name}
+              </Link>
+            </>
+          )}
+          {product.brand?.slug && (
+            <>
+              <ChevronRight className="h-3 w-3" />
+              <Link
+                to={`/shop?category=${product.category?.slug || ""}&brand=${product.brand.slug}`}
+                className="hover:text-neutral-900 dark:hover:text-white"
+              >
+                {product.brand.name}
+              </Link>
+            </>
+          )}
           <ChevronRight className="h-3 w-3" />
           <span className="text-neutral-600 dark:text-neutral-300">{product.name}</span>
         </div>
@@ -704,17 +721,19 @@ function ProductDetails() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.25 }}
-                  className="grid max-w-3xl gap-x-10 gap-y-4 sm:grid-cols-2"
+                  className="max-w-5xl"
                 >
                   {(product.specifications || []).length === 0 ? (
                     <p className="text-sm text-neutral-400">No specifications listed for this product.</p>
                   ) : (
-                    product.specifications.map((spec) => (
-                      <div key={spec.label} className="flex items-center justify-between border-b border-black/5 pb-3 dark:border-white/10">
-                        <span className="text-sm text-neutral-400">{spec.label}</span>
-                        <span className="text-sm font-medium text-neutral-900 dark:text-white">{spec.value}</span>
-                      </div>
-                    ))
+                    <div className="grid gap-x-12 sm:grid-cols-2">
+                      {product.specifications.map((spec) => (
+                        <div key={spec.label} className="flex gap-6 border-b border-black/5 py-3 dark:border-white/10">
+                          <span className="w-40 shrink-0 text-sm text-neutral-400">{spec.label}</span>
+                          <span className="text-sm font-medium text-neutral-900 dark:text-white">{spec.value}</span>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </motion.div>
               )}

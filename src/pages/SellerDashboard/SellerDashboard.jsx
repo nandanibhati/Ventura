@@ -713,6 +713,7 @@ function ProductsTab({ tokens, categoryColors }) {
       name: "", description: "", categoryId: categories[0]?.id, brandId: brands[0]?.id, price: "", stock: 0, status: "draft", images: [],
       isFeatured: false, isTrending: false, isBestSeller: false, isNew: false, badge: "",
       animationOverride: null,
+      specifications: [], highlights: [], tagsText: "",
     });
     setModalOpen(true);
   };
@@ -723,6 +724,7 @@ function ProductsTab({ tokens, categoryColors }) {
       isFeatured: !!p.isFeatured, isTrending: !!p.isTrending, isBestSeller: !!p.isBestSeller, isNew: !!p.isNew,
       badge: p.badge || "",
       animationOverride: p.animationOverride || null,
+      specifications: p.specifications || [], highlights: p.highlights || [], tagsText: (p.tags || []).join(", "),
     });
     setModalOpen(true);
   };
@@ -744,13 +746,21 @@ function ProductsTab({ tokens, categoryColors }) {
       badge: form.badge || null,
       animationOverride: form.animationOverride,
     };
+    const catalog = {
+      specifications: (form.specifications || []).filter((s) => s.label.trim() && s.value.trim()),
+      highlights: (form.highlights || []).filter((h) => h.trim()),
+      tags: (form.tagsText || "").split(",").map((t) => t.trim()).filter(Boolean),
+    };
     if (editing) {
       updateMutation.mutate({
         id: editing.id,
-        payload: { name: form.name, price: Number(form.price), stock: Number(form.stock), status: form.status, images: form.images, ...merchandising },
+        payload: {
+          name: form.name, price: Number(form.price), stock: Number(form.stock), status: form.status, images: form.images,
+          ...merchandising, ...catalog,
+        },
       });
     } else {
-      createMutation.mutate({ ...form, ...merchandising, price: Number(form.price), stock: Number(form.stock) });
+      createMutation.mutate({ ...form, ...merchandising, ...catalog, price: Number(form.price), stock: Number(form.stock) });
     }
   };
 
@@ -890,6 +900,92 @@ function ProductsTab({ tokens, categoryColors }) {
             <Input label="Stock quantity" type="number" value={form.stock ?? ""} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))} />
           </div>
           <Select label="Status" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))} options={PRODUCT_STATUSES.map((s) => ({ value: s, label: s }))} />
+
+          <div>
+            <p className="mb-2 text-sm font-medium text-neutral-900 dark:text-white">
+              Specifications <span className="font-normal text-neutral-400">(shown on the product's Specifications tab)</span>
+            </p>
+            <div className="flex flex-col gap-2">
+              {(form.specifications || []).map((spec, i) => (
+                <div key={i} className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Label (e.g. Screen Size)"
+                      value={spec.label}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          specifications: f.specifications.map((s, si) => (si === i ? { ...s, label: e.target.value } : s)),
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Value (e.g. 6.7 in)"
+                      value={spec.value}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          specifications: f.specifications.map((s, si) => (si === i ? { ...s, value: e.target.value } : s)),
+                        }))
+                      }
+                    />
+                  </div>
+                  <IconButton
+                    icon={X}
+                    size="sm"
+                    aria-label="Remove specification"
+                    onClick={() => setForm((f) => ({ ...f, specifications: f.specifications.filter((_, si) => si !== i) }))}
+                  />
+                </div>
+              ))}
+              <OutlineButton
+                size="sm"
+                leftIcon={Plus}
+                onClick={() => setForm((f) => ({ ...f, specifications: [...(f.specifications || []), { label: "", value: "" }] }))}
+              >
+                Add specification
+              </OutlineButton>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-sm font-medium text-neutral-900 dark:text-white">
+              Highlights <span className="font-normal text-neutral-400">(key selling points, shown as a bullet list)</span>
+            </p>
+            <div className="flex flex-col gap-2">
+              {(form.highlights || []).map((h, i) => (
+                <div key={i} className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="e.g. 30-day money-back guarantee"
+                      value={h}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, highlights: f.highlights.map((v, vi) => (vi === i ? e.target.value : v)) }))
+                      }
+                    />
+                  </div>
+                  <IconButton
+                    icon={X}
+                    size="sm"
+                    aria-label="Remove highlight"
+                    onClick={() => setForm((f) => ({ ...f, highlights: f.highlights.filter((_, vi) => vi !== i) }))}
+                  />
+                </div>
+              ))}
+              <OutlineButton size="sm" leftIcon={Plus} onClick={() => setForm((f) => ({ ...f, highlights: [...(f.highlights || []), ""] }))}>
+                Add highlight
+              </OutlineButton>
+            </div>
+          </div>
+
+          <Input
+            label="Tags (comma-separated)"
+            placeholder="e.g. wireless, noise-cancelling, travel"
+            value={form.tagsText || ""}
+            onChange={(e) => setForm((f) => ({ ...f, tagsText: e.target.value }))}
+          />
 
           <div>
             <p className="mb-2 text-sm font-medium text-neutral-900 dark:text-white">Homepage merchandising</p>

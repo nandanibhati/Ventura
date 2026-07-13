@@ -354,6 +354,8 @@ export default function Products() {
     if (q) setSearch(q);
     const category = searchParams.get("category");
     if (category) setCats([category]);
+    const brand = searchParams.get("brand");
+    if (brand) setBrands([brand]);
     if (searchParams.get("isNew") === "true") setIsNewOnly(true);
     if (searchParams.get("sale") === "true") setSaleOnly(true);
   }, [searchParams]);
