@@ -592,7 +592,6 @@ function ProductDetails() {
               <span className="text-sm text-neutral-500 dark:text-neutral-400">
                 {rating.toFixed(1)} ({product.ratingCount} reviews)
               </span>
-              <span className="text-xs text-neutral-300 dark:text-neutral-700">SKU {product.sku}</span>
               {product.condition && (
                 <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                   {product.condition}
@@ -809,6 +808,9 @@ function ProductDetails() {
                       </p>
                     </div>
                   </div>
+                  <Link to="/returns" className="inline-block text-sm font-medium text-neutral-900 underline dark:text-white">
+                    View full return policy & seller warranty
+                  </Link>
                 </motion.div>
               )}
 

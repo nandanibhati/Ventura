@@ -3630,6 +3630,7 @@ function SettingsSection() {
           <h3 className="mb-4 text-[15px] font-medium">Policies</h3>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <textarea placeholder="Return policy" value={current.returnPolicy || ""} onChange={(e) => set("returnPolicy", e.target.value)} rows={4} className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm" />
+            <textarea placeholder="Seller warranty" value={current.sellerWarranty || ""} onChange={(e) => set("sellerWarranty", e.target.value)} rows={4} className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm" />
             <textarea placeholder="Privacy policy" value={current.privacyPolicy || ""} onChange={(e) => set("privacyPolicy", e.target.value)} rows={4} className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm" />
             <textarea placeholder="Terms of service" value={current.termsOfService || ""} onChange={(e) => set("termsOfService", e.target.value)} rows={4} className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm" />
           </div>

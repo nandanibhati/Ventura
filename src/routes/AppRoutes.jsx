@@ -20,6 +20,7 @@ const Orders = lazy(() => import("../pages/Orders/Orders"));
 const SellerDashboard = lazy(() => import("../pages/SellerDashboard/SellerDashboard"));
 const AdminDashboard = lazy(() => import("../pages/AdminDashboard/AdminDashboard"));
 const Checkout = lazy(() => import("../pages/Checkout/Checkout"));
+const ReturnPolicy = lazy(() => import("../pages/Policies/ReturnPolicy"));
 
 function PageFallback() {
   return (
@@ -39,6 +40,7 @@ function AppRoutes() {
             <Route path="/cart" element={<Cart />} />
             <Route path="/product/:id" element={<ProductDetails />} />
             <Route path="/shop" element={<Products />} />
+            <Route path="/returns" element={<ReturnPolicy />} />
             <Route
               path="/account"
               element={

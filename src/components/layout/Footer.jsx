@@ -56,7 +56,7 @@ const LINK_COLUMNS = [
     title: "Help",
     links: [
       { label: "Track order", href: "/orders" },
-      { label: "Returns & refunds", href: "#returns" },
+      { label: "Returns & refunds", href: "/returns" },
       { label: "Shipping info", href: "#shipping" },
       { label: "FAQ", href: "#faq" },
     ],
