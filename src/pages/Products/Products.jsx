@@ -306,6 +306,7 @@ function toCardProduct(p) {
     stock: p.stock,
     lowStockThreshold: p.lowStockThreshold,
     animationOverride: p.animationOverride,
+    specifications: p.specifications || [],
     image: resolveMediaUrl(p.images?.[0]?.url) || null,
   };
 }
@@ -338,6 +339,8 @@ export default function Products() {
   const [page, setPage] = useState(1);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [openSections, setOpenSections] = useState({ category: true, brand: true, price: true, rating: true });
+  const [specFilters, setSpecFilters] = useState({});
+  const [openSpecSections, setOpenSpecSections] = useState({});
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -418,14 +421,24 @@ export default function Products() {
   };
 
   const toggleSection = (key) => setOpenSections((s) => ({ ...s, [key]: !s[key] }));
+  const toggleSpecSection = (label) => setOpenSpecSections((s) => ({ ...s, [label]: !s[label] }));
   const toggleIn = (arr, setArr, val) =>
     setArr(arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
+  const toggleSpecValue = (label, value) => {
+    setSpecFilters((prev) => {
+      const current = prev[label] || [];
+      const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+      const updated = { ...prev, [label]: next };
+      if (next.length === 0) delete updated[label];
+      return updated;
+    });
+  };
 
   // Category/brand are multi-select in this UI, which the backend's single-value filters don't
   // support directly — so those two are applied client-side over the (search/price/rating-filtered,
   // server-sorted) batch above. Fine for a catalogue of this size; would need a backend `categories[]`
   // param to scale past a few hundred products.
-  const filtered = useMemo(() => {
+  const specFacetSource = useMemo(() => {
     return allProducts.filter((p) => {
       if (cats.length && !cats.includes(p.categorySlug)) return false;
       if (brands.length && !brands.includes(p.brandSlug)) return false;
@@ -435,7 +448,38 @@ export default function Products() {
     });
   }, [allProducts, cats, brands, isNewOnly, saleOnly]);
 
-  useEffect(() => { setPage(1); }, [search, cats, brands, isNewOnly, saleOnly, price, minRating, sortBy]);
+  // Spec-value filters (Storage Capacity, Colour, RAM, etc.) are derived from whatever
+  // specifications sellers have actually entered on the currently category/brand-narrowed
+  // products, so the sidebar never shows fields that don't apply to what's in view.
+  const specFacets = useMemo(() => {
+    const map = new Map();
+    specFacetSource.forEach((p) => {
+      (p.specifications || []).forEach((s) => {
+        if (!s?.label || !s?.value) return;
+        if (!map.has(s.label)) map.set(s.label, new Map());
+        const valMap = map.get(s.label);
+        valMap.set(s.value, (valMap.get(s.value) || 0) + 1);
+      });
+    });
+    return Array.from(map.entries())
+      .map(([label, valMap]) => ({
+        label,
+        values: Array.from(valMap.entries())
+          .map(([value, count]) => ({ value, count }))
+          .sort((a, b) => a.value.localeCompare(b.value)),
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [specFacetSource]);
+
+  const filtered = useMemo(() => {
+    const specEntries = Object.entries(specFilters);
+    if (!specEntries.length) return specFacetSource;
+    return specFacetSource.filter((p) =>
+      specEntries.every(([label, values]) => (p.specifications || []).some((s) => s.label === label && values.includes(s.value)))
+    );
+  }, [specFacetSource, specFilters]);
+
+  useEffect(() => { setPage(1); }, [search, cats, brands, isNewOnly, saleOnly, price, minRating, sortBy, specFilters]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -448,6 +492,7 @@ export default function Products() {
     setMinRating(0);
     setIsNewOnly(false);
     setSaleOnly(false);
+    setSpecFilters({});
   };
 
   const catLabel = (slug) => categories.find((c) => c.slug === slug)?.name || slug;
@@ -460,6 +505,9 @@ export default function Products() {
     ...(saleOnly ? [{ key: "sale", label: "On sale", clear: () => setSaleOnly(false) }] : []),
     ...(minRating ? [{ key: "r", label: `${minRating}+ & up`, clear: () => setMinRating(0) }] : []),
     ...(price[0] > 0 || price[1] < MAX_PRICE ? [{ key: "p", label: `£${price[0]} - £${price[1]}`, clear: () => setPrice([0, MAX_PRICE]) }] : []),
+    ...Object.entries(specFilters).flatMap(([label, values]) =>
+      values.map((v) => ({ key: `s-${label}-${v}`, label: `${label}: ${v}`, clear: () => toggleSpecValue(label, v) }))
+    ),
   ];
 
   const pageNumbers = useMemo(() => {
@@ -564,7 +612,7 @@ export default function Products() {
         )}
       </div>
 
-      <div className="vp-acc" style={{ borderBottom: "none" }}>
+      <div className="vp-acc" style={{ borderBottom: specFacets.length ? undefined : "none" }}>
         <button className={`vp-acc-head ${openSections.rating ? "open" : ""}`} onClick={() => toggleSection("rating")}>
           Rating <IconChevron />
         </button>
@@ -590,6 +638,30 @@ export default function Products() {
           </div>
         )}
       </div>
+
+      {specFacets.map((facet, i) => (
+        <div className="vp-acc" key={facet.label} style={{ borderBottom: i === specFacets.length - 1 ? "none" : undefined }}>
+          <button className={`vp-acc-head ${openSpecSections[facet.label] ? "open" : ""}`} onClick={() => toggleSpecSection(facet.label)}>
+            {facet.label} <IconChevron />
+          </button>
+          {openSpecSections[facet.label] && (
+            <div className="vp-acc-body">
+              {facet.values.map(({ value, count }) => {
+                const on = (specFilters[facet.label] || []).includes(value);
+                return (
+                  <label key={value} className="vp-check-row" onClick={() => toggleSpecValue(facet.label, value)}>
+                    <span className="vp-check-left">
+                      <span className={`vp-checkbox ${on ? "on" : ""}`}><IconCheck /></span>
+                      <span className="lbl">{value}</span>
+                    </span>
+                    <span className="count">{count}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ))}
     </>
   );
 
