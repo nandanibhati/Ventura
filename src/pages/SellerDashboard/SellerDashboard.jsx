@@ -721,7 +721,7 @@ function ProductsTab({ tokens, categoryColors }) {
   const openEdit = (p) => {
     setEditing(p);
     setForm({
-      name: p.name, price: p.price, stock: p.stock, status: p.status, images: p.images?.map((i) => resolveMediaUrl(i.url)) || [],
+      name: p.name, description: p.description || "", price: p.price, stock: p.stock, status: p.status, images: p.images?.map((i) => resolveMediaUrl(i.url)) || [],
       isFeatured: !!p.isFeatured, isTrending: !!p.isTrending, isBestSeller: !!p.isBestSeller, isNew: !!p.isNew,
       badge: p.badge || "",
       animationOverride: p.animationOverride || null,
@@ -763,7 +763,7 @@ function ProductsTab({ tokens, categoryColors }) {
       updateMutation.mutate({
         id: editing.id,
         payload: {
-          name: form.name, price: Number(form.price), stock: Number(form.stock), status: form.status, images: form.images,
+          name: form.name, description: form.description, price: Number(form.price), stock: Number(form.stock), status: form.status, images: form.images,
           ...merchandising, ...catalog, ...identifiers,
         },
       });
@@ -889,15 +889,13 @@ function ProductsTab({ tokens, categoryColors }) {
             </div>
           </div>
 
-          {!editing && (
-            <textarea
-              placeholder="Description"
-              value={form.description || ""}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              className="w-full rounded-[var(--radius-md)] border border-black/10 bg-transparent px-4 py-2.5 text-sm dark:border-white/15"
-              rows={3}
-            />
-          )}
+          <textarea
+            placeholder="Description"
+            value={form.description || ""}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            className="w-full rounded-[var(--radius-md)] border border-black/10 bg-transparent px-4 py-2.5 text-sm dark:border-white/15"
+            rows={3}
+          />
           {!editing && (
             <div className="grid grid-cols-2 gap-4">
               <Select label="Category" value={form.categoryId} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))} options={categories.map((c) => ({ value: c.id, label: c.name }))} />

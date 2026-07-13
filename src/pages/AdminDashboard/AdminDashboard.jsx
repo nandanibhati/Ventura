@@ -786,7 +786,7 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
   const openEdit = (p) => {
     setEditing(p);
     setForm({
-      name: p.name, price: p.price, stock: p.stock, status: p.status, categoryId: p.categoryId, brandId: p.brandId,
+      name: p.name, description: p.description || "", price: p.price, stock: p.stock, status: p.status, categoryId: p.categoryId, brandId: p.brandId,
       images: p.images?.map((i) => resolveMediaUrl(i.url)) || [],
       sku: p.sku || "", barcode: p.barcode || "",
       isFeatured: !!p.isFeatured, isTrending: !!p.isTrending, isBestSeller: !!p.isBestSeller, isNew: !!p.isNew,
@@ -846,7 +846,7 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
       updateMutation.mutate({
         id: editing.id,
         payload: {
-          name: form.name, price: Number(form.price), stock: Number(form.stock), status: form.status, images: form.images,
+          name: form.name, description: form.description, price: Number(form.price), stock: Number(form.stock), status: form.status, images: form.images,
           ...merchandising, ...catalog, ...identifiers,
         },
       });
@@ -960,15 +960,13 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
             </div>
           </div>
 
-          {!editing && (
-            <textarea
-              placeholder="Description"
-              value={form.description || ""}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              className="w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm"
-              rows={3}
-            />
-          )}
+          <textarea
+            placeholder="Description"
+            value={form.description || ""}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            className="w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm"
+            rows={3}
+          />
           {!editing && (
             <div className="grid grid-cols-2 gap-4">
               <Select label="Category" value={form.categoryId} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))} options={categories.map((c) => ({ value: c.id, label: c.name }))} />
