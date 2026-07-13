@@ -64,7 +64,7 @@ function ZoomGallery({ images, fallbackKey, activeIndex, onSelect }) {
 
   return (
     <div>
-      <div className="relative aspect-square overflow-hidden rounded-3xl border border-black/5 dark:border-white/10">
+      <div className="relative aspect-square overflow-hidden rounded-3xl border border-black/5 bg-neutral-50 dark:border-white/10 dark:bg-neutral-900">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeIndex}
@@ -77,7 +77,7 @@ function ZoomGallery({ images, fallbackKey, activeIndex, onSelect }) {
             }`}
           >
             {current.url ? (
-              <img src={current.url} alt="" className="h-full w-full object-cover" />
+              <img src={current.url} alt="" className="h-full w-full object-contain" />
             ) : (
               <Sparkles className="h-28 w-28 text-white/30 md:h-36 md:w-36" strokeWidth={0.75} />
             )}
@@ -90,12 +90,12 @@ function ZoomGallery({ images, fallbackKey, activeIndex, onSelect }) {
             <button
               key={i}
               onClick={() => onSelect(i)}
-              className={`flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl transition-all ${
+              className={`flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-neutral-50 transition-all dark:bg-neutral-900 ${
                 image.url ? "" : `bg-gradient-to-br ${gradientFor(fallbackKey)}`
               } ${i === activeIndex ? "ring-2 ring-neutral-900 ring-offset-2 dark:ring-white dark:ring-offset-neutral-950" : "opacity-60 hover:opacity-100"}`}
             >
               {image.url ? (
-                <img src={image.url} alt="" className="h-full w-full object-cover" />
+                <img src={image.url} alt="" className="h-full w-full object-contain" />
               ) : (
                 <Sparkles className="h-7 w-7 text-white/40" strokeWidth={1} />
               )}
