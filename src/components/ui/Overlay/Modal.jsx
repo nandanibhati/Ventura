@@ -23,10 +23,17 @@ const SIZES = {
  */
 export default function Modal({ open, onClose, title, description, size = "md", footer, children }) {
   const dialogRef = useRef(null);
+  // Keep a ref to the latest onClose so the effect below doesn't need it as a dependency —
+  // callers typically pass a fresh inline arrow function on every render, which would otherwise
+  // re-run the effect (and re-steal focus from whatever the user is typing in) on every keystroke.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!open) return;
-    const onKeyDown = (e) => e.key === "Escape" && onClose?.();
+    const onKeyDown = (e) => e.key === "Escape" && onCloseRef.current?.();
     document.addEventListener("keydown", onKeyDown);
     dialogRef.current?.focus();
     const prevOverflow = document.body.style.overflow;
@@ -35,7 +42,7 @@ export default function Modal({ open, onClose, title, description, size = "md", 
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = prevOverflow;
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (typeof document === "undefined") return null;
 
