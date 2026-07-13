@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  ZoomIn,
   Share2,
   Copy,
   Mail,
@@ -61,26 +60,11 @@ function RatingStars({ rating, size = "h-3.5 w-3.5" }) {
 }
 
 function ZoomGallery({ images, fallbackKey, activeIndex, onSelect }) {
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [origin, setOrigin] = useState("50% 50%");
-
-  const handleMouseMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setOrigin(`${x}% ${y}%`);
-  };
-
   const current = images[activeIndex] || {};
 
   return (
     <div>
-      <div
-        onMouseEnter={() => setIsZoomed(true)}
-        onMouseLeave={() => setIsZoomed(false)}
-        onMouseMove={handleMouseMove}
-        className="relative aspect-square cursor-zoom-in overflow-hidden rounded-3xl border border-black/5 dark:border-white/10"
-      >
+      <div className="relative aspect-square overflow-hidden rounded-3xl border border-black/5 dark:border-white/10">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeIndex}
@@ -91,7 +75,6 @@ function ZoomGallery({ images, fallbackKey, activeIndex, onSelect }) {
             className={`flex h-full w-full items-center justify-center ${
               current.url ? "" : `bg-gradient-to-br ${gradientFor(fallbackKey)}`
             }`}
-            style={{ transform: isZoomed ? "scale(1.7)" : "scale(1)", transformOrigin: origin, transition: "transform 0.2s ease-out" }}
           >
             {current.url ? (
               <img src={current.url} alt="" className="h-full w-full object-cover" />
@@ -100,9 +83,6 @@ function ZoomGallery({ images, fallbackKey, activeIndex, onSelect }) {
             )}
           </motion.div>
         </AnimatePresence>
-        <span className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-black/40 px-3 py-1.5 text-[10px] font-medium text-white backdrop-blur">
-          <ZoomIn className="h-3 w-3" /> Hover to zoom
-        </span>
       </div>
       {images.length > 1 && (
         <div className="mt-4 flex gap-3">
