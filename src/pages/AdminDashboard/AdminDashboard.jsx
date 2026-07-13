@@ -84,6 +84,7 @@ import { Pagination } from "../../components/ui/Navigation";
 import { SectionTitle } from "../../components/ui/Typography";
 import { StatCard } from "../../components/ui/Cards";
 import VariantsEditor, { variantsFormStateFromProduct, buildOptionsAndVariantsPayload } from "../../components/product/VariantsEditor";
+import { SPEC_LABEL_PRESETS } from "../../lib/specLabelPresets";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { AnimatedCard, ANIMATION_PRESETS, DEFAULT_ANIMATION_CONFIG } from "../../lib/animations";
 import { DEFAULT_THEME, FONT_PRESETS, applyTheme } from "../../lib/themePresets";
@@ -1010,7 +1011,7 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
               label="Condition"
               value={form.condition || ""}
               onChange={(e) => setForm((f) => ({ ...f, condition: e.target.value }))}
-              options={[{ value: "", label: "Not specified" }, { value: "Brand New", label: "Brand New" }, { value: "Open Box", label: "Open Box" }]}
+              options={[{ value: "", label: "Not specified" }, { value: "Brand New", label: "Brand New" }]}
             />
           </div>
 
@@ -1023,6 +1024,7 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
                 <div key={i} className="flex items-end gap-2">
                   <div className="flex-1">
                     <Input
+                      list="spec-label-presets"
                       placeholder="Label (e.g. Screen Size)"
                       value={spec.label}
                       onChange={(e) =>
@@ -1060,6 +1062,11 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
               >
                 Add specification
               </OutlineButton>
+              <datalist id="spec-label-presets">
+                {SPEC_LABEL_PRESETS.map((label) => (
+                  <option key={label} value={label} />
+                ))}
+              </datalist>
             </div>
           </div>
 

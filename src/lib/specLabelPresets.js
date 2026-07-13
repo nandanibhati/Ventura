@@ -1,0 +1,31 @@
+// Common specification labels (electronics-focused, matching typical marketplace listings) —
+// offered as autocomplete suggestions so sellers/admins only have to type the value, not the
+// label, for the fields they use most. Any other label can still be typed freely.
+export const SPEC_LABEL_PRESETS = [
+  "Condition",
+  "Brand",
+  "Model",
+  "Model Number",
+  "MPN",
+  "Colour",
+  "Storage Capacity",
+  "RAM",
+  "Screen Size",
+  "Processor",
+  "Operating System",
+  "Camera Resolution",
+  "Connectivity",
+  "Network",
+  "SIM Card Slot",
+  "Cellular Band",
+  "Lock Status",
+  "Contract",
+  "Device Charging Range",
+  "Charger Included",
+  "Memory Card Type",
+  "Features",
+  "Style",
+  "Energy Efficiency Rating",
+  "Manufacturer Warranty",
+  "Country of Origin",
+];
