@@ -35,7 +35,7 @@ import {
   Bell,
   Sun,
   Moon,
-  DollarSign,
+  PoundSterling,
   ShoppingBag,
   Percent,
   TrendingUp,
@@ -60,6 +60,7 @@ import { Input, Select, Checkbox } from "../../components/ui/Input";
 import { EmptyState, Badge } from "../../components/ui/Feedback";
 import { Modal, Drawer, Dropdown } from "../../components/ui/Overlay";
 import { Pagination } from "../../components/ui/Navigation";
+import VariantsEditor, { variantsFormStateFromProduct, buildOptionsAndVariantsPayload } from "../../components/product/VariantsEditor";
 
 const CHART_TOKENS = {
   light: {
@@ -432,7 +433,7 @@ function OverviewTab({ tokens, categoryColors, range, onRangeChange }) {
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile
-          icon={DollarSign}
+          icon={PoundSterling}
           label="Total Revenue"
           value={formatCurrency(stats.totalRevenue)}
           delta={trend.revenueDelta}
@@ -714,7 +715,8 @@ function ProductsTab({ tokens, categoryColors }) {
       isFeatured: false, isTrending: false, isBestSeller: false, isNew: false, badge: "",
       animationOverride: null,
       specifications: [], highlights: [], tagsText: "",
-      sku: "", barcode: "",
+      sku: "", barcode: "", condition: "",
+      colorOptions: [], storageOptions: [], variants: [],
     });
     setModalOpen(true);
   };
@@ -726,7 +728,8 @@ function ProductsTab({ tokens, categoryColors }) {
       badge: p.badge || "",
       animationOverride: p.animationOverride || null,
       specifications: p.specifications || [], highlights: p.highlights || [], tagsText: (p.tags || []).join(", "),
-      sku: p.sku || "", barcode: p.barcode || "",
+      sku: p.sku || "", barcode: p.barcode || "", condition: p.condition || "",
+      ...variantsFormStateFromProduct(p),
     });
     setModalOpen(true);
   };
@@ -752,6 +755,7 @@ function ProductsTab({ tokens, categoryColors }) {
       specifications: (form.specifications || []).filter((s) => s.label.trim() && s.value.trim()),
       highlights: (form.highlights || []).filter((h) => h.trim()),
       tags: (form.tagsText || "").split(",").map((t) => t.trim()).filter(Boolean),
+      condition: form.condition || null,
     };
     // Leave SKU untouched (auto-generated / unchanged) unless the seller actually typed one in —
     // an empty string would fail the backend's non-empty validation on update.
@@ -759,17 +763,18 @@ function ProductsTab({ tokens, categoryColors }) {
       ...(form.sku?.trim() ? { sku: form.sku.trim() } : {}),
       barcode: form.barcode?.trim() || null,
     };
+    const variantsPayload = buildOptionsAndVariantsPayload(form);
     if (editing) {
       updateMutation.mutate({
         id: editing.id,
         payload: {
           name: form.name, description: form.description, price: Number(form.price), stock: Number(form.stock), status: form.status, images: form.images,
-          ...merchandising, ...catalog, ...identifiers,
+          ...merchandising, ...catalog, ...identifiers, ...variantsPayload,
         },
       });
     } else {
-      const { sku, barcode, ...formRest } = form;
-      createMutation.mutate({ ...formRest, ...merchandising, ...catalog, ...identifiers, price: Number(form.price), stock: Number(form.stock) });
+      const { sku, barcode, colorOptions, storageOptions, variants, ...formRest } = form;
+      createMutation.mutate({ ...formRest, ...merchandising, ...catalog, ...identifiers, ...variantsPayload, price: Number(form.price), stock: Number(form.stock) });
     }
   };
 
@@ -903,7 +908,7 @@ function ProductsTab({ tokens, categoryColors }) {
             </div>
           )}
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Price" type="number" leftIcon={DollarSign} value={form.price ?? ""} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} />
+            <Input label="Price" type="number" leftIcon={PoundSterling} value={form.price ?? ""} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} />
             <Input label="Stock quantity" type="number" value={form.stock ?? ""} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))} />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -920,7 +925,15 @@ function ProductsTab({ tokens, categoryColors }) {
               onChange={(e) => setForm((f) => ({ ...f, barcode: e.target.value }))}
             />
           </div>
-          <Select label="Status" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))} options={PRODUCT_STATUSES.map((s) => ({ value: s, label: s }))} />
+          <div className="grid grid-cols-2 gap-4">
+            <Select label="Status" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))} options={PRODUCT_STATUSES.map((s) => ({ value: s, label: s }))} />
+            <Select
+              label="Condition"
+              value={form.condition || ""}
+              onChange={(e) => setForm((f) => ({ ...f, condition: e.target.value }))}
+              options={[{ value: "", label: "Not specified" }, { value: "Brand New", label: "Brand New" }, { value: "Open Box", label: "Open Box" }]}
+            />
+          </div>
 
           <div>
             <p className="mb-2 text-sm font-medium text-neutral-900 dark:text-white">
@@ -1007,6 +1020,8 @@ function ProductsTab({ tokens, categoryColors }) {
             value={form.tagsText || ""}
             onChange={(e) => setForm((f) => ({ ...f, tagsText: e.target.value }))}
           />
+
+          <VariantsEditor form={form} setForm={setForm} />
 
           <div>
             <p className="mb-2 text-sm font-medium text-neutral-900 dark:text-white">Homepage merchandising</p>

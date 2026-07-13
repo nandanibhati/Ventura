@@ -307,6 +307,7 @@ function toCardProduct(p) {
     lowStockThreshold: p.lowStockThreshold,
     animationOverride: p.animationOverride,
     specifications: p.specifications || [],
+    condition: p.condition || null,
     image: resolveMediaUrl(p.images?.[0]?.url) || null,
   };
 }
@@ -341,6 +342,7 @@ export default function Products() {
   const [openSections, setOpenSections] = useState({ category: true, brand: true, price: true, rating: true });
   const [specFilters, setSpecFilters] = useState({});
   const [openSpecSections, setOpenSpecSections] = useState({});
+  const [conditions, setConditions] = useState([]);
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -442,11 +444,21 @@ export default function Products() {
     return allProducts.filter((p) => {
       if (cats.length && !cats.includes(p.categorySlug)) return false;
       if (brands.length && !brands.includes(p.brandSlug)) return false;
+      if (conditions.length && !conditions.includes(p.condition)) return false;
       if (isNewOnly && !p.isNew) return false;
       if (saleOnly && !p.oldPrice) return false;
       return true;
     });
-  }, [allProducts, cats, brands, isNewOnly, saleOnly]);
+  }, [allProducts, cats, brands, conditions, isNewOnly, saleOnly]);
+
+  const conditionFacets = useMemo(() => {
+    const counts = new Map();
+    specFacetSource.forEach((p) => {
+      if (!p.condition) return;
+      counts.set(p.condition, (counts.get(p.condition) || 0) + 1);
+    });
+    return Array.from(counts.entries()).map(([value, count]) => ({ value, count }));
+  }, [specFacetSource]);
 
   // Spec-value filters (Storage Capacity, Colour, RAM, etc.) are derived from whatever
   // specifications sellers have actually entered on the currently category/brand-narrowed
@@ -479,7 +491,7 @@ export default function Products() {
     );
   }, [specFacetSource, specFilters]);
 
-  useEffect(() => { setPage(1); }, [search, cats, brands, isNewOnly, saleOnly, price, minRating, sortBy, specFilters]);
+  useEffect(() => { setPage(1); }, [search, cats, brands, conditions, isNewOnly, saleOnly, price, minRating, sortBy, specFilters]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -493,6 +505,7 @@ export default function Products() {
     setIsNewOnly(false);
     setSaleOnly(false);
     setSpecFilters({});
+    setConditions([]);
   };
 
   const catLabel = (slug) => categories.find((c) => c.slug === slug)?.name || slug;
@@ -508,6 +521,7 @@ export default function Products() {
     ...Object.entries(specFilters).flatMap(([label, values]) =>
       values.map((v) => ({ key: `s-${label}-${v}`, label: `${label}: ${v}`, clear: () => toggleSpecValue(label, v) }))
     ),
+    ...conditions.map((c) => ({ key: `cond-${c}`, label: c, clear: () => toggleIn(conditions, setConditions, c) })),
   ];
 
   const pageNumbers = useMemo(() => {
@@ -569,6 +583,30 @@ export default function Products() {
           </div>
         )}
       </div>
+
+      {conditionFacets.length > 0 && (
+        <div className="vp-acc">
+          <button className={`vp-acc-head ${openSections.condition ? "open" : ""}`} onClick={() => toggleSection("condition")}>
+            Condition <IconChevron />
+          </button>
+          {openSections.condition && (
+            <div className="vp-acc-body">
+              {conditionFacets.map(({ value, count }) => {
+                const on = conditions.includes(value);
+                return (
+                  <label key={value} className="vp-check-row" onClick={() => toggleIn(conditions, setConditions, value)}>
+                    <span className="vp-check-left">
+                      <span className={`vp-checkbox ${on ? "on" : ""}`}><IconCheck /></span>
+                      <span className="lbl">{value}</span>
+                    </span>
+                    <span className="count">{count}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="vp-acc">
         <button className={`vp-acc-head ${openSections.price ? "open" : ""}`} onClick={() => toggleSection("price")}>

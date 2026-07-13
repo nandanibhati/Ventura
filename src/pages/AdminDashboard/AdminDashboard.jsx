@@ -22,7 +22,7 @@ import {
   CheckCircle2,
   Download,
   TrendingUp,
-  DollarSign,
+  PoundSterling,
   ShoppingCart,
   Percent,
   AlertTriangle,
@@ -83,6 +83,7 @@ import { Modal, Drawer, Dropdown } from "../../components/ui/Overlay";
 import { Pagination } from "../../components/ui/Navigation";
 import { SectionTitle } from "../../components/ui/Typography";
 import { StatCard } from "../../components/ui/Cards";
+import VariantsEditor, { variantsFormStateFromProduct, buildOptionsAndVariantsPayload } from "../../components/product/VariantsEditor";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { AnimatedCard, ANIMATION_PRESETS, DEFAULT_ANIMATION_CONFIG } from "../../lib/animations";
 import { DEFAULT_THEME, FONT_PRESETS, applyTheme } from "../../lib/themePresets";
@@ -776,10 +777,11 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
     setForm({
       name: "", description: "", categoryId: categories[0]?.id, brandId: brands[0]?.id, storeId: stores[0]?.id,
       price: "", stock: 0, status: "draft", images: [],
-      sku: "", barcode: "",
+      sku: "", barcode: "", condition: "",
       isFeatured: false, isTrending: false, isBestSeller: false, isNew: false, badge: "",
       animationOverride: null,
       specifications: [], highlights: [], tagsText: "",
+      colorOptions: [], storageOptions: [], variants: [],
     });
     setModalOpen(true);
   };
@@ -788,11 +790,12 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
     setForm({
       name: p.name, description: p.description || "", price: p.price, stock: p.stock, status: p.status, categoryId: p.categoryId, brandId: p.brandId,
       images: p.images?.map((i) => resolveMediaUrl(i.url)) || [],
-      sku: p.sku || "", barcode: p.barcode || "",
+      sku: p.sku || "", barcode: p.barcode || "", condition: p.condition || "",
       isFeatured: !!p.isFeatured, isTrending: !!p.isTrending, isBestSeller: !!p.isBestSeller, isNew: !!p.isNew,
       badge: p.badge || "",
       animationOverride: p.animationOverride || null,
       specifications: p.specifications || [], highlights: p.highlights || [], tagsText: (p.tags || []).join(", "),
+      ...variantsFormStateFromProduct(p),
     });
     setModalOpen(true);
   };
@@ -835,6 +838,7 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
       specifications: (form.specifications || []).filter((s) => s.label.trim() && s.value.trim()),
       highlights: (form.highlights || []).filter((h) => h.trim()),
       tags: (form.tagsText || "").split(",").map((t) => t.trim()).filter(Boolean),
+      condition: form.condition || null,
     };
     // Leave SKU untouched (auto-generated / unchanged) unless the seller/admin actually typed
     // one in — an empty string would fail the backend's non-empty validation on update.
@@ -842,17 +846,18 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
       ...(form.sku?.trim() ? { sku: form.sku.trim() } : {}),
       barcode: form.barcode?.trim() || null,
     };
+    const variantsPayload = buildOptionsAndVariantsPayload(form);
     if (editing) {
       updateMutation.mutate({
         id: editing.id,
         payload: {
           name: form.name, description: form.description, price: Number(form.price), stock: Number(form.stock), status: form.status, images: form.images,
-          ...merchandising, ...catalog, ...identifiers,
+          ...merchandising, ...catalog, ...identifiers, ...variantsPayload,
         },
       });
     } else {
-      const { sku, barcode, ...formRest } = form;
-      createMutation.mutate({ ...formRest, ...merchandising, ...catalog, ...identifiers, price: Number(form.price), stock: Number(form.stock) });
+      const { sku, barcode, colorOptions, storageOptions, variants, ...formRest } = form;
+      createMutation.mutate({ ...formRest, ...merchandising, ...catalog, ...identifiers, ...variantsPayload, price: Number(form.price), stock: Number(form.stock) });
     }
   };
 
@@ -977,7 +982,7 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
             <Select label="Store" value={form.storeId} onChange={(e) => setForm((f) => ({ ...f, storeId: e.target.value }))} options={stores.map((s) => ({ value: s.id, label: s.name }))} />
           )}
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Price" type="number" leftIcon={DollarSign} value={form.price ?? ""} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} />
+            <Input label="Price" type="number" leftIcon={PoundSterling} value={form.price ?? ""} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} />
             <Input label="Stock quantity" type="number" value={form.stock ?? ""} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))} />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -994,7 +999,20 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
               onChange={(e) => setForm((f) => ({ ...f, barcode: e.target.value }))}
             />
           </div>
-          <Select label="Status" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))} options={PRODUCT_STATUSES.map((s) => ({ value: s, label: s }))} />
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Status"
+              value={form.status}
+              onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+              options={PRODUCT_STATUSES.map((s) => ({ value: s, label: s }))}
+            />
+            <Select
+              label="Condition"
+              value={form.condition || ""}
+              onChange={(e) => setForm((f) => ({ ...f, condition: e.target.value }))}
+              options={[{ value: "", label: "Not specified" }, { value: "Brand New", label: "Brand New" }, { value: "Open Box", label: "Open Box" }]}
+            />
+          </div>
 
           <div>
             <p className="mb-2 text-sm font-medium text-[var(--text-primary)]">
@@ -1081,6 +1099,8 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
             value={form.tagsText || ""}
             onChange={(e) => setForm((f) => ({ ...f, tagsText: e.target.value }))}
           />
+
+          <VariantsEditor form={form} setForm={setForm} />
 
           <div>
             <p className="mb-2 text-sm font-medium text-[var(--text-primary)]">Homepage merchandising</p>
@@ -2783,7 +2803,7 @@ function DashboardHomeSection({ onNavigate }) {
       <SectionTitle eyebrow="Overview" title="Dashboard" description="What's happening in your store today." />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-        <StatCard label="Today's revenue" value={`${CURRENCY}${Number(d.todayRevenue || 0).toLocaleString()}`} icon={DollarSign} />
+        <StatCard label="Today's revenue" value={`${CURRENCY}${Number(d.todayRevenue || 0).toLocaleString()}`} icon={PoundSterling} />
         <StatCard label="Today's orders" value={d.todayOrders || 0} icon={ShoppingCart} />
         <StatCard label="Total revenue" value={`${CURRENCY}${Number(d.totalRevenue || 0).toLocaleString()}`} icon={TrendingUp} />
         <StatCard label="Total customers" value={d.totalCustomers || 0} icon={UsersIcon} />
@@ -2932,7 +2952,7 @@ function AnalyticsSection() {
       <SectionTitle eyebrow="Insights" title="Analytics" description="Key performance indicators at a glance." />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        <StatCard label="Total revenue" value={`${CURRENCY}${Number(overview.totalRevenue || 0).toLocaleString()}`} icon={DollarSign} />
+        <StatCard label="Total revenue" value={`${CURRENCY}${Number(overview.totalRevenue || 0).toLocaleString()}`} icon={PoundSterling} />
         <StatCard label="Total orders" value={overview.totalOrders || 0} icon={ShoppingCart} />
         <StatCard label="Avg. order value" value={`${CURRENCY}${overview.avgOrderValue || 0}`} icon={TrendingUp} />
         <StatCard label="Refund rate" value={`${overview.refundRate || 0}%`} icon={Percent} />

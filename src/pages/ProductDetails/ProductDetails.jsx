@@ -152,6 +152,30 @@ function ColorSelector({ colors, selected, onSelect }) {
   );
 }
 
+function StorageSelector({ options, selected, onSelect }) {
+  if (!options.length) return null;
+  return (
+    <div>
+      <p className="mb-2.5 text-sm font-medium text-neutral-900 dark:text-white">Storage</p>
+      <div className="flex flex-wrap gap-2.5">
+        {options.map((opt) => (
+          <button
+            key={opt.label}
+            onClick={() => onSelect(opt.label)}
+            className={`flex h-11 min-w-11 items-center justify-center rounded-xl border px-3 text-sm font-medium transition-colors ${
+              selected === opt.label
+                ? "border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900"
+                : "border-black/10 text-neutral-700 hover:border-neutral-400 dark:border-white/15 dark:text-neutral-200 dark:hover:border-white/40"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SizeSelector({ sizes, selected, onSelect }) {
   if (!sizes.length) return null;
   return (
@@ -452,6 +476,7 @@ function ProductDetails() {
   }, [product?.id]);
 
   const colorOptions = useMemo(() => (product?.options || []).filter((o) => o.kind === "color"), [product]);
+  const storageOptions = useMemo(() => (product?.options || []).filter((o) => o.kind === "storage"), [product]);
   const variantKeys = useMemo(
     () => (product?.variants?.length ? Object.keys(product.variants[0].combination) : []),
     [product]
@@ -472,6 +497,15 @@ function ProductDetails() {
 
   const displayPrice = matchedVariant?.price != null ? Number(matchedVariant.price) : Number(product?.price || 0);
   const maxQty = matchedVariant ? matchedVariant.stock : product?.stock ?? 9;
+
+  // Jump the gallery to whichever photo was assigned to the selected colour/storage combination,
+  // so the displayed image changes along with the variant — falls back to leaving it as-is when
+  // that combination has no dedicated photo.
+  useEffect(() => {
+    if (!matchedVariant?.imageUrl || !product?.images) return;
+    const idx = product.images.findIndex((img) => resolveMediaUrl(img.url) === matchedVariant.imageUrl);
+    if (idx >= 0) setActiveImage(idx);
+  }, [matchedVariant?.imageUrl, product?.images]);
 
   const handleToggleWishlist = () => {
     if (!isAuthenticated) {
@@ -569,6 +603,11 @@ function ProductDetails() {
                 {rating.toFixed(1)} ({product.ratingCount} reviews)
               </span>
               <span className="text-xs text-neutral-300 dark:text-neutral-700">SKU {product.sku}</span>
+              {product.condition && (
+                <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  {product.condition}
+                </span>
+              )}
             </div>
 
             <div className="mt-5 flex items-baseline gap-3">
@@ -591,12 +630,17 @@ function ProductDetails() {
               </ul>
             )}
 
-            {(colorOptions.length > 0 || sizeOptions.length > 0) && (
+            {(colorOptions.length > 0 || sizeOptions.length > 0 || storageOptions.length > 0) && (
               <div className="mt-7 space-y-6 border-t border-black/5 pt-6 dark:border-white/10">
                 <ColorSelector
                   colors={colorOptions}
                   selected={selections.color}
                   onSelect={(label) => setSelections((s) => ({ ...s, color: label }))}
+                />
+                <StorageSelector
+                  options={storageOptions}
+                  selected={selections.storage}
+                  onSelect={(label) => setSelections((s) => ({ ...s, storage: label }))}
                 />
                 <SizeSelector
                   sizes={sizeOptions}
