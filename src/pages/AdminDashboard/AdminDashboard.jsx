@@ -657,10 +657,32 @@ const ORDER_STATUS_VARIANT = {
 const PAYMENT_STATUS_VARIANT = { paid: "success", pending: "warning", refunded: "neutral" };
 const ORDER_STATUSES = ["pending", "processing", "shipped", "delivered", "cancelled", "return_requested", "returned", "exchange_requested", "exchanged"];
 
+function OrderItemsModal({ order, onClose }) {
+  return (
+    <Modal open={Boolean(order)} onClose={onClose} title={order ? `Order ${order.orderNumber}` : ""} size="md">
+      <div className="flex flex-col gap-3">
+        {(order?.items || []).map((item) => (
+          <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] p-4">
+            <div>
+              <p className="text-sm font-medium">{item.nameSnapshot}</p>
+              <p className="text-xs text-[var(--text-muted)]">
+                Qty {item.quantity}
+                {item.product?.sku && ` · SKU ${item.product.sku}`}
+              </p>
+            </div>
+            <span className="text-sm text-[var(--text-muted)]">{CURRENCY}{Number(item.priceSnapshot).toLocaleString()}</span>
+          </div>
+        ))}
+      </div>
+    </Modal>
+  );
+}
+
 function OrdersSection() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
+  const [itemsOrder, setItemsOrder] = useState(null);
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -697,7 +719,7 @@ function OrdersSection() {
       ) : (
         <TableShell>
           <thead className="border-b border-[var(--border)]">
-            <tr><Th>Order</Th><Th>Customer</Th><Th>Date</Th><Th>Total</Th><Th>Status</Th><Th>Payment</Th><Th className="text-right">Actions</Th></tr>
+            <tr><Th>Order</Th><Th>Customer</Th><Th>Date</Th><Th>Items</Th><Th>Total</Th><Th>Status</Th><Th>Payment</Th><Th className="text-right">Actions</Th></tr>
           </thead>
           <tbody className="divide-y divide-[var(--border)]">
             {orders.map((o) => (
@@ -705,6 +727,11 @@ function OrdersSection() {
                 <Td className="font-medium">{o.orderNumber}</Td>
                 <Td>{o.customer}</Td>
                 <Td className="text-[var(--text-muted)]">{new Date(o.placedAt).toLocaleDateString()}</Td>
+                <Td>
+                  <button onClick={() => setItemsOrder(o)} className="text-gold-500 hover:underline">
+                    {o.itemCount} item{o.itemCount === 1 ? "" : "s"}
+                  </button>
+                </Td>
                 <Td>{CURRENCY}{Number(o.total).toLocaleString()}</Td>
                 <Td><Badge variant={ORDER_STATUS_VARIANT[o.status]}>{o.status.replace(/_/g, " ")}</Badge></Td>
                 <Td><Badge variant={PAYMENT_STATUS_VARIANT[o.paymentStatus]}>{o.paymentStatus}</Badge></Td>
@@ -728,6 +755,8 @@ function OrdersSection() {
       )}
 
       <div className="mt-6"><Pagination page={page} totalPages={totalPages} onChange={setPage} /></div>
+
+      <OrderItemsModal order={itemsOrder} onClose={() => setItemsOrder(null)} />
     </div>
   );
 }

@@ -641,7 +641,10 @@ function OrderItemsModal({ order, onClose }) {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium text-neutral-900 dark:text-white">{item.nameSnapshot}</p>
-                  <p className="text-xs text-neutral-400">Qty {item.quantity}</p>
+                  <p className="text-xs text-neutral-400">
+                    Qty {item.quantity}
+                    {item.product?.sku && ` · SKU ${item.product.sku}`}
+                  </p>
                 </div>
                 {alreadyWarehouse ? (
                   <Badge variant="success">Fulfilled by Veluntra</Badge>
