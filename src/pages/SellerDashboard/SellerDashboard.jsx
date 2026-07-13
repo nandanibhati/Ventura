@@ -714,6 +714,7 @@ function ProductsTab({ tokens, categoryColors }) {
       isFeatured: false, isTrending: false, isBestSeller: false, isNew: false, badge: "",
       animationOverride: null,
       specifications: [], highlights: [], tagsText: "",
+      sku: "", barcode: "",
     });
     setModalOpen(true);
   };
@@ -725,6 +726,7 @@ function ProductsTab({ tokens, categoryColors }) {
       badge: p.badge || "",
       animationOverride: p.animationOverride || null,
       specifications: p.specifications || [], highlights: p.highlights || [], tagsText: (p.tags || []).join(", "),
+      sku: p.sku || "", barcode: p.barcode || "",
     });
     setModalOpen(true);
   };
@@ -751,16 +753,23 @@ function ProductsTab({ tokens, categoryColors }) {
       highlights: (form.highlights || []).filter((h) => h.trim()),
       tags: (form.tagsText || "").split(",").map((t) => t.trim()).filter(Boolean),
     };
+    // Leave SKU untouched (auto-generated / unchanged) unless the seller actually typed one in —
+    // an empty string would fail the backend's non-empty validation on update.
+    const identifiers = {
+      ...(form.sku?.trim() ? { sku: form.sku.trim() } : {}),
+      barcode: form.barcode?.trim() || null,
+    };
     if (editing) {
       updateMutation.mutate({
         id: editing.id,
         payload: {
           name: form.name, price: Number(form.price), stock: Number(form.stock), status: form.status, images: form.images,
-          ...merchandising, ...catalog,
+          ...merchandising, ...catalog, ...identifiers,
         },
       });
     } else {
-      createMutation.mutate({ ...form, ...merchandising, ...catalog, price: Number(form.price), stock: Number(form.stock) });
+      const { sku, barcode, ...formRest } = form;
+      createMutation.mutate({ ...formRest, ...merchandising, ...catalog, ...identifiers, price: Number(form.price), stock: Number(form.stock) });
     }
   };
 
@@ -898,6 +907,20 @@ function ProductsTab({ tokens, categoryColors }) {
           <div className="grid grid-cols-2 gap-4">
             <Input label="Price" type="number" leftIcon={DollarSign} value={form.price ?? ""} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} />
             <Input label="Stock quantity" type="number" value={form.stock ?? ""} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="SKU"
+              placeholder="Auto-generated if left blank"
+              value={form.sku ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))}
+            />
+            <Input
+              label="Barcode"
+              placeholder="Optional — for external/POS integration"
+              value={form.barcode ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, barcode: e.target.value }))}
+            />
           </div>
           <Select label="Status" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))} options={PRODUCT_STATUSES.map((s) => ({ value: s, label: s }))} />
 
