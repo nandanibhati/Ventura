@@ -215,6 +215,16 @@ function QuantityStepper({ quantity, onDecrease, onIncrease }) {
 function ShareMenu({ productName }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
 
   const handleCopy = async () => {
     try {
@@ -227,7 +237,7 @@ function ShareMenu({ productName }) {
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="Share product"
