@@ -135,7 +135,6 @@ function UtilityDropdown({ icon: Icon, options, selected, onSelect, isOpen, onTo
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(false);
@@ -201,7 +200,6 @@ function Navbar() {
     setPrevPathname(location.pathname);
     setOpenMenu(null);
     setMobileOpen(false);
-    setSearchOpen(false);
   }
 
   useEffect(() => {
@@ -224,7 +222,7 @@ function Navbar() {
     if (!query.trim()) return;
     navigate(`/shop?search=${encodeURIComponent(query.trim())}`);
     setQuery("");
-    setSearchOpen(false);
+    setMobileOpen(false);
   };
 
   const toggleMenu = (name) => setOpenMenu((m) => (m === name ? null : name));
@@ -298,7 +296,7 @@ function Navbar() {
         }`}
       >
         <div
-          className={`mx-auto flex max-w-7xl items-center justify-between px-6 transition-all duration-300 ${
+          className={`mx-auto flex max-w-7xl items-center gap-4 px-6 transition-all duration-300 sm:gap-6 ${
             scrolled ? "h-16" : "h-20"
           }`}
         >
@@ -317,133 +315,32 @@ function Navbar() {
             )}
           </Link>
 
-          <div className="hidden items-center gap-9 lg:flex">
-            <NavItem to="/shop?isNew=true" label="New Arrivals" />
+          <form
+            onSubmit={handleSearchSubmit}
+            className="hidden max-w-2xl flex-1 items-center rounded-full border border-black/10 bg-black/[0.03] px-4 py-2.5 md:flex dark:border-white/10 dark:bg-white/5"
+          >
+            <Search className="h-4 w-4 shrink-0 text-neutral-400" />
+            <input
+              aria-label="Search products"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search products, brands & more..."
+              className="w-full bg-transparent px-2.5 text-sm text-neutral-800 placeholder:text-neutral-400 focus-visible:outline-none dark:text-white"
+            />
+            <button type="submit" aria-label="Submit search" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold-500 text-white transition-colors hover:bg-gold-600">
+              <Search className="h-3.5 w-3.5" />
+            </button>
+          </form>
 
-            <div
-              className="relative"
-              onMouseEnter={() => setOpenMenu("mega")}
-              onMouseLeave={() => setOpenMenu((m) => (m === "mega" ? null : m))}
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Search"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 transition-colors hover:bg-black/5 dark:text-neutral-200 dark:hover:bg-white/10 md:hidden"
             >
-              <button className="relative flex items-center gap-1 py-2 text-[0.925rem] font-medium text-neutral-600 transition-colors hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white">
-                Categories
-                <ChevronDown
-                  className={`h-3.5 w-3.5 transition-transform duration-200 ${
-                    openMenu === "mega" ? "rotate-180" : ""
-                  }`}
-                />
-                <span
-                  className={`absolute -bottom-0.5 left-0 h-[1.5px] w-full origin-left bg-neutral-900 transition-transform duration-300 dark:bg-white ${
-                    openMenu === "mega" ? "scale-x-100" : "scale-x-0"
-                  }`}
-                />
-              </button>
-
-              <AnimatePresence>
-                {openMenu === "mega" && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="absolute left-1/2 top-full mt-3 w-[min(92vw,900px)] -translate-x-1/2 rounded-2xl border border-black/5 bg-white/95 p-8 shadow-2xl shadow-black/10 backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-900/95"
-                  >
-                    <div className="grid grid-cols-2 gap-8 xl:grid-cols-4">
-                      <div className="col-span-2 xl:col-span-3">
-                        <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-                          Shop by category
-                        </h4>
-                        {categoriesWithStock.length === 0 ? (
-                          <p className="text-sm text-neutral-500 dark:text-neutral-400">No categories yet.</p>
-                        ) : (
-                          <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">
-                            {categoriesWithStock.map((cat) => (
-                              <li key={cat.id}>
-                                <Link
-                                  to={`/shop?category=${cat.slug}`}
-                                  onClick={() => setOpenMenu(null)}
-                                  className="group flex flex-col items-center gap-2 text-center"
-                                >
-                                  <span className="block size-16 overflow-hidden rounded-full border border-black/5 bg-neutral-100 transition-transform duration-300 group-hover:scale-105 dark:border-white/10 dark:bg-white/5">
-                                    {cat.imageUrl && (
-                                      <img
-                                        src={resolveMediaUrl(cat.imageUrl)}
-                                        alt=""
-                                        className="size-full object-cover"
-                                      />
-                                    )}
-                                  </span>
-                                  <span className="text-xs font-medium text-neutral-600 transition-colors group-hover:text-neutral-900 dark:text-neutral-300 dark:group-hover:text-white">
-                                    {cat.name}
-                                  </span>
-                                </Link>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                      <div className="relative flex min-h-[200px] flex-col justify-end overflow-hidden rounded-xl bg-gradient-to-br from-neutral-900 to-neutral-700 p-6 dark:from-white/10 dark:to-white/5">
-                        <span className="text-xs uppercase tracking-wider text-white/60">Limited Time</span>
-                        <h5 className="mt-1 text-lg font-semibold text-white">Current Deals</h5>
-                        <p className="mt-1 text-sm text-white/70">Save on selected items, while stock lasts</p>
-                        <Link
-                          to="/shop?sale=true"
-                          onClick={() => setOpenMenu(null)}
-                          className="mt-4 inline-flex w-fit items-center gap-1 text-sm font-medium text-white underline underline-offset-4"
-                        >
-                          Shop Sale
-                          <ChevronRight className="h-3.5 w-3.5" />
-                        </Link>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {quickNavCategories.map((cat) => (
-              <NavItem key={cat.id} to={`/shop?category=${cat.slug}`} label={cat.name} />
-            ))}
-            <NavItem to="/shop?sale=true" label="Sale" accent />
-          </div>
-
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <div className="hidden md:flex">
-              <AnimatePresence mode="wait">
-                {searchOpen ? (
-                  <motion.form
-                    key="search-open"
-                    onSubmit={handleSearchSubmit}
-                    initial={{ width: 40, opacity: 0 }}
-                    animate={{ width: 260, opacity: 1 }}
-                    exit={{ width: 40, opacity: 0 }}
-                    transition={{ duration: 0.25, ease: "easeOut" }}
-                    className="relative flex items-center overflow-hidden rounded-full border border-black/10 bg-black/[0.03] dark:border-white/10 dark:bg-white/5"
-                  >
-                    <Search className="ml-3 h-4 w-4 shrink-0 text-neutral-400" />
-                    <input
-                      autoFocus
-                      aria-label="Search products"
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      onBlur={() => !query && setSearchOpen(false)}
-                      placeholder="Search products..."
-                      className="w-full bg-transparent px-2.5 py-2 text-sm text-neutral-800 placeholder:text-neutral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-400 dark:text-white"
-                    />
-                  </motion.form>
-                ) : (
-                  <motion.button
-                    key="search-closed"
-                    type="button"
-                    onClick={() => setSearchOpen(true)}
-                    aria-label="Search"
-                    className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-700 transition-colors hover:bg-black/5 dark:text-neutral-200 dark:hover:bg-white/10"
-                  >
-                    <Search className="h-[1.15rem] w-[1.15rem]" strokeWidth={1.75} />
-                  </motion.button>
-                )}
-              </AnimatePresence>
-            </div>
+              <Search className="h-[1.15rem] w-[1.15rem]" strokeWidth={1.75} />
+            </button>
 
             <button
               onClick={() => setIsDark((d) => !d)}
@@ -614,6 +511,98 @@ function Navbar() {
             >
               <Menu className="h-5 w-5" strokeWidth={1.75} />
             </button>
+          </div>
+        </div>
+
+        <div className="hidden border-t border-black/5 dark:border-white/10 lg:block">
+          <div className="mx-auto flex h-12 max-w-7xl items-center gap-9 px-6">
+            <NavItem to="/shop?isNew=true" label="New Arrivals" />
+
+            <div
+              className="relative"
+              onMouseEnter={() => setOpenMenu("mega")}
+              onMouseLeave={() => setOpenMenu((m) => (m === "mega" ? null : m))}
+            >
+              <button className="relative flex items-center gap-1 py-2 text-[0.925rem] font-medium text-neutral-600 transition-colors hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white">
+                Categories
+                <ChevronDown
+                  className={`h-3.5 w-3.5 transition-transform duration-200 ${
+                    openMenu === "mega" ? "rotate-180" : ""
+                  }`}
+                />
+                <span
+                  className={`absolute -bottom-0.5 left-0 h-[1.5px] w-full origin-left bg-neutral-900 transition-transform duration-300 dark:bg-white ${
+                    openMenu === "mega" ? "scale-x-100" : "scale-x-0"
+                  }`}
+                />
+              </button>
+
+              <AnimatePresence>
+                {openMenu === "mega" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="absolute left-1/2 top-full mt-3 w-[min(92vw,900px)] -translate-x-1/2 rounded-2xl border border-black/5 bg-white/95 p-8 shadow-2xl shadow-black/10 backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-900/95"
+                  >
+                    <div className="grid grid-cols-2 gap-8 xl:grid-cols-4">
+                      <div className="col-span-2 xl:col-span-3">
+                        <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                          Shop by category
+                        </h4>
+                        {categoriesWithStock.length === 0 ? (
+                          <p className="text-sm text-neutral-500 dark:text-neutral-400">No categories yet.</p>
+                        ) : (
+                          <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">
+                            {categoriesWithStock.map((cat) => (
+                              <li key={cat.id}>
+                                <Link
+                                  to={`/shop?category=${cat.slug}`}
+                                  onClick={() => setOpenMenu(null)}
+                                  className="group flex flex-col items-center gap-2 text-center"
+                                >
+                                  <span className="block size-16 overflow-hidden rounded-full border border-black/5 bg-neutral-100 transition-transform duration-300 group-hover:scale-105 dark:border-white/10 dark:bg-white/5">
+                                    {cat.imageUrl && (
+                                      <img
+                                        src={resolveMediaUrl(cat.imageUrl)}
+                                        alt=""
+                                        className="size-full object-cover"
+                                      />
+                                    )}
+                                  </span>
+                                  <span className="text-xs font-medium text-neutral-600 transition-colors group-hover:text-neutral-900 dark:text-neutral-300 dark:group-hover:text-white">
+                                    {cat.name}
+                                  </span>
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <div className="relative flex min-h-[200px] flex-col justify-end overflow-hidden rounded-xl bg-gradient-to-br from-neutral-900 to-neutral-700 p-6 dark:from-white/10 dark:to-white/5">
+                        <span className="text-xs uppercase tracking-wider text-white/60">Limited Time</span>
+                        <h5 className="mt-1 text-lg font-semibold text-white">Current Deals</h5>
+                        <p className="mt-1 text-sm text-white/70">Save on selected items, while stock lasts</p>
+                        <Link
+                          to="/shop?sale=true"
+                          onClick={() => setOpenMenu(null)}
+                          className="mt-4 inline-flex w-fit items-center gap-1 text-sm font-medium text-white underline underline-offset-4"
+                        >
+                          Shop Sale
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </Link>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {quickNavCategories.map((cat) => (
+              <NavItem key={cat.id} to={`/shop?category=${cat.slug}`} label={cat.name} />
+            ))}
+            <NavItem to="/shop?sale=true" label="Sale" accent />
           </div>
         </div>
       </nav>

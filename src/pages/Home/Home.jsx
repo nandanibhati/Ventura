@@ -7,9 +7,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Star,
-  Truck,
-  ShieldCheck,
-  RotateCcw,
   Headphones,
   Flame,
   TrendingUp,
@@ -67,13 +64,6 @@ const CATEGORY_ICONS = {
 function iconFor(categoryName) {
   return CATEGORY_ICONS[categoryName] || Package;
 }
-
-const FEATURES = [
-  { icon: Truck, title: "Free shipping", subtitle: "On orders over £150" },
-  { icon: ShieldCheck, title: "Secure payments", subtitle: "100% protected checkout" },
-  { icon: RotateCcw, title: "Easy returns", subtitle: "30-day return window" },
-  { icon: Headphones, title: "24/7 support", subtitle: "We're always here to help" },
-];
 
 const FAQS = [
   { question: "What is your return policy?", answer: "We offer a 30-day hassle-free return policy on all unopened or unused items with original packaging. Refunds are processed within 5-7 business days of receiving your return." },
@@ -246,10 +236,18 @@ function HomeProductCard({ product, index, compact, template }) {
  * rather than boxes stacking into several rows. */
 function HorizontalProductRow({ children }) {
   const scrollRef = useRef(null);
-  const scrollBy = (dir) => scrollRef.current?.scrollBy({ left: dir * 340, behavior: "smooth" });
+  // Scroll by a full viewport-width "page" (not a fixed pixel amount) so the arrow always lands
+  // on a card boundary instead of stopping mid-card — paired with scroll-snap below.
+  const scrollBy = (dir) => {
+    const el = scrollRef.current;
+    if (el) el.scrollBy({ left: dir * el.clientWidth, behavior: "smooth" });
+  };
   return (
     <div className="relative">
-      <div ref={scrollRef} className="flex gap-5 overflow-x-auto px-1 pb-2 [scrollbar-width:none] sm:gap-6 [&::-webkit-scrollbar]:hidden">
+      <div
+        ref={scrollRef}
+        className="flex snap-x snap-mandatory gap-5 overflow-x-auto px-1 pb-2 [scrollbar-width:none] sm:gap-6 [&::-webkit-scrollbar]:hidden"
+      >
         {children}
       </div>
       <button
@@ -390,7 +388,7 @@ function ProductGridSection({ section, defaults }) {
       {!isLoading && !isError && products.length > 0 && (
         <HorizontalProductRow>
           {products.map((product, i) => (
-            <div key={product.id} className="relative w-[150px] shrink-0 sm:w-[180px] lg:w-[200px]">
+            <div key={product.id} className="relative w-[62vw] shrink-0 snap-start sm:w-[240px] lg:w-[calc((100%-4*1.5rem)/5)]">
               <HomeProductCard product={product} index={i} template={template} />
               {isPreview && <CmsEditOverlay onEdit={() => requestEdit("product", product.id)} />}
             </div>
@@ -549,26 +547,6 @@ function PromoTilesRow() {
   );
 }
 
-function WhyVeluntraSection() {
-  return (
-    <SectionCard>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-3">
-        {FEATURES.map((feature) => (
-          <div key={feature.title} className="flex items-center gap-3">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
-              <feature.icon className="h-5 w-5" strokeWidth={1.75} />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-neutral-900 dark:text-white">{feature.title}</p>
-              <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">{feature.subtitle}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </SectionCard>
-  );
-}
-
 /** Photo-tile strip, horizontally scrollable — the primary category nav. Shows the
  * admin-uploaded category photo when set (Admin > Categories), falling back to a
  * generic icon on a gradient tile when a category has no photo yet. */
@@ -582,61 +560,63 @@ function CategoriesSection() {
   const { isPreview, requestEdit } = useCmsEditClick();
 
   return (
-    <SectionCard>
-      <SectionStatus isLoading={isLoading} isError={isError} isEmpty={categories.length === 0} onRetry={refetch} />
-      {!isLoading && !isError && categories.length > 0 && (
-        <div className="relative">
-          <h2 className="mb-4 text-center text-lg font-bold text-neutral-900 dark:text-white sm:text-xl" style={{ fontFamily: "var(--font-display)" }}>
-            Shop by Category
-          </h2>
-          <div ref={scrollRef} className="flex items-start gap-5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] sm:gap-7 [&::-webkit-scrollbar]:hidden">
-            {categories.slice(0, 12).map((cat) => {
-              const Icon = iconFor(cat.name);
-              return (
-                <Link key={cat.id} to={`/shop?category=${cat.slug}`} className="group flex shrink-0 flex-col items-center gap-2.5 text-center">
-                  <div
-                    className={cn(
-                      "relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-[var(--surface-inset)] shadow-sm ring-1 ring-black/5 transition-transform group-hover:scale-105 dark:ring-white/10 sm:h-20 sm:w-20",
-                      !cat.imageUrl && "bg-gradient-to-br",
-                      !cat.imageUrl && gradientClassFor(cat.id)
-                    )}
-                  >
-                    {cat.imageUrl ? (
-                      <img src={resolveMediaUrl(cat.imageUrl)} alt="" className="size-full object-cover" />
-                    ) : (
-                      <Icon className="h-6 w-6 text-white sm:h-7 sm:w-7" strokeWidth={1.5} />
-                    )}
-                    {isPreview && <CmsEditOverlay onEdit={() => requestEdit("category", cat.id)} />}
-                  </div>
-                  <span className="w-16 truncate text-[11px] font-medium text-neutral-700 dark:text-neutral-300 sm:w-20 sm:text-xs">
-                    {cat.name}
-                  </span>
-                </Link>
-              );
-            })}
+    <SectionCard padded={false}>
+      <div className="p-6 sm:p-8">
+        <SectionStatus isLoading={isLoading} isError={isError} isEmpty={categories.length === 0} onRetry={refetch} />
+        {!isLoading && !isError && categories.length > 0 && (
+          <div className="relative">
+            <h2 className="mb-6 text-center text-lg font-bold text-neutral-900 dark:text-white sm:text-xl" style={{ fontFamily: "var(--font-display)" }}>
+              Shop by Category
+            </h2>
+            <div ref={scrollRef} className="flex items-start gap-8 overflow-x-auto px-10 pb-1 [scrollbar-width:none] sm:gap-10 [&::-webkit-scrollbar]:hidden">
+              {categories.slice(0, 12).map((cat) => {
+                const Icon = iconFor(cat.name);
+                return (
+                  <Link key={cat.id} to={`/shop?category=${cat.slug}`} className="group flex shrink-0 flex-col items-center gap-3 text-center">
+                    <div
+                      className={cn(
+                        "relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-[var(--surface-inset)] shadow-sm ring-1 ring-black/5 transition-transform group-hover:scale-105 dark:ring-white/10 sm:h-20 sm:w-20",
+                        !cat.imageUrl && "bg-gradient-to-br",
+                        !cat.imageUrl && gradientClassFor(cat.id)
+                      )}
+                    >
+                      {cat.imageUrl ? (
+                        <img src={resolveMediaUrl(cat.imageUrl)} alt="" className="size-full object-cover" />
+                      ) : (
+                        <Icon className="h-6 w-6 text-white sm:h-7 sm:w-7" strokeWidth={1.5} />
+                      )}
+                      {isPreview && <CmsEditOverlay onEdit={() => requestEdit("category", cat.id)} />}
+                    </div>
+                    <span className="w-16 truncate text-[11px] font-medium text-neutral-700 dark:text-neutral-300 sm:w-20 sm:text-xs">
+                      {cat.name}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+            {categories.length > 6 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => scrollBy(-1)}
+                  aria-label="Scroll categories left"
+                  className="absolute left-0 top-16 hidden size-9 items-center justify-center rounded-full bg-gold-400 text-white shadow-soft-md hover:bg-gold-500 sm:flex"
+                >
+                  <ChevronLeft className="size-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollBy(1)}
+                  aria-label="Scroll categories right"
+                  className="absolute right-0 top-16 hidden size-9 items-center justify-center rounded-full bg-gold-400 text-white shadow-soft-md hover:bg-gold-500 sm:flex"
+                >
+                  <ChevronRight className="size-5" />
+                </button>
+              </>
+            )}
           </div>
-          {categories.length > 6 && (
-            <>
-              <button
-                type="button"
-                onClick={() => scrollBy(-1)}
-                aria-label="Scroll categories left"
-                className="absolute left-0 top-16 hidden size-9 items-center justify-center rounded-full bg-gold-400 text-white shadow-soft-md hover:bg-gold-500 sm:flex"
-              >
-                <ChevronLeft className="size-5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollBy(1)}
-                aria-label="Scroll categories right"
-                className="absolute right-0 top-16 hidden size-9 items-center justify-center rounded-full bg-gold-400 text-white shadow-soft-md hover:bg-gold-500 sm:flex"
-              >
-                <ChevronRight className="size-5" />
-              </button>
-            </>
-          )}
-        </div>
-      )}
+        )}
+      </div>
     </SectionCard>
   );
 }
@@ -719,7 +699,7 @@ function FlashSaleSection({ section }) {
       ) : (
         <HorizontalProductRow>
           {products.map((product, i) => (
-            <div key={product.id} className="relative w-[150px] shrink-0 sm:w-[180px] lg:w-[200px]">
+            <div key={product.id} className="relative w-[62vw] shrink-0 snap-start sm:w-[240px] lg:w-[calc((100%-4*1.5rem)/5)]">
               <HomeProductCard product={product} index={i} template={template} />
               {isPreview && <CmsEditOverlay onEdit={() => requestEdit("product", product.id)} />}
             </div>
@@ -1299,7 +1279,7 @@ function Home() {
   const heroSection = cmsSections?.find((s) => s.type === "hero_banner");
 
   return (
-    <div className="min-h-screen bg-[#f1f3f6] dark:bg-neutral-950">
+    <div className="min-h-screen bg-white dark:bg-neutral-950">
       <div className="pt-2 sm:pt-3">
         <CategoriesSection />
       </div>
@@ -1308,7 +1288,6 @@ function Home() {
       </div>
       <div className="space-y-2 py-2 sm:space-y-3 sm:py-3">
         <PromoTilesRow />
-        <WhyVeluntraSection />
         {merchandisingSections
           .filter((s) => s.type !== "categories")
           .map((section) => {
