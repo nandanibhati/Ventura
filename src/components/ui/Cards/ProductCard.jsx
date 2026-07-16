@@ -181,7 +181,7 @@ export default function ProductCard({
       {cfg.dense ? (
         <div className={cn("flex flex-1 flex-col gap-1 p-2", cfg.align === "center" && "items-center text-center")}>
           <Link to={href}>
-            <h3 className="line-clamp-2 text-[12.5px] leading-snug text-[var(--text-primary)]">{name}</h3>
+            <h3 className="line-clamp-2 min-h-[2.4em] text-[12.5px] leading-snug text-[var(--text-primary)]">{name}</h3>
           </Link>
           {cfg.showRating && rating != null && (
             <div className="flex items-center gap-1">
@@ -220,7 +220,10 @@ export default function ProductCard({
                 </button>
               ))}
           </div>
-          {stockStatus && <span className={cn("text-[10px] font-medium", stockStatus.tone)}>{stockStatus.label}</span>}
+          {/* Always rendered (just invisible when there's nothing to say) so cards without a
+              low-stock warning don't end up shorter than ones that have it — same fixed-height
+              slot on every card keeps a row of cards visually aligned. */}
+          <span className={cn("text-[10px] font-medium", stockStatus ? stockStatus.tone : "invisible")}>{stockStatus?.label || "placeholder"}</span>
         </div>
       ) : (
         <div className={cn("flex flex-1 flex-col gap-1.5 p-4", cfg.align === "center" && "items-center text-center")}>
@@ -250,7 +253,7 @@ export default function ProductCard({
             </div>
           )}
 
-          {stockStatus && <span className={cn("text-[11px] font-medium", stockStatus.tone)}>{stockStatus.label}</span>}
+          <span className={cn("text-[11px] font-medium", stockStatus ? stockStatus.tone : "invisible")}>{stockStatus?.label || "placeholder"}</span>
 
           <div className={cn("mt-auto flex pt-3", cfg.cta === "pill-full" ? "flex-col gap-3" : "items-center justify-between")}>
             <span className="text-base text-[var(--text-primary)]">

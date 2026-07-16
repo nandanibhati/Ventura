@@ -28,6 +28,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { wishlistApi, notificationsApi } from "../../api/orders";
 import { settingsApi, categoriesApi } from "../../api/catalog";
+import { productsApi } from "../../api/products";
 import { resolveMediaUrl } from "../../lib/api";
 
 const LANGUAGES = ["English", "Français", "Deutsch", "Español", "日本語"];
@@ -136,6 +137,7 @@ function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(false);
   const [language, setLanguage] = useState("English");
@@ -210,6 +212,19 @@ function Navbar() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Live search-as-you-type: wait for a short pause in typing before hitting the API, so we're
+  // not firing a request on every single keystroke.
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(id);
+  }, [query]);
+
+  const { data: searchSuggestions = [] } = useQuery({
+    queryKey: ["search-suggestions", debouncedQuery],
+    queryFn: () => productsApi.list({ search: debouncedQuery, limit: 6 }).then((r) => r.items),
+    enabled: debouncedQuery.length >= 2,
+  });
+
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
     return () => {
@@ -222,6 +237,14 @@ function Navbar() {
     if (!query.trim()) return;
     navigate(`/shop?search=${encodeURIComponent(query.trim())}`);
     setQuery("");
+    setOpenMenu(null);
+    setMobileOpen(false);
+  };
+
+  const goToSuggestedProduct = (id) => {
+    navigate(`/product/${id}`);
+    setQuery("");
+    setOpenMenu(null);
     setMobileOpen(false);
   };
 
@@ -315,22 +338,64 @@ function Navbar() {
             )}
           </Link>
 
-          <form
-            onSubmit={handleSearchSubmit}
-            className="hidden max-w-2xl flex-1 items-center rounded-full border border-black/10 bg-black/[0.03] px-4 py-2.5 md:flex dark:border-white/10 dark:bg-white/5"
-          >
-            <Search className="h-4 w-4 shrink-0 text-neutral-400" />
-            <input
-              aria-label="Search products"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search products, brands & more..."
-              className="w-full bg-transparent px-2.5 text-sm text-neutral-800 placeholder:text-neutral-400 focus-visible:outline-none dark:text-white"
-            />
-            <button type="submit" aria-label="Submit search" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold-500 text-white transition-colors hover:bg-gold-600">
-              <Search className="h-3.5 w-3.5" />
-            </button>
-          </form>
+          <div className="relative hidden max-w-2xl flex-1 md:block">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="flex items-center rounded-full border border-black/10 bg-black/[0.03] px-4 py-2.5 dark:border-white/10 dark:bg-white/5"
+            >
+              <Search className="h-4 w-4 shrink-0 text-neutral-400" />
+              <input
+                aria-label="Search products"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => setOpenMenu("search")}
+                placeholder="Search products, brands & more..."
+                className="w-full bg-transparent px-2.5 text-sm text-neutral-800 placeholder:text-neutral-400 focus-visible:outline-none dark:text-white"
+                autoComplete="off"
+              />
+              <button type="submit" aria-label="Submit search" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold-500 text-white transition-colors hover:bg-gold-600">
+                <Search className="h-3.5 w-3.5" />
+              </button>
+            </form>
+
+            {openMenu === "search" && debouncedQuery.length >= 2 && (
+              <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-[70vh] overflow-y-auto rounded-2xl border border-black/5 bg-white p-2 shadow-xl shadow-black/10 dark:border-white/10 dark:bg-neutral-900">
+                {searchSuggestions.length === 0 ? (
+                  <p className="px-3 py-4 text-center text-sm text-neutral-400">No products match "{debouncedQuery}"</p>
+                ) : (
+                  <>
+                    {searchSuggestions.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => goToSuggestedProduct(p.id)}
+                        className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+                      >
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--surface-inset)]">
+                          {p.images?.[0]?.url ? (
+                            <img src={resolveMediaUrl(p.images[0].url)} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <Search className="h-4 w-4 text-neutral-300" />
+                          )}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-neutral-900 dark:text-white">{p.name}</span>
+                          <span className="text-xs text-neutral-400">£{Number(p.price).toLocaleString()}</span>
+                        </span>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={handleSearchSubmit}
+                      className="mt-1 w-full rounded-xl px-3 py-2 text-center text-sm font-medium text-gold-600 transition-colors hover:bg-black/5 dark:text-gold-400 dark:hover:bg-white/10"
+                    >
+                      See all results for "{debouncedQuery}"
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <button
@@ -544,10 +609,18 @@ function Navbar() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="absolute left-1/2 top-full mt-3 w-[min(92vw,900px)] -translate-x-1/2 rounded-2xl border border-black/5 bg-white/95 p-8 shadow-2xl shadow-black/10 backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-900/95"
+                    // Anchored to the trigger's left edge, not centered on it — the button sits
+                    // near the left of the nav, so a centered 900px panel overflowed off the left
+                    // edge of the viewport on anything narrower than ~1400px.
+                    className="absolute left-0 top-full z-20 mt-3 w-[min(92vw,900px)] rounded-2xl border border-black/5 bg-white p-8 shadow-2xl shadow-black/10 dark:border-white/10 dark:bg-neutral-900"
                   >
-                    <div className="grid grid-cols-2 gap-8 xl:grid-cols-4">
-                      <div className="col-span-2 xl:col-span-3">
+                    {/* flex, not grid — a grid-cols-2/xl:grid-cols-4 combo jumped between two very
+                        different layouts right at the xl breakpoint (full-width categories below
+                        1280px, 3/4-width above it), which read as the promo card overlapping/
+                        crowding the category grid at in-between widths. Flex-basis scales the two
+                        panels smoothly at every width instead of snapping between two layouts. */}
+                    <div className="flex flex-col gap-8 md:flex-row">
+                      <div className="md:flex-[3]">
                         <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
                           Shop by category
                         </h4>
@@ -580,7 +653,7 @@ function Navbar() {
                           </ul>
                         )}
                       </div>
-                      <div className="relative flex min-h-[200px] flex-col justify-end overflow-hidden rounded-xl bg-gradient-to-br from-neutral-900 to-neutral-700 p-6 dark:from-white/10 dark:to-white/5">
+                      <div className="relative flex min-h-[200px] flex-col justify-end overflow-hidden rounded-xl bg-gradient-to-br from-neutral-900 to-neutral-700 p-6 dark:from-white/10 dark:to-white/5 md:w-64 md:flex-1 md:shrink-0">
                         <span className="text-xs uppercase tracking-wider text-white/60">Limited Time</span>
                         <h5 className="mt-1 text-lg font-semibold text-white">Current Deals</h5>
                         <p className="mt-1 text-sm text-white/70">Save on selected items, while stock lasts</p>
