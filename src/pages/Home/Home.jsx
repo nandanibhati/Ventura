@@ -401,8 +401,9 @@ function ProductGridSection({ section, defaults }) {
 
 /**
  * Rotating full-width banner strip (Amazon/Flipkart-style "lightning deals" banner), not a
- * heavy editorial hero. The first slide is CMS-editable (Homepage CMS > hero_banner); the
- * rest are always-on fallback promo slides so the strip never looks empty.
+ * heavy editorial hero. Every slide is admin-editable (Homepage CMS > hero banner > Add slide);
+ * these generic ones only appear when the admin hasn't configured any slides at all, so the
+ * strip is never empty on a brand-new store.
  */
 const FALLBACK_SLIDES = [
   { id: "s1", gradient: "from-amber-500 to-orange-600", title: "Big Electronics Sale", subtitle: "Up to 60% off Audio, Wearables & more", cta: "Shop deals", link: "/shop" },
@@ -411,20 +412,25 @@ const FALLBACK_SLIDES = [
 ];
 
 function BannerCarousel({ heroConfig }) {
-  const slides = heroConfig?.headline || heroConfig?.backgroundImage || heroConfig?.backgroundVideo
-    ? [
-        {
-          id: "cms-hero",
-          image: heroConfig.backgroundImage,
-          video: heroConfig.backgroundVideo,
-          gradient: "from-neutral-800 to-neutral-950",
-          title: heroConfig.headline || "Upgrade Your Everyday Tech",
-          subtitle: heroConfig.subheadline,
-          cta: heroConfig.ctaText || "Shop now",
-          link: heroConfig.ctaLink || "/shop",
-        },
-        ...FALLBACK_SLIDES,
-      ]
+  // Older sections saved before the multi-slide editor existed have their one slide's fields
+  // directly on config (headline/backgroundImage/...) instead of a `slides` array — read those
+  // as a one-slide list too, so nothing already configured just disappears.
+  const legacySlide =
+    !heroConfig?.slides && (heroConfig?.headline || heroConfig?.backgroundImage || heroConfig?.backgroundVideo || heroConfig?.subheadline)
+      ? [heroConfig]
+      : null;
+  const cmsSlides = heroConfig?.slides?.length ? heroConfig.slides : legacySlide;
+  const slides = cmsSlides?.length
+    ? cmsSlides.map((s, i) => ({
+        id: `cms-hero-${i}`,
+        image: s.backgroundImage,
+        video: s.backgroundVideo,
+        gradient: "from-neutral-800 to-neutral-950",
+        title: s.headline || "Upgrade Your Everyday Tech",
+        subtitle: s.subheadline,
+        cta: s.ctaText || "Shop now",
+        link: s.ctaLink || "/shop",
+      }))
     : FALLBACK_SLIDES;
 
   const [index, setIndex] = useState(0);

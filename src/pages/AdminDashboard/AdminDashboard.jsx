@@ -2268,7 +2268,7 @@ function HomepageCmsSection() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ type: "announcement", title: "", config: {}, startsAt: "", endsAt: "" });
-  const [heroUploading, setHeroUploading] = useState(false);
+  const [heroUploadingIndex, setHeroUploadingIndex] = useState(null);
 
   // Undo/redo for the editor panel: rather than rewiring every individual field's onChange,
   // this just observes `form` and snapshots the previous value whenever it changes (skipping
@@ -2514,16 +2514,47 @@ function HomepageCmsSection() {
   };
   const setConfig = (key, value) => setForm((f) => ({ ...f, config: { ...f.config, [key]: value } }));
 
-  const handleHeroImageUpload = async (files) => {
+  // The hero banner used to be a single slide's worth of fields directly on `config`
+  // (headline/backgroundImage/...). Older sections saved before the multi-slide editor existed
+  // still have that shape in the database — read them as a one-slide list instead of losing
+  // them, but always write back the new `config.slides` array shape.
+  const heroSlides = Array.isArray(form.config.slides)
+    ? form.config.slides
+    : form.config.headline || form.config.backgroundImage || form.config.backgroundVideo || form.config.subheadline
+    ? [
+        {
+          headline: form.config.headline,
+          subheadline: form.config.subheadline,
+          backgroundImage: form.config.backgroundImage,
+          backgroundVideo: form.config.backgroundVideo,
+          ctaText: form.config.ctaText,
+          ctaLink: form.config.ctaLink,
+        },
+      ]
+    : [];
+  const setHeroSlides = (slides) => setConfig("slides", slides);
+  const updateHeroSlide = (index, key, value) =>
+    setHeroSlides(heroSlides.map((s, i) => (i === index ? { ...s, [key]: value } : s)));
+  const addHeroSlide = () => setHeroSlides([...heroSlides, { headline: "", subheadline: "", backgroundImage: null, ctaText: "", ctaLink: "" }]);
+  const removeHeroSlide = (index) => setHeroSlides(heroSlides.filter((_, i) => i !== index));
+  const moveHeroSlide = (index, dir) => {
+    const next = [...heroSlides];
+    const target = index + dir;
+    if (target < 0 || target >= next.length) return;
+    [next[index], next[target]] = [next[target], next[index]];
+    setHeroSlides(next);
+  };
+
+  const handleHeroImageUpload = async (files, index) => {
     if (!files.length) return;
-    setHeroUploading(true);
+    setHeroUploadingIndex(index);
     try {
       const { urls } = await uploadsApi.uploadImages(Array.from(files));
-      setConfig("backgroundImage", resolveMediaUrl(urls[0]));
+      updateHeroSlide(index, "backgroundImage", resolveMediaUrl(urls[0]));
     } catch {
       toast({ title: "Image upload failed", variant: "error" });
     } finally {
-      setHeroUploading(false);
+      setHeroUploadingIndex(null);
     }
   };
 
@@ -2664,37 +2695,63 @@ function HomepageCmsSection() {
             </>
           )}
           {form.type === "hero_banner" && (
-            <>
-              <div className="flex flex-col gap-2">
-                <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Background image</span>
-                {form.config.backgroundImage && (
-                  <img src={form.config.backgroundImage} alt="" className="h-28 w-full rounded-[var(--radius-md)] object-cover" />
-                )}
-                <div className="flex items-center gap-2">
-                  <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-xs font-medium">
-                    {heroUploading ? "Uploading…" : form.config.backgroundImage ? "Replace" : "Upload image"}
-                    <input type="file" accept="image/*" hidden disabled={heroUploading} onChange={(e) => handleHeroImageUpload(e.target.files)} />
-                  </label>
-                  {form.config.backgroundImage && (
-                    <SecondaryButton size="sm" onClick={() => setConfig("backgroundImage", null)}>
-                      Remove
-                    </SecondaryButton>
-                  )}
+            <div className="flex flex-col gap-4">
+              <p className="text-xs text-[var(--text-muted)]">
+                Every slide here rotates on the homepage banner — add as many as you want, remove ones you don't, reorder with the
+                arrows. If there are none, the homepage falls back to a few generic promo slides so it's never empty.
+              </p>
+              {heroSlides.map((slide, i) => (
+                <div key={i} className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--border)] p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Slide {i + 1}</span>
+                    <div className="flex items-center gap-1">
+                      <IconButton icon={ArrowUp} size="sm" aria-label="Move slide up" disabled={i === 0} onClick={() => moveHeroSlide(i, -1)} />
+                      <IconButton icon={ArrowDown} size="sm" aria-label="Move slide down" disabled={i === heroSlides.length - 1} onClick={() => moveHeroSlide(i, 1)} />
+                      <IconButton icon={Trash2} size="sm" aria-label="Delete slide" onClick={() => removeHeroSlide(i)} />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Background image</span>
+                    {slide.backgroundImage && (
+                      <img src={slide.backgroundImage} alt="" className="h-24 w-full rounded-[var(--radius-md)] object-cover" />
+                    )}
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-xs font-medium">
+                        {heroUploadingIndex === i ? "Uploading…" : slide.backgroundImage ? "Replace" : "Upload image"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          hidden
+                          disabled={heroUploadingIndex === i}
+                          onChange={(e) => handleHeroImageUpload(e.target.files, i)}
+                        />
+                      </label>
+                      {slide.backgroundImage && (
+                        <SecondaryButton size="sm" onClick={() => updateHeroSlide(i, "backgroundImage", null)}>
+                          Remove
+                        </SecondaryButton>
+                      )}
+                    </div>
+                  </div>
+                  <Input label="Headline" value={slide.headline || ""} onChange={(e) => updateHeroSlide(i, "headline", e.target.value)} />
+                  <Input label="Subheadline" value={slide.subheadline || ""} onChange={(e) => updateHeroSlide(i, "subheadline", e.target.value)} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input label="CTA text" value={slide.ctaText || ""} onChange={(e) => updateHeroSlide(i, "ctaText", e.target.value)} />
+                    <Input label="CTA link" value={slide.ctaLink || ""} onChange={(e) => updateHeroSlide(i, "ctaLink", e.target.value)} />
+                  </div>
+                  <Input
+                    label="Background video URL (optional)"
+                    helperText="Takes priority over the image when set."
+                    value={slide.backgroundVideo || ""}
+                    onChange={(e) => updateHeroSlide(i, "backgroundVideo", e.target.value)}
+                  />
                 </div>
-              </div>
-              <Input label="Headline" value={form.config.headline || ""} onChange={(e) => setConfig("headline", e.target.value)} />
-              <Input label="Subheadline" value={form.config.subheadline || ""} onChange={(e) => setConfig("subheadline", e.target.value)} />
-              <div className="grid grid-cols-2 gap-4">
-                <Input label="CTA text" value={form.config.ctaText || ""} onChange={(e) => setConfig("ctaText", e.target.value)} />
-                <Input label="CTA link" value={form.config.ctaLink || ""} onChange={(e) => setConfig("ctaLink", e.target.value)} />
-              </div>
-              <Input
-                label="Background video URL (optional)"
-                helperText="Takes priority over the image when set."
-                value={form.config.backgroundVideo || ""}
-                onChange={(e) => setConfig("backgroundVideo", e.target.value)}
-              />
-            </>
+              ))}
+              <OutlineButton size="sm" leftIcon={Plus} onClick={addHeroSlide}>
+                Add slide
+              </OutlineButton>
+            </div>
           )}
           {GRID_SETTINGS_TYPES.has(form.type) && (
             <>
