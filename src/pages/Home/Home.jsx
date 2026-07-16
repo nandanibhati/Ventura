@@ -411,7 +411,7 @@ const FALLBACK_SLIDES = [
   { id: "s3", gradient: "from-emerald-600 to-teal-700", title: "Top Rated Best Sellers", subtitle: "Loved by thousands of happy customers", cta: "View best sellers", link: "/shop?sort=best-selling" },
 ];
 
-function BannerCarousel({ heroConfig }) {
+function BannerCarousel({ heroConfig, isLoading }) {
   // Older sections saved before the multi-slide editor existed have their one slide's fields
   // directly on config (headline/backgroundImage/...) instead of a `slides` array — read those
   // as a one-slide list too, so nothing already configured just disappears.
@@ -426,9 +426,14 @@ function BannerCarousel({ heroConfig }) {
         image: s.backgroundImage,
         video: s.backgroundVideo,
         gradient: "from-neutral-800 to-neutral-950",
-        title: s.headline || "Upgrade Your Everyday Tech",
+        // No fallback text here on purpose — a slide's image is often a complete, pre-designed
+        // banner graphic with its own headline baked in (e.g. an agency-made promo image), and
+        // forcing default text/button on top of it doubled up with whatever the image already
+        // says. Leaving a field blank in the editor means "no overlay for this", not "use a
+        // generic default".
+        title: s.headline,
         subtitle: s.subheadline,
-        cta: s.ctaText || "Shop now",
+        cta: s.ctaText,
         link: s.ctaLink || "/shop",
       }))
     : FALLBACK_SLIDES;
@@ -439,6 +444,18 @@ function BannerCarousel({ heroConfig }) {
     const id = setInterval(() => setIndex((i) => (i + 1) % slides.length), 4500);
     return () => clearInterval(id);
   }, [slides.length]);
+
+  // While the real CMS config is still in flight, show a plain skeleton rather than jumping
+  // straight to the generic fallback slides — otherwise every load flashes "Big Electronics
+  // Sale" for a moment before swapping to the real content, which reads as a bug. This check
+  // comes after the hooks above (not before) so they still run on every render either way.
+  if (isLoading && !cmsSlides?.length) {
+    return (
+      <div className="mx-auto max-w-7xl px-2 sm:px-3">
+        <div className="h-[170px] animate-pulse rounded-md bg-[var(--surface-inset)] sm:h-[240px] md:h-[320px]" />
+      </div>
+    );
+  }
 
   const slide = slides[index];
 
@@ -457,19 +474,37 @@ function BannerCarousel({ heroConfig }) {
             {slide.video ? (
               <video src={slide.video} className="absolute inset-0 h-full w-full object-cover" autoPlay muted loop playsInline />
             ) : slide.image ? (
-              <img src={slide.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              // object-contain, not object-cover: the banner box's aspect ratio changes across
+              // breakpoints (short and wide on mobile, taller on desktop), so no single uploaded
+              // image size ever exactly matches it — cover would crop a different part of the
+              // image at every screen size. Contain always shows the whole image, letterboxed on
+              // the slide's own gradient background instead of cropped.
+              <img src={slide.image} alt="" className="absolute inset-0 h-full w-full object-contain" />
             ) : null}
-            {(slide.image || slide.video) && <div className="absolute inset-0 bg-black/30" />}
-            <div className="relative z-10 px-5 sm:px-10 md:px-14">
-              <h2 className="max-w-md text-xl font-bold leading-tight text-white sm:text-2xl md:text-4xl">{slide.title}</h2>
-              {slide.subtitle && <p className="mt-2 max-w-sm text-xs text-white/80 sm:text-sm md:text-base">{slide.subtitle}</p>}
-              <Link
-                to={slide.link}
-                className="mt-4 inline-flex items-center gap-2 rounded-sm bg-white px-4 py-2 text-xs font-semibold text-neutral-900 sm:mt-5 sm:px-5 sm:py-2.5 sm:text-sm"
-              >
-                {slide.cta} <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
+            {(slide.title || slide.subtitle || slide.cta) && (slide.image || slide.video) && (
+              <div className="absolute inset-0 bg-black/30" />
+            )}
+            {(slide.title || slide.subtitle || slide.cta) && (
+              <div className="relative z-10 px-5 sm:px-10 md:px-14">
+                {slide.title && (
+                  <h2 className="max-w-md text-xl font-bold leading-tight text-white sm:text-2xl md:text-4xl">{slide.title}</h2>
+                )}
+                {slide.subtitle && <p className="mt-2 max-w-sm text-xs text-white/80 sm:text-sm md:text-base">{slide.subtitle}</p>}
+                {slide.cta && (
+                  <Link
+                    to={slide.link}
+                    className="mt-4 inline-flex items-center gap-2 rounded-sm bg-white px-4 py-2 text-xs font-semibold text-neutral-900 sm:mt-5 sm:px-5 sm:py-2.5 sm:text-sm"
+                  >
+                    {slide.cta} <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                )}
+              </div>
+            )}
+            {!(slide.title || slide.subtitle || slide.cta) && (slide.image || slide.video) && (
+              // Pure-image slide (the graphic already has its own text/CTA) — make the whole
+              // banner clickable so it's not just decorative, using whatever link was set.
+              <Link to={slide.link} className="absolute inset-0" aria-label={`Banner ${index + 1}`} />
+            )}
           </motion.div>
         </AnimatePresence>
 
@@ -1297,7 +1332,7 @@ function Home() {
         <CategoriesSection />
       </div>
       <div className="mt-2 sm:mt-3">
-        <BannerCarousel heroConfig={heroSection?.config} />
+        <BannerCarousel heroConfig={heroSection?.config} isLoading={!isCmsPreview && sectionsLoading} />
       </div>
       <div className="space-y-2 py-2 sm:space-y-3 sm:py-3">
         <PromoTilesRow />
