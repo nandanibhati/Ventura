@@ -388,7 +388,7 @@ function ProductGridSection({ section, defaults }) {
       {!isLoading && !isError && products.length > 0 && (
         <HorizontalProductRow>
           {products.map((product, i) => (
-            <div key={product.id} className="relative w-[62vw] shrink-0 snap-start sm:w-[240px] lg:w-[calc((100%-4*1.5rem)/5)]">
+            <div key={product.id} className="relative w-[72vw] shrink-0 snap-start sm:w-[270px] lg:w-[calc((100%-3*1.5rem)/4)]">
               <HomeProductCard product={product} index={i} template={template} />
               {isPreview && <CmsEditOverlay onEdit={() => requestEdit("product", product.id)} />}
             </div>
@@ -699,7 +699,7 @@ function FlashSaleSection({ section }) {
       ) : (
         <HorizontalProductRow>
           {products.map((product, i) => (
-            <div key={product.id} className="relative w-[62vw] shrink-0 snap-start sm:w-[240px] lg:w-[calc((100%-4*1.5rem)/5)]">
+            <div key={product.id} className="relative w-[72vw] shrink-0 snap-start sm:w-[270px] lg:w-[calc((100%-3*1.5rem)/4)]">
               <HomeProductCard product={product} index={i} template={template} />
               {isPreview && <CmsEditOverlay onEdit={() => requestEdit("product", product.id)} />}
             </div>
