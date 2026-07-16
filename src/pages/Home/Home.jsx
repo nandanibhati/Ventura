@@ -474,12 +474,7 @@ function BannerCarousel({ heroConfig, isLoading }) {
             {slide.video ? (
               <video src={slide.video} className="absolute inset-0 h-full w-full object-cover" autoPlay muted loop playsInline />
             ) : slide.image ? (
-              // object-contain, not object-cover: the banner box's aspect ratio changes across
-              // breakpoints (short and wide on mobile, taller on desktop), so no single uploaded
-              // image size ever exactly matches it — cover would crop a different part of the
-              // image at every screen size. Contain always shows the whole image, letterboxed on
-              // the slide's own gradient background instead of cropped.
-              <img src={slide.image} alt="" className="absolute inset-0 h-full w-full object-contain" />
+              <img src={slide.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
             ) : null}
             {(slide.title || slide.subtitle || slide.cta) && (slide.image || slide.video) && (
               <div className="absolute inset-0 bg-black/30" />

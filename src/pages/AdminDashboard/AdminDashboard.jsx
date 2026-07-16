@@ -2269,6 +2269,7 @@ function HomepageCmsSection() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ type: "announcement", title: "", config: {}, startsAt: "", endsAt: "" });
   const [heroUploadingIndex, setHeroUploadingIndex] = useState(null);
+  const [adBannerUploading, setAdBannerUploading] = useState(false);
 
   // Undo/redo for the editor panel: rather than rewiring every individual field's onChange,
   // this just observes `form` and snapshots the previous value whenever it changes (skipping
@@ -2558,6 +2559,19 @@ function HomepageCmsSection() {
     }
   };
 
+  const handleAdBannerImageUpload = async (files) => {
+    if (!files.length) return;
+    setAdBannerUploading(true);
+    try {
+      const { urls } = await uploadsApi.uploadImages(Array.from(files));
+      setConfig("imageUrl", resolveMediaUrl(urls[0]));
+    } catch {
+      toast({ title: "Image upload failed", variant: "error" });
+    } finally {
+      setAdBannerUploading(false);
+    }
+  };
+
   return (
     <div className="grid gap-6 lg:grid-cols-[380px_1fr] xl:grid-cols-[420px_1fr]">
     <div>
@@ -2690,7 +2704,23 @@ function HomepageCmsSection() {
           )}
           {form.type === "ad_banner" && (
             <>
-              <Input label="Banner image URL" value={form.config.imageUrl || ""} onChange={(e) => setConfig("imageUrl", e.target.value)} />
+              <div className="flex flex-col gap-2">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Banner image</span>
+                {form.config.imageUrl && (
+                  <img src={form.config.imageUrl} alt="" className="h-24 w-full rounded-[var(--radius-md)] object-cover" />
+                )}
+                <div className="flex items-center gap-2">
+                  <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-xs font-medium">
+                    {adBannerUploading ? "Uploading…" : form.config.imageUrl ? "Replace" : "Upload image"}
+                    <input type="file" accept="image/*" hidden disabled={adBannerUploading} onChange={(e) => handleAdBannerImageUpload(e.target.files)} />
+                  </label>
+                  {form.config.imageUrl && (
+                    <SecondaryButton size="sm" onClick={() => setConfig("imageUrl", null)}>
+                      Remove
+                    </SecondaryButton>
+                  )}
+                </div>
+              </div>
               <Input label="Link (optional)" value={form.config.link || ""} onChange={(e) => setConfig("link", e.target.value)} />
             </>
           )}
