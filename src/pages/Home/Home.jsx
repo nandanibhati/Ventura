@@ -1262,7 +1262,7 @@ function Home() {
   useDocumentTitle();
   const isCmsPreview = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("cms_preview") === "1";
   const previewSections = useCmsPreviewSections();
-  const { data: fetchedSections } = useQuery({
+  const { data: fetchedSections, isLoading: sectionsLoading } = useQuery({
     queryKey: ["homepage-sections"],
     queryFn: homepageApi.listPublic,
     staleTime: 5 * 60 * 1000,
@@ -1270,11 +1270,18 @@ function Home() {
   });
   const cmsSections = isCmsPreview ? previewSections : fetchedSections;
 
-  // Until the admin configures the Homepage CMS (or if it's unreachable), fall back to the
-  // default section order so the storefront never renders an empty page.
+  // Fall back to the default section order once we know the CMS genuinely has nothing
+  // configured (or is unreachable) — NOT while the request is simply still in flight. Falling
+  // back during loading used to render the default section list (with synthetic ids like
+  // "featured_products") immediately, each firing its own product query, and then swap to the
+  // real CMS sections (with real uuids) the moment they arrived — a different `key` per section
+  // meant React remounted every one of them, doubling every product fetch and briefly
+  // flashing whatever order the default list happens to use before settling on the real one.
   const merchandisingSections =
     cmsSections && cmsSections.length > 0
       ? cmsSections.filter((s) => CMS_SECTION_COMPONENTS[s.type])
+      : !isCmsPreview && sectionsLoading
+      ? []
       : DEFAULT_CMS_SECTION_ORDER.map((type) => ({ id: type, type, config: null, title: null }));
   const heroSection = cmsSections?.find((s) => s.type === "hero_banner");
 
