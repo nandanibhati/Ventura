@@ -29,7 +29,7 @@ import { useCart } from "../../context/CartContext";
 import { wishlistApi, notificationsApi } from "../../api/orders";
 import { settingsApi, categoriesApi } from "../../api/catalog";
 import { productsApi } from "../../api/products";
-import { resolveMediaUrl } from "../../lib/api";
+import { resolveMediaUrl, resolveProductImageUrl } from "../../lib/api";
 
 const LANGUAGES = ["English", "Français", "Deutsch", "Español", "日本語"];
 const CURRENCIES = ["£", "EUR", "GBP", "JPY", "INR"];
@@ -373,7 +373,7 @@ function Navbar() {
                       >
                         <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--surface-inset)]">
                           {p.images?.[0]?.url ? (
-                            <img src={resolveMediaUrl(p.images[0].url)} alt="" className="h-full w-full object-cover" />
+                            <img src={resolveProductImageUrl(p.images[0].url)} alt="" className="h-full w-full object-contain" />
                           ) : (
                             <Search className="h-4 w-4 text-neutral-300" />
                           )}

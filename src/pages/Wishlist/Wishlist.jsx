@@ -2,7 +2,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Heart } from "lucide-react";
 import { wishlistApi } from "../../api/orders";
-import { resolveMediaUrl } from "../../lib/api";
+import { resolveProductImageUrl } from "../../lib/api";
 import { useCart } from "../../context/CartContext";
 import ProductCard from "../../components/ui/Cards/ProductCard";
 import { LoadingSpinner, EmptyState, ErrorState } from "../../components/ui/Feedback";
@@ -68,7 +68,7 @@ export default function Wishlist() {
                   lowStockThreshold: product.lowStockThreshold,
                   animationOverride: product.animationOverride,
                 }}
-                image={resolveMediaUrl(product.images?.[0]?.url)}
+                image={resolveProductImageUrl(product.images?.[0]?.url)}
                 wished
                 onWishlistToggle={() => removeMutation.mutate(product.id)}
                 onAdd={() => addItem({ productId: product.id, quantity: 1 })}

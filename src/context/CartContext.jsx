@@ -1,13 +1,13 @@
 import { createContext, useCallback, useContext, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cartApi } from "../api/cart";
-import { resolveMediaUrl } from "../lib/api";
+import { resolveProductImageUrl } from "../lib/api";
 import { useAuth } from "./AuthContext";
 
 /** The backend returns origin-relative upload paths; resolve them once here so every
  * consumer of `cart` (Cart page, Checkout summary, Navbar, ...) gets a usable image URL. */
 function resolveCartImages(cart) {
-  return { ...cart, items: cart.items.map((item) => ({ ...item, image: resolveMediaUrl(item.image) })) };
+  return { ...cart, items: cart.items.map((item) => ({ ...item, image: resolveProductImageUrl(item.image) })) };
 }
 async function getCartResolved() {
   return resolveCartImages(await cartApi.get());

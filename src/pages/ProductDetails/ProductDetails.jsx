@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { productsApi, reviewsApi } from "../../api/products";
 import { wishlistApi } from "../../api/orders";
-import { resolveMediaUrl } from "../../lib/api";
+import { resolveMediaUrl, resolveProductImageUrl } from "../../lib/api";
 import { gradientClassFor as gradientFor } from "../../lib/gradientFor";
 import ProductCard from "../../components/ui/Cards/ProductCard";
 import { useAuth } from "../../context/AuthContext";
@@ -414,7 +414,7 @@ function ProductDetails() {
           stock: p.stock,
           lowStockThreshold: p.lowStockThreshold,
           animationOverride: p.animationOverride,
-          image: resolveMediaUrl(p.images?.[0]?.url) || null,
+          image: resolveProductImageUrl(p.images?.[0]?.url) || null,
         })),
     [relatedResult, id]
   );
@@ -542,7 +542,7 @@ function ProductDetails() {
     );
   }
 
-  const gallery = product.images?.length ? product.images.map((img) => ({ url: resolveMediaUrl(img.url) })) : [{}];
+  const gallery = product.images?.length ? product.images.map((img) => ({ url: resolveProductImageUrl(img.url) })) : [{}];
   const rating = Number(product.ratingAvg) || 0;
   const oldPrice = product.oldPrice ? Number(product.oldPrice) : null;
 

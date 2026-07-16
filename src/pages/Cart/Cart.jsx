@@ -21,7 +21,7 @@ import {
 import { useCart } from "../../context/CartContext";
 import { shippingApi, settingsApi } from "../../api/catalog";
 import { productsApi } from "../../api/products";
-import { resolveMediaUrl } from "../../lib/api";
+import { resolveProductImageUrl } from "../../lib/api";
 import { gradientClassFor as gradientFor } from "../../lib/gradientFor";
 import { LoadingSpinner } from "../../components/ui/Feedback";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
@@ -369,7 +369,7 @@ function Cart() {
           stock: p.stock,
           lowStockThreshold: p.lowStockThreshold,
           animationOverride: p.animationOverride,
-          image: resolveMediaUrl(p.images?.[0]?.url) || null,
+          image: resolveProductImageUrl(p.images?.[0]?.url) || null,
         })),
     [recsResult, cartProductIds]
   );

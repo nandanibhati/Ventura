@@ -21,6 +21,22 @@ export function resolveMediaUrl(url) {
   return `${apiOrigin}${url}`;
 }
 
+/**
+ * Squares up a product photo for card/gallery display. Uploaded photos are all different
+ * aspect ratios (a tall phone shot, a wide accessory, a square lifestyle photo), and cropping
+ * them to fit a square box cuts off part of the product — which is exactly the bug the
+ * card/gallery object-contain fix just solved. This instead asks Cloudinary to pad the shorter
+ * side with a white background so the full photo is always visible on a clean square canvas,
+ * rather than relying on each display context to letterbox it itself. Only rewrites Cloudinary
+ * delivery URLs (the "c_pad" transform doesn't apply to anything else) — local-disk /uploads/
+ * URLs and data: URIs pass through resolveMediaUrl unchanged.
+ */
+export function resolveProductImageUrl(url) {
+  const resolved = resolveMediaUrl(url);
+  if (!resolved || !resolved.includes("res.cloudinary.com")) return resolved;
+  return resolved.replace(/\/upload\/[^/]+\//, "/upload/f_auto,q_auto,w_1200,h_1200,c_pad,b_white/");
+}
+
 // Attach the access token (and, for guest cart requests, a session id) to every request.
 api.interceptors.request.use((config) => {
   const token = tokenStorage.getAccessToken();

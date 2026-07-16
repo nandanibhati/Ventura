@@ -37,7 +37,7 @@ import { useAuth } from "../../context/AuthContext";
 import { LoadingSpinner, EmptyState } from "../../components/ui/Feedback";
 import { gradientClassFor } from "../../lib/gradientFor";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
-import { resolveMediaUrl } from "../../lib/api";
+import { resolveMediaUrl, resolveProductImageUrl } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import ProductCard from "../../components/ui/Cards/ProductCard";
 
@@ -194,7 +194,7 @@ function toCardProduct(product) {
     isTrending: product.isTrending,
     isBestSeller: product.isBestSeller,
     badge: product.badge,
-    image: resolveMediaUrl(product.images?.[0]?.url) || null,
+    image: resolveProductImageUrl(product.images?.[0]?.url) || null,
     stock: product.stock,
     lowStockThreshold: product.lowStockThreshold,
     animationOverride: product.animationOverride,

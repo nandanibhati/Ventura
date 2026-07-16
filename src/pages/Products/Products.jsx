@@ -5,7 +5,7 @@ import { Search, ChevronDown, LayoutGrid, List, SlidersHorizontal, Check, Star, 
 import { categoriesApi, brandsApi } from "../../api/catalog";
 import { productsApi } from "../../api/products";
 import { wishlistApi } from "../../api/orders";
-import { resolveMediaUrl } from "../../lib/api";
+import { resolveProductImageUrl } from "../../lib/api";
 import ProductCard from "../../components/ui/Cards/ProductCard";
 import { Checkbox } from "../../components/ui/Input";
 import { Pagination } from "../../components/ui/Navigation";
@@ -46,7 +46,7 @@ function toCardProduct(p) {
     animationOverride: p.animationOverride,
     specifications: p.specifications || [],
     condition: p.condition || null,
-    image: resolveMediaUrl(p.images?.[0]?.url) || null,
+    image: resolveProductImageUrl(p.images?.[0]?.url) || null,
   };
 }
 
