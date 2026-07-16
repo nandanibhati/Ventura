@@ -23,7 +23,7 @@ export default function ChatbotWidget() {
   const [view, setView] = useState("menu"); // "menu" | "shipping" | "returns" | "contact" | "track"
   const [trackForm, setTrackForm] = useState({ orderNumber: "", email: "" });
   const [trackError, setTrackError] = useState("");
-  const { style: fabStyle, dragHandlers, handleClick } = useDraggableFab("veluntra.chatbotFabPos", "left");
+  const { ref: fabRef, style: fabStyle, dragHandlers, handleClick } = useDraggableFab("veluntra.chatbotFabPos", "left");
 
   const { data: settings } = useQuery({ queryKey: ["settings", "public"], queryFn: settingsApi.getPublic, staleTime: 5 * 60 * 1000 });
 
@@ -53,6 +53,7 @@ export default function ChatbotWidget() {
   return (
     <>
       <button
+        ref={fabRef}
         onClick={handleClick(() => setOpen(true))}
         {...dragHandlers}
         style={fabStyle}

@@ -16,7 +16,7 @@ export default function SuggestionBox() {
   const [sent, setSent] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [error, setError] = useState("");
-  const { style: fabStyle, dragHandlers, handleClick } = useDraggableFab("veluntra.suggestionFabPos", "right");
+  const { ref: fabRef, style: fabStyle, dragHandlers, handleClick } = useDraggableFab("veluntra.suggestionFabPos", "right");
 
   const setField = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
@@ -48,6 +48,7 @@ export default function SuggestionBox() {
   return (
     <>
       <button
+        ref={fabRef}
         onClick={handleClick(() => setOpen(true))}
         {...dragHandlers}
         style={fabStyle}

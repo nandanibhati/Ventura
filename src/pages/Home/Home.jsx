@@ -147,15 +147,15 @@ function SectionCard({ children, className, padded = true }) {
 
 function SectionHeaderRow({ icon: Icon, title, viewAllLink, viewAllLabel = "View all" }) {
   return (
-    <div className="mb-3 flex items-center justify-between">
-      <h2 className="flex items-center gap-2 text-[15px] font-bold text-neutral-900 dark:text-white sm:text-lg">
+    <div className="relative mb-5 flex items-center justify-center">
+      <h2 className="flex items-center gap-2 text-lg font-bold text-neutral-900 dark:text-white sm:text-xl" style={{ fontFamily: "var(--font-display)" }}>
         {Icon && <Icon className="h-4 w-4 text-amber-500" />}
         {title}
       </h2>
       {viewAllLink && (
         <Link
           to={viewAllLink}
-          className="flex shrink-0 items-center gap-1 text-xs font-semibold text-amber-600 hover:underline dark:text-amber-400"
+          className="absolute right-0 flex shrink-0 items-center gap-1 text-xs font-semibold text-amber-600 hover:underline dark:text-amber-400"
         >
           {viewAllLabel} <ArrowRight className="h-3 w-3" />
         </Link>
@@ -249,7 +249,7 @@ function HorizontalProductRow({ children }) {
   const scrollBy = (dir) => scrollRef.current?.scrollBy({ left: dir * 340, behavior: "smooth" });
   return (
     <div className="relative">
-      <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div ref={scrollRef} className="flex gap-5 overflow-x-auto px-1 pb-2 [scrollbar-width:none] sm:gap-6 [&::-webkit-scrollbar]:hidden">
         {children}
       </div>
       <button

@@ -1,18 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const MARGIN = 12;
-const FAB_SIZE = 56; // approx button footprint, used for clamping so it can't be dragged off-screen
+// Only used for the very first paint, before the button has ever been measured or dragged —
+// once elRef is attached we clamp against the button's real (possibly text-label-widened)
+// bounding box instead, so dragging a wide pill button to an edge never clips its label.
+const ESTIMATED_WIDTH = 190;
+const ESTIMATED_HEIGHT = 48;
 
-function clamp(x, y) {
-  const maxX = window.innerWidth - FAB_SIZE - MARGIN;
-  const maxY = window.innerHeight - FAB_SIZE - MARGIN;
+function clamp(x, y, width, height) {
+  const maxX = window.innerWidth - width - MARGIN;
+  const maxY = window.innerHeight - height - MARGIN;
   return { x: Math.min(Math.max(x, MARGIN), Math.max(MARGIN, maxX)), y: Math.min(Math.max(y, MARGIN), Math.max(MARGIN, maxY)) };
 }
 
 /** Makes a fixed-position floating button (chat widget, feedback button, etc.) draggable to
  * anywhere on screen, remembering where the user left it. `side` picks the default starting
- * corner ("left" or "right") the first time it renders, before any drag has happened. */
+ * corner ("left" or "right") the first time it renders, before any drag has happened.
+ * Consumers must attach the returned `ref` to the actual button element — its real measured
+ * size (not a guess) is what dragging gets clamped against, since these are wide pill buttons
+ * with text labels, not fixed-size icons. */
 export function useDraggableFab(storageKey, side = "right") {
+  const elRef = useRef(null);
+
   const [pos, setPos] = useState(() => {
     try {
       const saved = localStorage.getItem(storageKey);
@@ -20,10 +29,23 @@ export function useDraggableFab(storageKey, side = "right") {
     } catch {
       // ignore malformed storage
     }
-    const x = side === "left" ? MARGIN + 4 : window.innerWidth - FAB_SIZE - MARGIN - 4;
-    const y = window.innerHeight - FAB_SIZE - 96; // matches the old bottom-24 offset
-    return clamp(x, y);
+    const x = side === "left" ? MARGIN + 4 : window.innerWidth - ESTIMATED_WIDTH - MARGIN - 4;
+    const y = window.innerHeight - ESTIMATED_HEIGHT - 96; // matches the old bottom-24 offset
+    return clamp(x, y, ESTIMATED_WIDTH, ESTIMATED_HEIGHT);
   });
+
+  const measure = useCallback(() => {
+    const rect = elRef.current?.getBoundingClientRect();
+    return rect ? { width: rect.width, height: rect.height } : { width: ESTIMATED_WIDTH, height: ESTIMATED_HEIGHT };
+  }, []);
+
+  // Once the real element is on screen, snap any estimate-based position onto real bounds
+  // (covers the case where the estimate was too small/large for this particular label).
+  useEffect(() => {
+    const { width, height } = measure();
+    setPos((current) => clamp(current.x, current.y, width, height));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const draggingRef = useRef(false);
   const movedRef = useRef(false);
@@ -39,14 +61,18 @@ export function useDraggableFab(storageKey, side = "right") {
     [pos]
   );
 
-  const onPointerMove = useCallback((e) => {
-    if (!draggingRef.current) return;
-    const dx = e.clientX - startRef.current.mouseX;
-    const dy = e.clientY - startRef.current.mouseY;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) movedRef.current = true;
-    if (!movedRef.current) return;
-    setPos(clamp(startRef.current.posX + dx, startRef.current.posY + dy));
-  }, []);
+  const onPointerMove = useCallback(
+    (e) => {
+      if (!draggingRef.current) return;
+      const dx = e.clientX - startRef.current.mouseX;
+      const dy = e.clientY - startRef.current.mouseY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) movedRef.current = true;
+      if (!movedRef.current) return;
+      const { width, height } = measure();
+      setPos(clamp(startRef.current.posX + dx, startRef.current.posY + dy, width, height));
+    },
+    [measure]
+  );
 
   const onPointerUp = useCallback(() => {
     if (!draggingRef.current) return;
@@ -65,10 +91,13 @@ export function useDraggableFab(storageKey, side = "right") {
 
   // Keep it on-screen if the window is resized (e.g. rotating a tablet).
   useEffect(() => {
-    const onResize = () => setPos((current) => clamp(current.x, current.y));
+    const onResize = () => {
+      const { width, height } = measure();
+      setPos((current) => clamp(current.x, current.y, width, height));
+    };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, []);
+  }, [measure]);
 
   /** Wrap the button's real onClick — suppresses the click that would otherwise fire right
    * after a drag ends (pointerup + click both fire on release). */
@@ -81,6 +110,7 @@ export function useDraggableFab(storageKey, side = "right") {
   }, []);
 
   return {
+    ref: elRef,
     style: { position: "fixed", left: pos.x, top: pos.y, touchAction: "none" },
     dragHandlers: { onPointerDown, onPointerMove, onPointerUp },
     handleClick,

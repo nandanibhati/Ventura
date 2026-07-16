@@ -1,11 +1,17 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { Search, ChevronDown, LayoutGrid, List, SlidersHorizontal, Check, Star, X } from "lucide-react";
 import { categoriesApi, brandsApi } from "../../api/catalog";
 import { productsApi } from "../../api/products";
 import { wishlistApi } from "../../api/orders";
 import { resolveMediaUrl } from "../../lib/api";
 import ProductCard from "../../components/ui/Cards/ProductCard";
+import { Checkbox } from "../../components/ui/Input";
+import { Pagination } from "../../components/ui/Navigation";
+import { Drawer } from "../../components/ui/Overlay";
+import { OutlineButton, PrimaryButton } from "../../components/ui/Button";
+import { EmptyState, ErrorState } from "../../components/ui/Feedback";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { useToast } from "../../components/ui/Feedback";
@@ -13,276 +19,8 @@ import { useDocumentTitle } from "../../lib/useDocumentTitle";
 
 /* -----------------------------------------------------------
    Veluntra — Products
-   Filterable, sortable catalogue
+   Filterable, sortable catalogue — same light marketplace look as Home.
    ----------------------------------------------------------- */
-
-const css = `
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Jost:wght@300;400;500&display=swap');
-
-.vp-root {
-  --ink-0: #08080d;
-  --ink-1: #10101a;
-  --ink-2: #191926;
-  --ink-3: #21212f;
-  --line: rgba(216, 179, 106, 0.20);
-  --line-soft: rgba(236,233,224,0.08);
-  --gold-0: #d8b36a;
-  --gold-1: #f4e6c3;
-  --text: #ece9e0;
-  --muted: #8f8d99;
-  --star: #d8b36a;
-  --grad-gold: linear-gradient(96deg, var(--gold-0) 0%, var(--gold-1) 55%, var(--gold-0) 100%);
-  --field-bg: rgba(255,255,255,0.02);
-
-  min-height: 100vh;
-  background:
-    radial-gradient(1000px 460px at 90% -8%, rgba(216,179,106,0.07), transparent 60%),
-    var(--ink-0);
-  color: var(--text);
-  font-family: 'Jost', system-ui, sans-serif;
-  font-weight: 300;
-}
-
-.vp-shell { max-width: 1360px; margin: 0 auto; padding: 0 clamp(18px, 4vw, 48px) 80px; }
-
-/* Header */
-.vp-header { padding: clamp(40px, 6vw, 64px) 0 28px; }
-.vp-eyebrow { font-size: 11px; letter-spacing: 0.34em; text-transform: uppercase; color: var(--gold-0); margin: 0 0 14px; }
-.vp-h1 {
-  font-family: 'Cormorant Garamond', serif;
-  font-weight: 500;
-  font-size: clamp(34px, 4.4vw, 52px);
-  margin: 0 0 10px;
-}
-.vp-sub { margin: 0; color: var(--muted); font-size: 15px; max-width: 52ch; line-height: 1.7; }
-
-/* Toolbar */
-.vp-toolbar {
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  padding: 20px 0; margin-bottom: 8px;
-  border-top: 1px solid var(--line-soft);
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.vp-search {
-  flex: 1; min-width: 220px;
-  display: flex; align-items: center; gap: 10px;
-  border: 1px solid var(--line); border-radius: 999px;
-  background: var(--field-bg); padding: 0 16px; height: 44px;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-.vp-search:focus-within { border-color: var(--gold-0); box-shadow: 0 0 0 3px rgba(216,179,106,0.08); }
-.vp-search svg { width: 15px; height: 15px; color: var(--muted); flex: none; }
-.vp-search input {
-  flex: 1; min-width: 0; background: transparent; border: 0; outline: none;
-  color: var(--text); font: 300 14px 'Jost', system-ui, sans-serif; letter-spacing: 0.02em;
-}
-.vp-search input::placeholder { color: var(--muted); }
-
-.vp-sort-wrap { position: relative; }
-.vp-sort {
-  appearance: none; -webkit-appearance: none;
-  height: 44px; padding: 0 38px 0 16px;
-  border: 1px solid var(--line); border-radius: 999px;
-  background: var(--field-bg); color: var(--text);
-  font: 300 13.5px 'Jost', system-ui, sans-serif; letter-spacing: 0.02em;
-  cursor: pointer; transition: border-color 0.3s ease;
-}
-.vp-sort:hover, .vp-sort:focus-visible { border-color: var(--gold-0); }
-.vp-sort-wrap svg { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 11px; height: 11px; color: var(--gold-0); pointer-events: none; }
-
-.vp-view-toggle { display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; flex: none; }
-.vp-view-btn {
-  width: 44px; height: 44px; display: grid; place-items: center;
-  background: transparent; border: 0; cursor: pointer; color: var(--muted);
-  transition: color 0.25s ease, background 0.25s ease;
-}
-.vp-view-btn + .vp-view-btn { border-left: 1px solid var(--line); }
-.vp-view-btn.on { color: var(--ink-0); background: var(--grad-gold); }
-.vp-view-btn svg { width: 16px; height: 16px; }
-
-.vp-filter-btn {
-  display: none; align-items: center; gap: 8px;
-  height: 44px; padding: 0 18px; border-radius: 999px;
-  border: 1px solid var(--line); background: var(--field-bg); color: var(--text);
-  font: 300 13.5px 'Jost', system-ui, sans-serif; letter-spacing: 0.02em; cursor: pointer;
-}
-.vp-filter-btn svg { width: 14px; height: 14px; color: var(--gold-0); }
-
-/* Layout */
-.vp-layout { display: grid; grid-template-columns: 268px 1fr; gap: 40px; align-items: start; margin-top: 28px; }
-
-/* Sidebar / Filters */
-.vp-sidebar { position: sticky; top: 24px; }
-.vp-sidebar-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.vp-sidebar-title { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 20px; margin: 0; }
-.vp-clear { background: none; border: 0; color: var(--gold-0); font-size: 12.5px; letter-spacing: 0.04em; cursor: pointer; padding: 0; }
-.vp-clear:hover { text-decoration: underline; }
-
-.vp-acc { border-bottom: 1px solid var(--line-soft); padding: 18px 0; }
-.vp-acc-head {
-  width: 100%; display: flex; align-items: center; justify-content: space-between;
-  background: none; border: 0; cursor: pointer; color: var(--text); padding: 0;
-  font: 400 12px 'Jost', system-ui, sans-serif; letter-spacing: 0.22em; text-transform: uppercase;
-}
-.vp-acc-head svg { width: 11px; height: 11px; color: var(--gold-0); transition: transform 0.3s ease; }
-.vp-acc-head.open svg { transform: rotate(180deg); }
-.vp-acc-body { display: grid; gap: 12px; margin-top: 16px; overflow: hidden; }
-
-.vp-check-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; user-select: none; }
-.vp-check-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.vp-checkbox {
-  width: 16px; height: 16px; border: 1px solid var(--line); border-radius: 4px;
-  display: grid; place-items: center; flex: none; transition: border-color 0.25s ease, background 0.25s ease;
-}
-.vp-checkbox.on { background: var(--grad-gold); border-color: transparent; }
-.vp-checkbox svg { width: 10px; height: 10px; color: var(--ink-0); opacity: 0; transition: opacity 0.2s ease; }
-.vp-checkbox.on svg { opacity: 1; }
-.vp-check-row span.lbl { font-size: 14px; color: var(--text); opacity: 0.88; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.vp-check-row .count { font-size: 12px; color: var(--muted); flex: none; }
-
-/* Price slider */
-.vp-price-values { display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 13.5px; color: var(--gold-1); letter-spacing: 0.02em; }
-.vp-slider { position: relative; height: 30px; }
-.vp-slider-track { position: absolute; top: 50%; left: 0; right: 0; height: 3px; transform: translateY(-50%); border-radius: 3px; background: var(--ink-3); }
-.vp-slider-fill { position: absolute; top: 50%; height: 3px; transform: translateY(-50%); border-radius: 3px; background: var(--grad-gold); }
-.vp-slider input[type="range"] {
-  position: absolute; top: 0; left: 0; width: 100%; height: 30px;
-  margin: 0; background: transparent; appearance: none; -webkit-appearance: none; pointer-events: none;
-}
-.vp-slider input[type="range"]::-webkit-slider-thumb {
-  pointer-events: auto; appearance: none; -webkit-appearance: none;
-  width: 17px; height: 17px; border-radius: 50%; margin-top: 0;
-  background: var(--gold-1); border: 2px solid var(--ink-0); box-shadow: 0 0 0 1px var(--gold-0);
-  cursor: pointer; position: relative; top: 6.5px;
-}
-.vp-slider input[type="range"]::-moz-range-thumb {
-  pointer-events: auto; width: 17px; height: 17px; border-radius: 50%;
-  background: var(--gold-1); border: 2px solid var(--ink-0); box-shadow: 0 0 0 1px var(--gold-0); cursor: pointer;
-}
-.vp-slider input[type="range"]::-webkit-slider-runnable-track { background: transparent; }
-.vp-slider input[type="range"]::-moz-range-track { background: transparent; }
-
-/* Rating filter */
-.vp-rating-opt {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  background: none; border: 0; cursor: pointer; padding: 6px 0; color: var(--text);
-}
-.vp-rating-opt .stars { display: flex; gap: 2px; }
-.vp-rating-opt .stars svg { width: 14px; height: 14px; }
-.vp-rating-opt span.txt { font-size: 13.5px; color: var(--muted); }
-.vp-rating-opt.active span.txt { color: var(--gold-0); }
-.vp-radio {
-  width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--line);
-  display: grid; place-items: center; flex: none;
-}
-.vp-radio .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--grad-gold); opacity: 0; transition: opacity 0.2s ease; }
-.vp-radio.on .dot { opacity: 1; }
-
-/* Results meta */
-.vp-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
-.vp-count { font-size: 13.5px; color: var(--muted); }
-.vp-count b { color: var(--text); font-weight: 400; }
-.vp-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-.vp-chip {
-  display: flex; align-items: center; gap: 6px;
-  border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px 6px 12px;
-  font-size: 12px; color: var(--text); background: var(--field-bg);
-}
-.vp-chip button { background: none; border: 0; color: var(--muted); cursor: pointer; display: grid; place-items: center; padding: 2px; }
-.vp-chip button:hover { color: var(--gold-0); }
-.vp-chip svg { width: 10px; height: 10px; }
-
-/* Product grid / list */
-.vp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px; }
-.vp-grid.list { grid-template-columns: 1fr; gap: 16px; }
-
-.vp-add {
-  border: 1px solid var(--line); background: transparent; color: var(--text);
-  height: 36px; padding: 0 16px; border-radius: 999px; cursor: pointer;
-  font: 400 11px 'Jost', system-ui, sans-serif; letter-spacing: 0.16em; text-transform: uppercase;
-  transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
-}
-.vp-add:hover { border-color: var(--gold-0); background: var(--grad-gold); color: var(--ink-0); }
-
-.vp-empty {
-  grid-column: 1 / -1;
-  text-align: center; padding: 90px 20px; color: var(--muted);
-}
-.vp-empty h3 { font-family: 'Cormorant Garamond', serif; font-size: 26px; color: var(--text); margin: 0 0 10px; font-weight: 500; }
-
-/* Pagination */
-.vp-pagination { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 48px; }
-.vp-page-btn {
-  min-width: 40px; height: 40px; padding: 0 4px;
-  border: 1px solid var(--line-soft); border-radius: 8px;
-  background: transparent; color: var(--muted); cursor: pointer;
-  font: 300 13.5px 'Jost', system-ui, sans-serif;
-  display: grid; place-items: center;
-  transition: border-color 0.25s ease, color 0.25s ease, background 0.25s ease;
-}
-.vp-page-btn:hover:not(:disabled) { border-color: var(--gold-0); color: var(--gold-0); }
-.vp-page-btn.on { background: var(--grad-gold); color: var(--ink-0); border-color: transparent; }
-.vp-page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-.vp-page-btn svg { width: 14px; height: 14px; }
-.vp-page-dots { color: var(--muted); padding: 0 4px; }
-
-/* Mobile filter drawer */
-.vp-scrim { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); z-index: 40; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
-.vp-scrim.show { opacity: 1; pointer-events: auto; }
-.vp-drawer {
-  position: fixed; top: 0; left: 0; height: 100%; width: min(340px, 88vw);
-  background: var(--ink-1); border-right: 1px solid var(--line);
-  z-index: 41; padding: 24px; overflow-y: auto;
-  transform: translateX(-100%); transition: transform 0.4s cubic-bezier(0.22,1,0.36,1);
-}
-.vp-drawer.show { transform: translateX(0); }
-.vp-drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.vp-drawer-close { background: none; border: 1px solid var(--line-soft); border-radius: 50%; width: 34px; height: 34px; display: grid; place-items: center; color: var(--text); cursor: pointer; }
-.vp-drawer-close svg { width: 14px; height: 14px; }
-.vp-drawer-apply {
-  margin-top: 10px; width: 100%; height: 46px; border: 0; border-radius: 8px; cursor: pointer;
-  background: var(--grad-gold); color: var(--ink-0); font: 400 12px 'Jost'; letter-spacing: 0.2em; text-transform: uppercase;
-}
-
-.vp-root a:focus-visible, .vp-root button:focus-visible, .vp-root input:focus-visible, .vp-root select:focus-visible {
-  outline: 1px solid var(--gold-0); outline-offset: 3px; border-radius: 3px;
-}
-
-/* Responsive */
-@media (max-width: 1080px) {
-  .vp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 980px) {
-  .vp-layout { grid-template-columns: 1fr; }
-  .vp-sidebar { display: none; }
-  .vp-filter-btn { display: inline-flex; }
-}
-@media (max-width: 640px) {
-  .vp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-  .vp-toolbar { gap: 10px; }
-  .vp-search { order: -1; width: 100%; flex: 1 1 100%; }
-}
-@media (max-width: 400px) {
-  .vp-grid { grid-template-columns: 1fr; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .vp-root * { animation: none !important; transition: none !important; }
-}
-`;
-
-/* Icons */
-const IconSearch = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" {...p}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>);
-const IconChevron = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...p}><path d="M6 9l6 6 6-6" /></svg>);
-const IconGrid = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" {...p}><rect x="3" y="3" width="7" height="7" rx="1.4" /><rect x="14" y="3" width="7" height="7" rx="1.4" /><rect x="3" y="14" width="7" height="7" rx="1.4" /><rect x="14" y="14" width="7" height="7" rx="1.4" /></svg>);
-const IconList = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" {...p}><path d="M8 6h13M8 12h13M8 18h13" /><circle cx="3.5" cy="6" r="1.2" fill="currentColor" stroke="none" /><circle cx="3.5" cy="12" r="1.2" fill="currentColor" stroke="none" /><circle cx="3.5" cy="18" r="1.2" fill="currentColor" stroke="none" /></svg>);
-const IconFilter = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" {...p}><path d="M4 6h16M7 12h10M10 18h4" /></svg>);
-const IconCheck = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" {...p}><path d="M4 12l5.5 5.5L20 6" /></svg>);
-const IconStar = (p) => (<svg viewBox="0 0 24 24" fill={p.filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.4" {...p}><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.6 6.1 20.5l1.2-6.5-4.8-4.6 6.6-.9z" /></svg>);
-const IconX = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M5 5l14 14M19 5L5 19" /></svg>);
-const IconArrowLeft = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M14 6l-6 6 6 6" /></svg>);
-const IconArrowRight = (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M10 6l6 6-6 6" /></svg>);
 
 const MAX_PRICE = 1500;
 const PAGE_SIZE = 9;
@@ -312,17 +50,43 @@ function toCardProduct(p) {
   };
 }
 
-function StarRow({ rating, size = 12 }) {
+function StarRow({ rating, size = 14 }) {
   return (
-    <span className="stars" aria-label={`${rating} out of 5 stars`}>
+    <span className="flex gap-0.5" aria-label={`${rating} out of 5 stars`}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <IconStar
+        <Star
           key={n}
-          filled={n <= Math.round(rating)}
-          style={{ width: size, height: size, color: "var(--star)" }}
+          className={n <= Math.round(rating) ? "text-amber-400" : "text-neutral-300 dark:text-neutral-700"}
+          fill={n <= Math.round(rating) ? "currentColor" : "none"}
+          style={{ width: size, height: size }}
         />
       ))}
     </span>
+  );
+}
+
+/** Collapsible filter group — shared shell for Category/Brand/Condition/spec facets. */
+function FilterGroup({ title, open, onToggle, children }) {
+  return (
+    <div className="border-b border-black/5 py-4 last:border-b-0 dark:border-white/10">
+      <button
+        onClick={onToggle}
+        className="flex w-full items-center justify-between text-xs font-semibold uppercase tracking-wide text-neutral-900 dark:text-white"
+      >
+        {title}
+        <ChevronDown className={`size-3.5 text-neutral-400 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && <div className="mt-3 flex flex-col gap-2.5">{children}</div>}
+    </div>
+  );
+}
+
+function CheckRow({ label, count, checked, onChange }) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-2">
+      <Checkbox checked={checked} onChange={onChange} label={<span className="max-w-[13rem] truncate text-sm text-neutral-700 dark:text-neutral-300">{label}</span>} />
+      {count != null && <span className="text-xs text-neutral-400">{count}</span>}
+    </label>
   );
 }
 
@@ -524,251 +288,199 @@ export default function Products() {
     ...conditions.map((c) => ({ key: `cond-${c}`, label: c, clear: () => toggleIn(conditions, setConditions, c) })),
   ];
 
-  const pageNumbers = useMemo(() => {
-    const nums = [];
-    for (let i = 1; i <= totalPages; i++) {
-      if (i === 1 || i === totalPages || Math.abs(i - page) <= 1) nums.push(i);
-      else if (nums[nums.length - 1] !== "...") nums.push("...");
-    }
-    return nums;
-  }, [totalPages, page]);
-
   const FiltersContent = () => (
     <>
-      <div className="vp-sidebar-head">
-        <h3 className="vp-sidebar-title">Filters</h3>
-        <button className="vp-clear" onClick={clearAll}>Clear all</button>
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-base font-bold text-neutral-900 dark:text-white">Filters</h3>
+        <button onClick={clearAll} className="text-xs font-medium text-gold-600 hover:underline dark:text-gold-400">
+          Clear all
+        </button>
       </div>
 
-      <div className="vp-acc">
-        <button className={`vp-acc-head ${openSections.category ? "open" : ""}`} onClick={() => toggleSection("category")}>
-          Category <IconChevron />
-        </button>
-        {openSections.category && (
-          <div className="vp-acc-body">
-            {categories.map((c) => {
-              const on = cats.includes(c.slug);
-              return (
-                <label key={c.slug} className="vp-check-row" onClick={() => toggleIn(cats, setCats, c.slug)}>
-                  <span className="vp-check-left">
-                    <span className={`vp-checkbox ${on ? "on" : ""}`}><IconCheck /></span>
-                    <span className="lbl">{c.name}</span>
-                  </span>
-                  <span className="count">{c.productCount}</span>
-                </label>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <FilterGroup title="Category" open={openSections.category} onToggle={() => toggleSection("category")}>
+        {categories.map((c) => (
+          <CheckRow key={c.slug} label={c.name} count={c.productCount} checked={cats.includes(c.slug)} onChange={() => toggleIn(cats, setCats, c.slug)} />
+        ))}
+      </FilterGroup>
 
-      <div className="vp-acc">
-        <button className={`vp-acc-head ${openSections.brand ? "open" : ""}`} onClick={() => toggleSection("brand")}>
-          Brand <IconChevron />
-        </button>
-        {openSections.brand && (
-          <div className="vp-acc-body">
-            {brandsList.map((b) => {
-              const on = brands.includes(b.slug);
-              return (
-                <label key={b.slug} className="vp-check-row" onClick={() => toggleIn(brands, setBrands, b.slug)}>
-                  <span className="vp-check-left">
-                    <span className={`vp-checkbox ${on ? "on" : ""}`}><IconCheck /></span>
-                    <span className="lbl">{b.name}</span>
-                  </span>
-                  <span className="count">{b.productCount}</span>
-                </label>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <FilterGroup title="Brand" open={openSections.brand} onToggle={() => toggleSection("brand")}>
+        {brandsList.map((b) => (
+          <CheckRow key={b.slug} label={b.name} count={b.productCount} checked={brands.includes(b.slug)} onChange={() => toggleIn(brands, setBrands, b.slug)} />
+        ))}
+      </FilterGroup>
 
       {conditionFacets.length > 0 && (
-        <div className="vp-acc">
-          <button className={`vp-acc-head ${openSections.condition ? "open" : ""}`} onClick={() => toggleSection("condition")}>
-            Condition <IconChevron />
-          </button>
-          {openSections.condition && (
-            <div className="vp-acc-body">
-              {conditionFacets.map(({ value, count }) => {
-                const on = conditions.includes(value);
-                return (
-                  <label key={value} className="vp-check-row" onClick={() => toggleIn(conditions, setConditions, value)}>
-                    <span className="vp-check-left">
-                      <span className={`vp-checkbox ${on ? "on" : ""}`}><IconCheck /></span>
-                      <span className="lbl">{value}</span>
-                    </span>
-                    <span className="count">{count}</span>
-                  </label>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <FilterGroup title="Condition" open={openSections.condition} onToggle={() => toggleSection("condition")}>
+          {conditionFacets.map(({ value, count }) => (
+            <CheckRow key={value} label={value} count={count} checked={conditions.includes(value)} onChange={() => toggleIn(conditions, setConditions, value)} />
+          ))}
+        </FilterGroup>
       )}
 
-      <div className="vp-acc">
-        <button className={`vp-acc-head ${openSections.price ? "open" : ""}`} onClick={() => toggleSection("price")}>
-          Price <IconChevron />
-        </button>
-        {openSections.price && (
-          <div className="vp-acc-body">
-            <div className="vp-price-values">
-              <span>£{price[0].toLocaleString()}</span>
-              <span>£{price[1].toLocaleString()}</span>
-            </div>
-            <div className="vp-slider">
-              <div className="vp-slider-track" />
-              <div
-                className="vp-slider-fill"
-                style={{
-                  left: `${(price[0] / MAX_PRICE) * 100}%`,
-                  width: `${((price[1] - price[0]) / MAX_PRICE) * 100}%`,
-                }}
-              />
-              <input
-                type="range"
-                min={0}
-                max={MAX_PRICE}
-                step={10}
-                value={price[0]}
-                onChange={(e) => setPrice([Math.min(+e.target.value, price[1] - 10), price[1]])}
-                aria-label="Minimum price"
-              />
-              <input
-                type="range"
-                min={0}
-                max={MAX_PRICE}
-                step={10}
-                value={price[1]}
-                onChange={(e) => setPrice([price[0], Math.max(+e.target.value, price[0] + 10)])}
-                aria-label="Maximum price"
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="vp-acc" style={{ borderBottom: specFacets.length ? undefined : "none" }}>
-        <button className={`vp-acc-head ${openSections.rating ? "open" : ""}`} onClick={() => toggleSection("rating")}>
-          Rating <IconChevron />
-        </button>
-        {openSections.rating && (
-          <div className="vp-acc-body">
-            {[4.5, 4, 3, 0].map((r) => (
-              <button
-                key={r}
-                className={`vp-rating-opt ${minRating === r ? "active" : ""}`}
-                onClick={() => setMinRating(r)}
-              >
-                <span className={`vp-radio ${minRating === r ? "on" : ""}`}><span className="dot" /></span>
-                {r > 0 ? (
-                  <>
-                    <StarRow rating={r} size={14} />
-                    <span className="txt">& up</span>
-                  </>
-                ) : (
-                  <span className="txt">Any rating</span>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {specFacets.map((facet, i) => (
-        <div className="vp-acc" key={facet.label} style={{ borderBottom: i === specFacets.length - 1 ? "none" : undefined }}>
-          <button className={`vp-acc-head ${openSpecSections[facet.label] ? "open" : ""}`} onClick={() => toggleSpecSection(facet.label)}>
-            {facet.label} <IconChevron />
-          </button>
-          {openSpecSections[facet.label] && (
-            <div className="vp-acc-body">
-              {facet.values.map(({ value, count }) => {
-                const on = (specFilters[facet.label] || []).includes(value);
-                return (
-                  <label key={value} className="vp-check-row" onClick={() => toggleSpecValue(facet.label, value)}>
-                    <span className="vp-check-left">
-                      <span className={`vp-checkbox ${on ? "on" : ""}`}><IconCheck /></span>
-                      <span className="lbl">{value}</span>
-                    </span>
-                    <span className="count">{count}</span>
-                  </label>
-                );
-              })}
-            </div>
-          )}
+      <FilterGroup title="Price" open={openSections.price} onToggle={() => toggleSection("price")}>
+        <div className="flex items-center justify-between text-sm font-medium text-neutral-900 dark:text-white">
+          <span>£{price[0].toLocaleString()}</span>
+          <span>£{price[1].toLocaleString()}</span>
         </div>
+        <div className="relative h-6">
+          <div className="absolute top-1/2 h-1 w-full -translate-y-1/2 rounded-full bg-neutral-200 dark:bg-neutral-700" />
+          <div
+            className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-gold-400"
+            style={{ left: `${(price[0] / MAX_PRICE) * 100}%`, width: `${((price[1] - price[0]) / MAX_PRICE) * 100}%` }}
+          />
+          <input
+            type="range"
+            min={0}
+            max={MAX_PRICE}
+            step={10}
+            value={price[0]}
+            onChange={(e) => setPrice([Math.min(+e.target.value, price[1] - 10), price[1]])}
+            aria-label="Minimum price"
+            className="vp-range absolute inset-x-0 top-0 h-6 w-full appearance-none bg-transparent"
+          />
+          <input
+            type="range"
+            min={0}
+            max={MAX_PRICE}
+            step={10}
+            value={price[1]}
+            onChange={(e) => setPrice([price[0], Math.max(+e.target.value, price[0] + 10)])}
+            aria-label="Maximum price"
+            className="vp-range absolute inset-x-0 top-0 h-6 w-full appearance-none bg-transparent"
+          />
+        </div>
+      </FilterGroup>
+
+      <FilterGroup title="Rating" open={openSections.rating} onToggle={() => toggleSection("rating")}>
+        {[4.5, 4, 3, 0].map((r) => (
+          <button
+            key={r}
+            onClick={() => setMinRating(r)}
+            className="flex items-center gap-2.5 text-left"
+          >
+            <span
+              className={`grid size-4 shrink-0 place-items-center rounded-full border ${
+                minRating === r ? "border-gold-400 bg-gold-400" : "border-neutral-300 dark:border-neutral-600"
+              }`}
+            >
+              {minRating === r && <span className="size-1.5 rounded-full bg-white" />}
+            </span>
+            {r > 0 ? (
+              <span className="flex items-center gap-1.5">
+                <StarRow rating={r} size={13} />
+                <span className="text-sm text-neutral-500 dark:text-neutral-400">& up</span>
+              </span>
+            ) : (
+              <span className="text-sm text-neutral-500 dark:text-neutral-400">Any rating</span>
+            )}
+          </button>
+        ))}
+      </FilterGroup>
+
+      {specFacets.map((facet) => (
+        <FilterGroup key={facet.label} title={facet.label} open={!!openSpecSections[facet.label]} onToggle={() => toggleSpecSection(facet.label)}>
+          {facet.values.map(({ value, count }) => (
+            <CheckRow
+              key={value}
+              label={value}
+              count={count}
+              checked={(specFilters[facet.label] || []).includes(value)}
+              onChange={() => toggleSpecValue(facet.label, value)}
+            />
+          ))}
+        </FilterGroup>
       ))}
     </>
   );
 
   return (
-    <div className="vp-root">
-      <style>{css}</style>
+    <div className="min-h-screen bg-white dark:bg-neutral-950">
+      <style>{`.vp-range::-webkit-slider-thumb { pointer-events: auto; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: white; border: 2px solid var(--color-gold-400, #d8b36a); box-shadow: 0 1px 3px rgba(0,0,0,0.25); cursor: pointer; margin-top: 2px; } .vp-range::-moz-range-thumb { pointer-events: auto; width: 16px; height: 16px; border-radius: 50%; background: white; border: 2px solid var(--color-gold-400, #d8b36a); box-shadow: 0 1px 3px rgba(0,0,0,0.25); cursor: pointer; } .vp-range::-webkit-slider-runnable-track, .vp-range::-moz-range-track { background: transparent; }`}</style>
 
-      <div className="vp-shell">
-        <header className="vp-header">
-          <p className="vp-eyebrow">The Catalogue</p>
-          <h1 className="vp-h1">All Products</h1>
-          <p className="vp-sub">
-            Considered electronics and everyday essentials, curated for performance, durability, and design.
+      <div className="mx-auto max-w-7xl px-6 py-8 md:py-12">
+        <header className="mb-6">
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white md:text-3xl">All Products</h1>
+          <p className="mt-1.5 max-w-2xl text-sm text-neutral-500 dark:text-neutral-400">
+            Quality electronics and everyday essentials, curated for performance, durability, and design.
           </p>
         </header>
 
-        <div className="vp-toolbar">
-          <button className="vp-filter-btn" onClick={() => setDrawerOpen(true)}>
-            <IconFilter /> Filters
-          </button>
+        <div className="flex flex-wrap items-center gap-3 border-y border-black/5 py-4 dark:border-white/10">
+          <OutlineButton size="sm" leftIcon={SlidersHorizontal} className="lg:hidden" onClick={() => setDrawerOpen(true)}>
+            Filters
+          </OutlineButton>
 
-          <div className="vp-search">
-            <IconSearch />
+          <div className="flex h-11 min-w-[220px] flex-1 items-center gap-2.5 rounded-full border border-black/10 bg-white px-4 dark:border-white/15 dark:bg-neutral-900">
+            <Search className="size-4 shrink-0 text-neutral-400" />
             <input
               type="text"
               placeholder="Search products or brands..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               aria-label="Search products"
+              className="w-full min-w-0 bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-400 dark:text-white"
             />
           </div>
 
-          <div className="vp-sort-wrap">
-            <select className="vp-sort" value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sort by">
+          <div className="relative">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              aria-label="Sort by"
+              className="h-11 appearance-none rounded-full border border-black/10 bg-white pl-4 pr-9 text-sm text-neutral-900 outline-none dark:border-white/15 dark:bg-neutral-900 dark:text-white"
+            >
               <option value="featured">Featured</option>
               <option value="price-asc">Price: Low to High</option>
               <option value="price-desc">Price: High to Low</option>
               <option value="rating">Top Rated</option>
               <option value="newest">Newest</option>
             </select>
-            <IconChevron />
+            <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 size-3.5 -translate-y-1/2 text-neutral-400" />
           </div>
 
-          <div className="vp-view-toggle" role="group" aria-label="Layout view">
-            <button className={`vp-view-btn ${view === "grid" ? "on" : ""}`} onClick={() => setView("grid")} aria-label="Grid view">
-              <IconGrid />
+          <div className="flex overflow-hidden rounded-full border border-black/10 dark:border-white/15" role="group" aria-label="Layout view">
+            <button
+              onClick={() => setView("grid")}
+              aria-label="Grid view"
+              className={`grid size-11 place-items-center transition-colors ${view === "grid" ? "bg-gold-400 text-white" : "text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"}`}
+            >
+              <LayoutGrid className="size-4" />
             </button>
-            <button className={`vp-view-btn ${view === "list" ? "on" : ""}`} onClick={() => setView("list")} aria-label="List view">
-              <IconList />
+            <button
+              onClick={() => setView("list")}
+              aria-label="List view"
+              className={`grid size-11 place-items-center border-l border-black/10 transition-colors dark:border-white/15 ${view === "list" ? "bg-gold-400 text-white" : "text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"}`}
+            >
+              <List className="size-4" />
             </button>
           </div>
         </div>
 
-        <div className="vp-layout">
-          <aside className="vp-sidebar">
+        <div className="mt-7 grid gap-10 lg:grid-cols-[260px_1fr]">
+          <aside className="hidden lg:block">
             <FiltersContent />
           </aside>
 
           <div>
-            <div className="vp-meta">
-              <p className="vp-count">
-                Showing <b>{pageItems.length ? (page - 1) * PAGE_SIZE + 1 : 0}-{Math.min(page * PAGE_SIZE, filtered.length)}</b> of <b>{filtered.length}</b> products
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                Showing{" "}
+                <span className="font-medium text-neutral-900 dark:text-white">
+                  {pageItems.length ? (page - 1) * PAGE_SIZE + 1 : 0}-{Math.min(page * PAGE_SIZE, filtered.length)}
+                </span>{" "}
+                of <span className="font-medium text-neutral-900 dark:text-white">{filtered.length}</span> products
               </p>
               {activeChips.length > 0 && (
-                <div className="vp-chips">
+                <div className="flex flex-wrap gap-2">
                   {activeChips.map((chip) => (
-                    <span className="vp-chip" key={chip.key}>
+                    <span
+                      key={chip.key}
+                      className="flex items-center gap-1.5 rounded-full border border-black/10 bg-neutral-50 py-1.5 pl-3 pr-2 text-xs text-neutral-700 dark:border-white/15 dark:bg-neutral-900 dark:text-neutral-300"
+                    >
                       {chip.label}
-                      <button onClick={chip.clear} aria-label={`Remove ${chip.label}`}><IconX /></button>
+                      <button onClick={chip.clear} aria-label={`Remove ${chip.label}`} className="text-neutral-400 hover:text-gold-500">
+                        <X className="size-3" />
+                      </button>
                     </span>
                   ))}
                 </div>
@@ -776,80 +488,45 @@ export default function Products() {
             </div>
 
             {productsLoading ? (
-              <div className="vp-empty">
-                <h3>Loading products&hellip;</h3>
-              </div>
+              <div className="py-24 text-center text-sm text-neutral-400">Loading products…</div>
             ) : productsError ? (
-              <div className="vp-empty">
-                <h3>Something went wrong</h3>
-                <p>We couldn&apos;t load the catalogue.</p>
-                <button className="vp-add" style={{ marginTop: 16 }} onClick={() => refetchProducts()}>
-                  Try again
-                </button>
-              </div>
+              <ErrorState description="We couldn't load the catalogue." onRetry={() => refetchProducts()} />
+            ) : pageItems.length === 0 ? (
+              <EmptyState title="No products match your filters" description="Try widening your price range or clearing a filter." />
             ) : (
-              <div className={`vp-grid ${view === "list" ? "list" : ""}`}>
-                {pageItems.length === 0 ? (
-                  <div className="vp-empty">
-                    <h3>No products match your filters</h3>
-                    <p>Try widening your price range or clearing a filter.</p>
-                  </div>
-                ) : (
-                  pageItems.map((p, i) => (
-                    <ProductCard
-                      key={p.id}
-                      product={p}
-                      image={p.image}
-                      index={i}
-                      wished={wishedIds.has(p.id)}
-                      onWishlistToggle={() => toggleWish(p.id)}
-                      onAdd={() => handleAddToBag(p.id)}
-                    />
-                  ))
-                )}
+              <div className={view === "list" ? "flex flex-col gap-4" : "grid grid-cols-2 gap-4 sm:grid-cols-3"}>
+                {pageItems.map((p, i) => (
+                  <ProductCard
+                    key={p.id}
+                    product={p}
+                    image={p.image}
+                    index={i}
+                    wished={wishedIds.has(p.id)}
+                    onWishlistToggle={() => toggleWish(p.id)}
+                    onAdd={() => handleAddToBag(p.id)}
+                  />
+                ))}
               </div>
             )}
 
-            {totalPages > 1 && (
-              <nav className="vp-pagination" aria-label="Pagination">
-                <button className="vp-page-btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} aria-label="Previous page">
-                  <IconArrowLeft />
-                </button>
-                {pageNumbers.map((n, idx) =>
-                  n === "..." ? (
-                    <span className="vp-page-dots" key={`dots-${idx}`}>...</span>
-                  ) : (
-                    <button
-                      key={n}
-                      className={`vp-page-btn ${page === n ? "on" : ""}`}
-                      onClick={() => setPage(n)}
-                      aria-current={page === n ? "page" : undefined}
-                    >
-                      {n}
-                    </button>
-                  )
-                )}
-                <button className="vp-page-btn" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} aria-label="Next page">
-                  <IconArrowRight />
-                </button>
-              </nav>
-            )}
+            {totalPages > 1 && <Pagination page={page} totalPages={totalPages} onChange={setPage} className="mt-12" />}
           </div>
         </div>
       </div>
 
-      {/* Mobile drawer */}
-      <div className={`vp-scrim ${drawerOpen ? "show" : ""}`} onClick={() => setDrawerOpen(false)} />
-      <div className={`vp-drawer ${drawerOpen ? "show" : ""}`}>
-        <div className="vp-drawer-head">
-          <h3 className="vp-sidebar-title">Filters</h3>
-          <button className="vp-drawer-close" onClick={() => setDrawerOpen(false)} aria-label="Close filters"><IconX /></button>
-        </div>
+      <Drawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        side="left"
+        title="Filters"
+        footer={
+          <PrimaryButton className="w-full" onClick={() => setDrawerOpen(false)}>
+            Show {filtered.length} results
+          </PrimaryButton>
+        }
+      >
         <FiltersContent />
-        <button className="vp-drawer-apply" onClick={() => setDrawerOpen(false)}>
-          Show {filtered.length} results
-        </button>
-      </div>
+      </Drawer>
     </div>
   );
 }
