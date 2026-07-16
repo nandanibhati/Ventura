@@ -229,7 +229,10 @@ export default function ProductCard({
         <div className={cn("flex flex-1 flex-col gap-1.5 p-4", cfg.align === "center" && "items-center text-center")}>
           {category && <span className="text-[10.5px] font-medium uppercase tracking-wider text-gold-500">{category}</span>}
           <Link to={href}>
-            <h3 className={cn("font-medium leading-snug", cfg.tall ? "text-xl" : "text-[17px]")} style={{ fontFamily: "var(--font-display)" }}>
+            <h3
+              className={cn("line-clamp-2 min-h-[2.75em] font-medium leading-snug", cfg.tall ? "text-xl" : "text-[17px]")}
+              style={{ fontFamily: "var(--font-display)" }}
+            >
               {name}
             </h3>
           </Link>
