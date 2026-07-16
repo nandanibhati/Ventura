@@ -6,6 +6,7 @@ import { Input, Textarea } from "../ui/Input";
 import { PrimaryButton } from "../ui/Button";
 import { useAuth } from "../../context/AuthContext";
 import { suggestionsApi } from "../../api/suggestions";
+import { useDraggableFab } from "../../lib/useDraggableFab";
 
 /** Site-wide floating feedback widget — lets any shopper (guest or logged in) send a
  * suggestion/complaint straight to the admin dashboard, no account or order required. */
@@ -15,6 +16,7 @@ export default function SuggestionBox() {
   const [sent, setSent] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [error, setError] = useState("");
+  const { style: fabStyle, dragHandlers, handleClick } = useDraggableFab("veluntra.suggestionFabPos", "right");
 
   const setField = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
@@ -46,9 +48,11 @@ export default function SuggestionBox() {
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={handleClick(() => setOpen(true))}
+        {...dragHandlers}
+        style={fabStyle}
         aria-label="Send us a suggestion"
-        className="fixed bottom-24 right-4 z-[70] flex items-center gap-2 rounded-full bg-gold-500 px-4 py-3 text-sm font-medium text-white shadow-soft-lg transition-transform hover:scale-105 hover:bg-gold-600"
+        className="z-[70] flex cursor-grab items-center gap-2 rounded-full bg-gold-500 px-4 py-3 text-sm font-medium text-white shadow-soft-lg transition-transform hover:scale-105 hover:bg-gold-600 active:cursor-grabbing"
       >
         <MessageSquarePlus className="size-4.5" />
         <span className="hidden sm:inline">Suggestions</span>

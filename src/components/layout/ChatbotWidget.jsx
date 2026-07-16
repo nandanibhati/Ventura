@@ -6,6 +6,7 @@ import { Input } from "../ui/Input";
 import { PrimaryButton, OutlineButton } from "../ui/Button";
 import { settingsApi } from "../../api/catalog";
 import { ordersApi } from "../../api/orders";
+import { useDraggableFab } from "../../lib/useDraggableFab";
 
 const TOPICS = [
   { id: "shipping", label: "Shipping & delivery", icon: Truck },
@@ -22,6 +23,7 @@ export default function ChatbotWidget() {
   const [view, setView] = useState("menu"); // "menu" | "shipping" | "returns" | "contact" | "track"
   const [trackForm, setTrackForm] = useState({ orderNumber: "", email: "" });
   const [trackError, setTrackError] = useState("");
+  const { style: fabStyle, dragHandlers, handleClick } = useDraggableFab("veluntra.chatbotFabPos", "left");
 
   const { data: settings } = useQuery({ queryKey: ["settings", "public"], queryFn: settingsApi.getPublic, staleTime: 5 * 60 * 1000 });
 
@@ -51,9 +53,11 @@ export default function ChatbotWidget() {
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={handleClick(() => setOpen(true))}
+        {...dragHandlers}
+        style={fabStyle}
         aria-label="Chat with Veluntra Assistant"
-        className="fixed bottom-24 left-4 z-[70] flex items-center gap-2 rounded-full bg-neutral-900 px-4 py-3 text-sm font-medium text-white shadow-soft-lg transition-transform hover:scale-105 hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
+        className="z-[70] flex cursor-grab items-center gap-2 rounded-full bg-neutral-900 px-4 py-3 text-sm font-medium text-white shadow-soft-lg transition-transform hover:scale-105 hover:bg-neutral-800 active:cursor-grabbing dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
       >
         <Bot className="size-4.5" />
         <span className="hidden sm:inline">Veluntra Assistant</span>
