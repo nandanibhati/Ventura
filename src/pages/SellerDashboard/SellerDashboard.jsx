@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
@@ -54,6 +54,7 @@ import {
   History,
   X,
   Download,
+  Upload,
 } from "lucide-react";
 import { PrimaryButton, SecondaryButton, OutlineButton, IconButton } from "../../components/ui/Button";
 import { Input, Select, Checkbox } from "../../components/ui/Input";
@@ -707,6 +708,22 @@ function ProductsTab({ tokens, categoryColors }) {
     onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't update product", variant: "error" }),
   });
   const removeMutation = useMutation({ mutationFn: (id) => productsApi.remove(id), onSuccess: invalidate });
+  const importFileInputRef = useRef(null);
+  const importMutation = useMutation({
+    mutationFn: (file) => productsApi.importCsv(file),
+    onSuccess: (result) => {
+      invalidate();
+      const errorNote = result.errors?.length ? ` — ${result.errors.length} row(s) had errors` : "";
+      toast({ title: `Import complete: ${result.created} created, ${result.updated} updated${errorNote}`, variant: result.errors?.length ? "warning" : "success" });
+      if (result.errors?.length) console.warn("Import errors:", result.errors);
+    },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Import failed", variant: "error" }),
+  });
+  const handleImportFile = (e) => {
+    const file = e.target.files?.[0];
+    if (file) importMutation.mutate(file);
+    e.target.value = "";
+  };
   const duplicateMutation = useMutation({ mutationFn: (id) => productsApi.duplicate(id), onSuccess: invalidate });
 
   const products = data?.items || [];
@@ -802,6 +819,10 @@ function ProductsTab({ tokens, categoryColors }) {
               placeholder="Search products…"
               className="rounded-full border border-black/10 bg-transparent px-4 py-2 text-xs dark:border-white/15 dark:text-white"
             />
+            <OutlineButton size="sm" leftIcon={Upload} loading={importMutation.isPending} onClick={() => importFileInputRef.current?.click()}>
+              Import Excel/CSV
+            </OutlineButton>
+            <input ref={importFileInputRef} type="file" accept=".csv,.xlsx" hidden onChange={handleImportFile} />
             <PrimaryButton size="sm" leftIcon={Plus} onClick={openCreate}>Add product</PrimaryButton>
           </div>
         </div>

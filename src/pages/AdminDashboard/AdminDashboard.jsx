@@ -786,6 +786,24 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-products"] });
 
+  const [importStoreId, setImportStoreId] = useState("");
+  const importFileInputRef = useRef(null);
+  const importMutation = useMutation({
+    mutationFn: (file) => productsApi.importCsv(file, importStoreId || stores[0]?.id),
+    onSuccess: (result) => {
+      invalidate();
+      const errorNote = result.errors?.length ? ` — ${result.errors.length} row(s) had errors` : "";
+      toast({ title: `Import complete: ${result.created} created, ${result.updated} updated${errorNote}`, variant: result.errors?.length ? "warning" : "success" });
+      if (result.errors?.length) console.warn("Import errors:", result.errors);
+    },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Import failed", variant: "error" }),
+  });
+  const handleImportFile = (e) => {
+    const file = e.target.files?.[0];
+    if (file) importMutation.mutate(file);
+    e.target.value = "";
+  };
+
   const createMutation = useMutation({
     mutationFn: (payload) => productsApi.create(payload),
     onSuccess: () => { invalidate(); setModalOpen(false); toast({ title: "Product created", variant: "success" }); },
@@ -901,7 +919,39 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
         eyebrow="Manage"
         title="Products"
         description="Catalogue inventory, pricing, and publish status across every store."
-        action={<PrimaryButton leftIcon={Plus} onClick={openCreate}>Add product</PrimaryButton>}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            {stores.length > 1 && (
+              <Select
+                value={importStoreId || stores[0]?.id || ""}
+                onChange={(e) => setImportStoreId(e.target.value)}
+                options={stores.map((s) => ({ value: s.id, label: s.name }))}
+              />
+            )}
+            <OutlineButton
+              leftIcon={Download}
+              onClick={() =>
+                productsApi.exportCsv().then((blob) => {
+                  const url = window.URL.createObjectURL(blob);
+                  const link = document.createElement("a");
+                  link.href = url;
+                  link.download = "products.csv";
+                  document.body.appendChild(link);
+                  link.click();
+                  link.remove();
+                  window.URL.revokeObjectURL(url);
+                })
+              }
+            >
+              Export
+            </OutlineButton>
+            <OutlineButton leftIcon={Upload} loading={importMutation.isPending} onClick={() => importFileInputRef.current?.click()}>
+              Import Excel/CSV
+            </OutlineButton>
+            <input ref={importFileInputRef} type="file" accept=".csv,.xlsx" hidden onChange={handleImportFile} />
+            <PrimaryButton leftIcon={Plus} onClick={openCreate}>Add product</PrimaryButton>
+          </div>
+        }
       />
 
       <Toolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }} />

@@ -1,5 +1,5 @@
-import { Suspense, lazy } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Suspense, lazy, useEffect } from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 
 import MainLayout from "../layouts/MainLayout";
 import Home from "../pages/Home/Home";
@@ -22,6 +22,18 @@ const AdminDashboard = lazy(() => import("../pages/AdminDashboard/AdminDashboard
 const Checkout = lazy(() => import("../pages/Checkout/Checkout"));
 const ReturnPolicy = lazy(() => import("../pages/Policies/ReturnPolicy"));
 
+// React Router doesn't reset scroll position on navigation — without this, clicking a link while
+// scrolled down on one page lands you at the same scroll offset on the next page (often showing
+// the footer instead of the top). Skips the reset on pure hash changes (e.g. "#reviews").
+function ScrollToTop() {
+  const { pathname, hash } = useLocation();
+  useEffect(() => {
+    if (hash) return;
+    window.scrollTo(0, 0);
+  }, [pathname, hash]);
+  return null;
+}
+
 function PageFallback() {
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
@@ -33,6 +45,7 @@ function PageFallback() {
 function AppRoutes() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Suspense fallback={<PageFallback />}>
         <Routes>
           <Route element={<MainLayout />}>
