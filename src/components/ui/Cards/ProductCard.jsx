@@ -143,10 +143,11 @@ export default function ProductCard({
           <img
             src={image}
             alt={name}
-            className={cn(
-              "absolute inset-0 size-full transition-transform duration-500 group-hover:scale-[1.06]",
-              cfg.dense ? "object-contain" : "object-cover"
-            )}
+            // object-contain regardless of template: object-cover crops any photo that isn't
+            // itself square to fill the box, which for a tall/portrait product shot reads as a
+            // random zoomed-in slice rather than the actual product (same issue fixed on the
+            // product detail gallery — see ProductDetails.jsx).
+            className="absolute inset-0 size-full object-contain transition-transform duration-500 group-hover:scale-[1.06]"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
