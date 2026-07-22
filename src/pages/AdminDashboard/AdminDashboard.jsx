@@ -833,19 +833,28 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
     });
     setModalOpen(true);
   };
-  const openEdit = (p) => {
-    setEditing(p);
-    setForm({
-      name: p.name, description: p.description || "", price: p.price, stock: p.stock, status: p.status, categoryId: p.categoryId, brandId: p.brandId,
-      images: p.images?.map((i) => resolveMediaUrl(i.url)) || [],
-      sku: p.sku || "", barcode: p.barcode || "", condition: p.condition || "",
-      isFeatured: !!p.isFeatured, isTrending: !!p.isTrending, isBestSeller: !!p.isBestSeller, isNew: !!p.isNew,
-      badge: p.badge || "",
-      animationOverride: p.animationOverride || null,
-      specifications: p.specifications || [], highlights: p.highlights || [], tagsText: (p.tags || []).join(", "),
-      ...variantsFormStateFromProduct(p),
-    });
-    setModalOpen(true);
+  // The admin products list never includes options/variants (a lighter query for a list of
+  // hundreds of rows) — populating the edit form straight from a list row silently treated any
+  // existing colour/storage variants as "none", and saving wrote that emptiness back, wiping
+  // them from the database. Always re-fetch the full product first instead.
+  const openEdit = async (p) => {
+    try {
+      const full = await productsApi.getByIdForManage(p.id);
+      setEditing(full);
+      setForm({
+        name: full.name, description: full.description || "", price: full.price, stock: full.stock, status: full.status, categoryId: full.categoryId, brandId: full.brandId,
+        images: full.images?.map((i) => resolveMediaUrl(i.url)) || [],
+        sku: full.sku || "", barcode: full.barcode || "", condition: full.condition || "",
+        isFeatured: !!full.isFeatured, isTrending: !!full.isTrending, isBestSeller: !!full.isBestSeller, isNew: !!full.isNew,
+        badge: full.badge || "",
+        animationOverride: full.animationOverride || null,
+        specifications: full.specifications || [], highlights: full.highlights || [], tagsText: (full.tags || []).join(", "),
+        ...variantsFormStateFromProduct(full),
+      });
+      setModalOpen(true);
+    } catch {
+      toast({ title: "Couldn't load product details", variant: "error" });
+    }
   };
   const handleImageUpload = async (files) => {
     if (!files.length) return;
