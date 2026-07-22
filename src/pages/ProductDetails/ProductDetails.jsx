@@ -743,7 +743,7 @@ function ProductDetails() {
                   transition={{ duration: 0.25 }}
                   className="max-w-3xl"
                 >
-                  <p className="text-base leading-relaxed text-neutral-600 dark:text-neutral-300">{product.description}</p>
+                  <p className="text-base leading-relaxed text-neutral-600 dark:text-neutral-300 whitespace-pre-line">{product.description}</p>
                 </motion.div>
               )}
 
