@@ -289,9 +289,11 @@ const COLUMN_CLASS = {
 function resolveProductSourceParams(source, sourceValue, limit) {
   switch (source) {
     case "featured":
+      return { featured: true, sort: "rating", limit };
     case "trending":
+      return { trending: true, sort: "newest", limit };
     case "bestSeller":
-      return { sort: source === "bestSeller" ? "best-selling" : source === "trending" ? "newest" : "rating", limit };
+      return { bestSeller: true, sort: "best-selling", limit };
     case "newest":
       return { sort: "newest", limit };
     case "rating":
