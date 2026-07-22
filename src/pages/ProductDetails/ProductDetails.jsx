@@ -487,6 +487,13 @@ function ProductDetails() {
 
   const displayPrice = matchedVariant?.price != null ? Number(matchedVariant.price) : Number(product?.price || 0);
   const maxQty = matchedVariant ? matchedVariant.stock : product?.stock ?? 9;
+  const lowStockThreshold = product?.lowStockThreshold ?? 10;
+  const stockStatus =
+    maxQty === 0
+      ? { text: "Out of stock", tone: "text-rose-500" }
+      : maxQty <= lowStockThreshold
+      ? { text: `Only ${maxQty} left in stock`, tone: "text-amber-500" }
+      : { text: `${maxQty} in stock`, tone: "text-emerald-600 dark:text-emerald-400" };
 
   // Jump the gallery to whichever photo was assigned to the selected colour/storage combination,
   // so the displayed image changes along with the variant — falls back to leaving it as-is when
@@ -639,7 +646,9 @@ function ProductDetails() {
               </div>
             )}
 
-            <div className="mt-7 flex flex-wrap items-center gap-3">
+            <p className={`mt-5 text-xs font-semibold ${stockStatus.tone}`}>{stockStatus.text}</p>
+
+            <div className="mt-3 flex flex-wrap items-center gap-3">
               <QuantityStepper
                 quantity={quantity}
                 onIncrease={() => setQuantity((q) => Math.min(maxQty || 9, q + 1))}
