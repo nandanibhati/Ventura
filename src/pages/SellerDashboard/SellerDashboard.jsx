@@ -644,7 +644,7 @@ function OrderItemsModal({ order, onClose }) {
                   <p className="text-sm font-medium text-neutral-900 dark:text-white">{item.nameSnapshot}</p>
                   <p className="text-xs text-neutral-400">
                     Qty {item.quantity}
-                    {item.product?.sku && ` · SKU ${item.product.sku}`}
+                    {(item.variant?.sku || item.product?.sku) && ` · SKU ${item.variant?.sku || item.product?.sku}`}
                   </p>
                 </div>
                 {alreadyWarehouse ? (

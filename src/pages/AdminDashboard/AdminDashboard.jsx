@@ -667,7 +667,7 @@ function OrderItemsModal({ order, onClose }) {
               <p className="text-sm font-medium">{item.nameSnapshot}</p>
               <p className="text-xs text-[var(--text-muted)]">
                 Qty {item.quantity}
-                {item.product?.sku && ` · SKU ${item.product.sku}`}
+                {(item.variant?.sku || item.product?.sku) && ` · SKU ${item.variant?.sku || item.product?.sku}`}
               </p>
             </div>
             <span className="text-sm text-[var(--text-muted)]">{CURRENCY}{Number(item.priceSnapshot).toLocaleString()}</span>
