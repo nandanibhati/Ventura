@@ -297,17 +297,10 @@ export default function Products() {
         </button>
       </div>
 
-      <FilterGroup title="Category" open={openSections.category} onToggle={() => toggleSection("category")}>
-        {categories.map((c) => (
-          <CheckRow key={c.slug} label={c.name} count={c.productCount} checked={cats.includes(c.slug)} onChange={() => toggleIn(cats, setCats, c.slug)} />
-        ))}
-      </FilterGroup>
-
-      <FilterGroup title="Brand" open={openSections.brand} onToggle={() => toggleSection("brand")}>
-        {brandsList.map((b) => (
-          <CheckRow key={b.slug} label={b.name} count={b.productCount} checked={brands.includes(b.slug)} onChange={() => toggleIn(brands, setBrands, b.slug)} />
-        ))}
-      </FilterGroup>
+      {/* No Category/Brand checkbox filters here on purpose — the navbar's Categories menu and
+          product-page breadcrumb links already cover browsing by category/brand (via
+          ?category=/?brand= URL params, which this page still reads and filters by), so a
+          duplicate checkbox list here was redundant. */}
 
       {conditionFacets.length > 0 && (
         <FilterGroup title="Condition" open={openSections.condition} onToggle={() => toggleSection("condition")}>
