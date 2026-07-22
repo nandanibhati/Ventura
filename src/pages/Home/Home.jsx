@@ -419,7 +419,11 @@ function BannerCarousel({ heroConfig, isLoading }) {
     !heroConfig?.slides && (heroConfig?.headline || heroConfig?.backgroundImage || heroConfig?.backgroundVideo || heroConfig?.subheadline)
       ? [heroConfig]
       : null;
-  const cmsSlides = heroConfig?.slides?.length ? heroConfig.slides : legacySlide;
+  const rawSlides = heroConfig?.slides?.length ? heroConfig.slides : legacySlide;
+  // A slide with no image/video AND no text/CTA has nothing to show — render it as if it
+  // doesn't exist rather than a blank dark box (e.g. after "Remove" clears just the image but
+  // the empty slide entry itself is still in the list).
+  const cmsSlides = rawSlides?.filter((s) => s.backgroundImage || s.backgroundVideo || s.headline || s.subheadline || s.ctaText);
   const slides = cmsSlides?.length
     ? cmsSlides.map((s, i) => ({
         id: `cms-hero-${i}`,
