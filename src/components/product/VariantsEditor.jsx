@@ -220,6 +220,14 @@ function VariantRow({ variant, images, onChange }) {
         />
         <Input label="Stock" type="number" value={variant.stock ?? 0} onChange={(e) => onChange({ ...variant, stock: e.target.value })} />
       </div>
+      <div className="mt-3">
+        <Input
+          label="SKU"
+          placeholder="Auto-generated if left blank"
+          value={variant.sku ?? ""}
+          onChange={(e) => onChange({ ...variant, sku: e.target.value })}
+        />
+      </div>
       {images.length > 0 && (
         <div className="mt-3">
           <p className="mb-1.5 text-xs text-[var(--text-muted)]">Photo shown when a shopper selects this option</p>
