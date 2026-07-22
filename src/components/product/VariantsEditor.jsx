@@ -72,13 +72,56 @@ export function buildOptionsAndVariantsPayload(form) {
   return { options, variants };
 }
 
+// Common colour names auto-fill the swatch picker as you type, so typing "Green" and hitting
+// Add actually gives you a green swatch instead of whatever the picker happened to be left on
+// (the bug that shipped real listings with 3 different colour names all rendered as near-black).
+const NAMED_COLOR_HEX = {
+  black: "#171717",
+  white: "#f5f5f5",
+  red: "#dc2626",
+  green: "#16a34a",
+  blue: "#2563eb",
+  yellow: "#eab308",
+  orange: "#f97316",
+  purple: "#9333ea",
+  violet: "#7c3aed",
+  pink: "#ec4899",
+  gray: "#6b7280",
+  grey: "#6b7280",
+  silver: "#c0c0c0",
+  gold: "#d4af37",
+  brown: "#78350f",
+  navy: "#1e3a8a",
+  teal: "#0d9488",
+  beige: "#e8dcc8",
+  cream: "#f5f0dc",
+  maroon: "#7f1d1d",
+  turquoise: "#06b6d4",
+  lavender: "#c4b5fd",
+  "rose gold": "#b76e79",
+  "space gray": "#4b4b4d",
+  "space grey": "#4b4b4d",
+};
+
 function ColorOptionEditor({ values, onAdd, onRemove }) {
   const [draft, setDraft] = useState("");
   const [hex, setHex] = useState("#111111");
+  const [hexTouched, setHexTouched] = useState(false);
+
+  const handleDraftChange = (value) => {
+    setDraft(value);
+    if (!hexTouched) {
+      const guess = NAMED_COLOR_HEX[value.trim().toLowerCase()];
+      if (guess) setHex(guess);
+    }
+  };
+
   const submit = () => {
     if (!draft.trim()) return;
     onAdd({ label: draft.trim(), hex });
     setDraft("");
+    setHex("#111111");
+    setHexTouched(false);
   };
   return (
     <div>
@@ -95,15 +138,19 @@ function ColorOptionEditor({ values, onAdd, onRemove }) {
         <input
           type="color"
           value={hex}
-          onChange={(e) => setHex(e.target.value)}
+          onChange={(e) => {
+            setHex(e.target.value);
+            setHexTouched(true);
+          }}
           className="h-11 w-11 shrink-0 cursor-pointer rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-1"
           aria-label="Swatch colour"
         />
         <div className="flex-1">
           <Input
             placeholder="Add a colour value (e.g. Black)"
+            helperText="The swatch on the left auto-fills for common colour names, or pick your own."
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => handleDraftChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
