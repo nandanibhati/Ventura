@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Search, ChevronDown, LayoutGrid, List, SlidersHorizontal, Check, Star, X } from "lucide-react";
+import { Search, ChevronDown, LayoutGrid, List, SlidersHorizontal, Check, X } from "lucide-react";
 import { categoriesApi, brandsApi } from "../../api/catalog";
 import { productsApi } from "../../api/products";
 import { wishlistApi } from "../../api/orders";
@@ -48,21 +48,6 @@ function toCardProduct(p) {
     condition: p.condition || null,
     image: resolveProductImageUrl(p.images?.[0]?.url) || null,
   };
-}
-
-function StarRow({ rating, size = 14 }) {
-  return (
-    <span className="flex gap-0.5" aria-label={`${rating} out of 5 stars`}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <Star
-          key={n}
-          className={n <= Math.round(rating) ? "text-amber-400" : "text-neutral-300 dark:text-neutral-700"}
-          fill={n <= Math.round(rating) ? "currentColor" : "none"}
-          style={{ width: size, height: size }}
-        />
-      ))}
-    </span>
-  );
 }
 
 /** Collapsible filter group — shared shell for Category/Brand/Condition/spec facets. */
@@ -309,66 +294,6 @@ export default function Products() {
           ))}
         </FilterGroup>
       )}
-
-      <FilterGroup title="Price" open={openSections.price} onToggle={() => toggleSection("price")}>
-        <div className="flex items-center justify-between text-sm font-medium text-neutral-900 dark:text-white">
-          <span>£{price[0].toLocaleString()}</span>
-          <span>£{price[1].toLocaleString()}</span>
-        </div>
-        <div className="relative h-6">
-          <div className="absolute top-1/2 h-1 w-full -translate-y-1/2 rounded-full bg-neutral-200 dark:bg-neutral-700" />
-          <div
-            className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-gold-400"
-            style={{ left: `${(price[0] / MAX_PRICE) * 100}%`, width: `${((price[1] - price[0]) / MAX_PRICE) * 100}%` }}
-          />
-          <input
-            type="range"
-            min={0}
-            max={MAX_PRICE}
-            step={10}
-            value={price[0]}
-            onChange={(e) => setPrice([Math.min(+e.target.value, price[1] - 10), price[1]])}
-            aria-label="Minimum price"
-            className="vp-range absolute inset-x-0 top-0 h-6 w-full appearance-none bg-transparent"
-          />
-          <input
-            type="range"
-            min={0}
-            max={MAX_PRICE}
-            step={10}
-            value={price[1]}
-            onChange={(e) => setPrice([price[0], Math.max(+e.target.value, price[0] + 10)])}
-            aria-label="Maximum price"
-            className="vp-range absolute inset-x-0 top-0 h-6 w-full appearance-none bg-transparent"
-          />
-        </div>
-      </FilterGroup>
-
-      <FilterGroup title="Rating" open={openSections.rating} onToggle={() => toggleSection("rating")}>
-        {[4.5, 4, 3, 0].map((r) => (
-          <button
-            key={r}
-            onClick={() => setMinRating(r)}
-            className="flex items-center gap-2.5 text-left"
-          >
-            <span
-              className={`grid size-4 shrink-0 place-items-center rounded-full border ${
-                minRating === r ? "border-gold-400 bg-gold-400" : "border-neutral-300 dark:border-neutral-600"
-              }`}
-            >
-              {minRating === r && <span className="size-1.5 rounded-full bg-white" />}
-            </span>
-            {r > 0 ? (
-              <span className="flex items-center gap-1.5">
-                <StarRow rating={r} size={13} />
-                <span className="text-sm text-neutral-500 dark:text-neutral-400">& up</span>
-              </span>
-            ) : (
-              <span className="text-sm text-neutral-500 dark:text-neutral-400">Any rating</span>
-            )}
-          </button>
-        ))}
-      </FilterGroup>
 
       {specFacets.map((facet) => (
         <FilterGroup key={facet.label} title={facet.label} open={!!openSpecSections[facet.label]} onToggle={() => toggleSpecSection(facet.label)}>
