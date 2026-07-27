@@ -94,6 +94,7 @@ import { cn } from "../../lib/utils";
 import { useAuth } from "../../context/AuthContext";
 import { adminApi } from "../../api/admin";
 import { dropshipOrderRequestsApi } from "../../api/dropshipOrderRequests";
+import { wholesaleOrderRequestsApi } from "../../api/wholesaleOrderRequests";
 import { productsApi, uploadsApi } from "../../api/products";
 import { resolveMediaUrl } from "../../lib/api";
 import { categoriesApi, brandsApi, promotionsApi, settingsApi, homepageApi, permissionsApi } from "../../api/catalog";
@@ -126,6 +127,7 @@ const NAV_GROUPS = [
       { id: "suggestions", label: "Suggestions", icon: MessageSquarePlus },
       { id: "partnerApplications", label: "Partner Applications", icon: Truck },
       { id: "dropshipOrders", label: "Dropship Orders", icon: ShoppingCart },
+      { id: "wholesaleOrders", label: "Wholesale Orders", icon: ShoppingCart },
       { id: "fulfillmentRequests", label: "Fulfillment Requests", icon: PackageX },
       { id: "warehouse", label: "Warehouse Stock", icon: Warehouse },
       { id: "homepage", label: "Homepage CMS", icon: Layout },
@@ -241,6 +243,7 @@ export default function AdminDashboard() {
               {activeTab === "suggestions" && <SuggestionsSection />}
               {activeTab === "partnerApplications" && <PartnerApplicationsSection />}
               {activeTab === "dropshipOrders" && <DropshipOrdersSection />}
+              {activeTab === "wholesaleOrders" && <WholesaleOrdersSection />}
               {activeTab === "fulfillmentRequests" && <FulfillmentRequestsSection />}
               {activeTab === "warehouse" && <WarehouseStockSection />}
               {activeTab === "homepage" && <HomepageCmsSection />}
@@ -518,6 +521,16 @@ function UsersSection() {
                         }
                       >
                         {u.role === "dropshipper" ? "Remove dropshipper access" : "Approve as dropshipper"}
+                      </Dropdown.Item>
+                    )}
+                    {(u.role === "customer" || u.role === "wholesaler") && (
+                      <Dropdown.Item
+                        icon={Store}
+                        onClick={() =>
+                          roleMutation.mutate({ id: u.id, role: u.role === "wholesaler" ? "customer" : "wholesaler" })
+                        }
+                      >
+                        {u.role === "wholesaler" ? "Remove wholesaler access" : "Approve as wholesaler"}
                       </Dropdown.Item>
                     )}
                     <Dropdown.Separator />
@@ -840,7 +853,7 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
     setEditing(null);
     setForm({
       name: "", description: "", categoryId: categories[0]?.id, brandId: brands[0]?.id, storeId: stores[0]?.id,
-      price: "", dropshipPrice: "", stock: 0, status: "draft", images: [],
+      price: "", dropshipPrice: "", wholesalePrice: "", stock: 0, status: "draft", images: [],
       sku: "", barcode: "", condition: "",
       isFeatured: false, isTrending: false, isBestSeller: false, isNew: false, badge: "",
       animationOverride: null,
@@ -858,7 +871,7 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
       const full = await productsApi.getByIdForManage(p.id);
       setEditing(full);
       setForm({
-        name: full.name, description: full.description || "", price: full.price, dropshipPrice: full.dropshipPrice ?? "", stock: full.stock, status: full.status, categoryId: full.categoryId, brandId: full.brandId,
+        name: full.name, description: full.description || "", price: full.price, dropshipPrice: full.dropshipPrice ?? "", wholesalePrice: full.wholesalePrice ?? "", stock: full.stock, status: full.status, categoryId: full.categoryId, brandId: full.brandId,
         images: full.images?.map((i) => resolveMediaUrl(i.url)) || [],
         sku: full.sku || "", barcode: full.barcode || "", condition: full.condition || "",
         isFeatured: !!full.isFeatured, isTrending: !!full.isTrending, isBestSeller: !!full.isBestSeller, isNew: !!full.isNew,
@@ -921,17 +934,18 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
     };
     const variantsPayload = buildOptionsAndVariantsPayload(form);
     const dropshipPrice = form.dropshipPrice !== "" && form.dropshipPrice != null ? Number(form.dropshipPrice) : null;
+    const wholesalePrice = form.wholesalePrice !== "" && form.wholesalePrice != null ? Number(form.wholesalePrice) : null;
     if (editing) {
       updateMutation.mutate({
         id: editing.id,
         payload: {
-          name: form.name, description: form.description, price: Number(form.price), dropshipPrice, stock: Number(form.stock), status: form.status, images: form.images,
+          name: form.name, description: form.description, price: Number(form.price), dropshipPrice, wholesalePrice, stock: Number(form.stock), status: form.status, images: form.images,
           ...merchandising, ...catalog, ...identifiers, ...variantsPayload,
         },
       });
     } else {
       const { sku, barcode, colorOptions, storageOptions, variants, ...formRest } = form;
-      createMutation.mutate({ ...formRest, ...merchandising, ...catalog, ...identifiers, ...variantsPayload, price: Number(form.price), dropshipPrice, stock: Number(form.stock) });
+      createMutation.mutate({ ...formRest, ...merchandising, ...catalog, ...identifiers, ...variantsPayload, price: Number(form.price), dropshipPrice, wholesalePrice, stock: Number(form.stock) });
     }
   };
 
@@ -1095,15 +1109,26 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
             <Input label="Price" type="number" leftIcon={PoundSterling} value={form.price ?? ""} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} />
             <Input label="Stock quantity" type="number" value={form.stock ?? ""} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))} />
           </div>
-          <Input
-            label="Dropship price (optional)"
-            type="number"
-            leftIcon={PoundSterling}
-            placeholder="Same as price if left blank"
-            helperText="What an approved dropshipper pays — never shown to regular customers."
-            value={form.dropshipPrice ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, dropshipPrice: e.target.value }))}
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Dropship price (optional)"
+              type="number"
+              leftIcon={PoundSterling}
+              placeholder="Same as price if left blank"
+              helperText="What an approved dropshipper pays — never shown to regular customers."
+              value={form.dropshipPrice ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, dropshipPrice: e.target.value }))}
+            />
+            <Input
+              label="Wholesale price (optional)"
+              type="number"
+              leftIcon={PoundSterling}
+              placeholder="Same as price if left blank"
+              helperText="What an approved wholesaler pays — never shown to regular customers."
+              value={form.wholesalePrice ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, wholesalePrice: e.target.value }))}
+            />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="SKU"
@@ -2117,6 +2142,119 @@ function DropshipOrdersSection() {
                   <p className="text-xs text-[var(--text-muted)]">
                     {r.addressLine1}, {r.city}, {r.country} {r.postalCode}
                   </p>
+                  {r.specialInstructions && <p className="mt-1 text-xs italic text-[var(--text-muted)]">{r.specialInstructions}</p>}
+                </Td>
+                <Td>{r.quantity}</Td>
+                <Td>£{(Number(r.unitPrice) * r.quantity).toFixed(2)}</Td>
+                <Td>
+                  <Badge
+                    variant={r.status === "new" ? "warning" : r.status === "fulfilled" ? "success" : r.status === "cancelled" ? "error" : "neutral"}
+                  >
+                    {DROPSHIP_ORDER_STATUS_LABELS[r.status] || r.status}
+                  </Badge>
+                </Td>
+                <Td className="text-[var(--text-muted)]">{new Date(r.createdAt).toLocaleDateString()}</Td>
+                <Td className="text-right">
+                  <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
+                    {r.status !== "processing" && (
+                      <Dropdown.Item icon={Package} onClick={() => setStatusMutation.mutate({ id: r.id, status: "processing" })}>
+                        Mark processing
+                      </Dropdown.Item>
+                    )}
+                    {r.status !== "fulfilled" && (
+                      <Dropdown.Item icon={CheckCircle2} onClick={() => setStatusMutation.mutate({ id: r.id, status: "fulfilled" })}>
+                        Mark fulfilled
+                      </Dropdown.Item>
+                    )}
+                    {r.status !== "cancelled" && (
+                      <Dropdown.Item icon={Ban} destructive onClick={() => setStatusMutation.mutate({ id: r.id, status: "cancelled" })}>
+                        Cancel
+                      </Dropdown.Item>
+                    )}
+                  </Dropdown>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </TableShell>
+      )}
+
+      <div className="mt-6">
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      </div>
+    </div>
+  );
+}
+
+/* — Wholesale Order Requests — */
+
+function WholesaleOrdersSection() {
+  const [statusFilter, setStatusFilter] = useState("new");
+  const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-wholesale-orders", { statusFilter, page }],
+    queryFn: () => wholesaleOrderRequestsApi.list({ status: statusFilter, page, limit: PAGE_SIZE }),
+  });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-wholesale-orders"] });
+  const setStatusMutation = useMutation({
+    mutationFn: ({ id, status }) => wholesaleOrderRequestsApi.setStatus(id, status),
+    onSuccess: invalidate,
+  });
+
+  const requests = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+
+  return (
+    <div>
+      <SectionTitle
+        eyebrow="Manage"
+        title="Wholesale Orders"
+        description="Bulk order requests submitted by approved wholesalers — place and invoice the real order outside the platform, then update its status here."
+      />
+
+      <Toolbar search="" onSearch={() => {}}>
+        {["new", "processing", "fulfilled", "cancelled", "all"].map((s) => (
+          <Chip key={s} selected={statusFilter === s} onClick={() => { setStatusFilter(s); setPage(1); }}>
+            {s === "all" ? "All" : DROPSHIP_ORDER_STATUS_LABELS[s]}
+          </Chip>
+        ))}
+      </Toolbar>
+
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading order requests…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : requests.length === 0 ? (
+        <EmptyState icon={ShoppingCart} title="No order requests here" description="Nothing in this filter yet." />
+      ) : (
+        <TableShell>
+          <thead>
+            <tr>
+              <Th>Product</Th>
+              <Th>Wholesaler</Th>
+              <Th>Delivery to</Th>
+              <Th>Qty</Th>
+              <Th>Total</Th>
+              <Th>Status</Th>
+              <Th>Submitted</Th>
+              <Th className="text-right">Actions</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {requests.map((r) => (
+              <tr key={r.id}>
+                <Td className="font-medium">{r.product?.name}</Td>
+                <Td>
+                  <p>{r.wholesaler?.name}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{r.wholesaler?.email}</p>
+                </Td>
+                <Td>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {r.addressLine1}, {r.city}, {r.country} {r.postalCode}
+                  </p>
+                  {r.purchaseOrderReference && <p className="text-xs text-[var(--text-muted)]">PO: {r.purchaseOrderReference}</p>}
                   {r.specialInstructions && <p className="mt-1 text-xs italic text-[var(--text-muted)]">{r.specialInstructions}</p>}
                 </Td>
                 <Td>{r.quantity}</Td>

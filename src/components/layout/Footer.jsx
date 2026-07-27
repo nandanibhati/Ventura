@@ -78,7 +78,7 @@ const LINK_COLUMNS = [
 // Trustpilot need the store's real review-page URLs filled in once available (never fabricate
 // a business's external profile links).
 const EXPLORE_LINKS = [
-  { label: "Apply For Wholesale", icon: TrendingUp, subject: "Wholesale Application" },
+  { label: "Apply For Wholesale", icon: TrendingUp, href: "/wholesale" },
   { label: "Apply for Dropshipping", icon: Handshake, href: "/dropshipping" },
   { label: "Register as an Affiliate / Influencer", icon: ThumbsUp, subject: "Affiliate / Influencer Enquiry" },
   { label: "Report an Issue", icon: Flag, subject: "Issue Report" },

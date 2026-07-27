@@ -8,6 +8,7 @@ import { productsApi } from "../../api/products";
 import { categoriesApi, brandsApi } from "../../api/catalog";
 import { uploadsApi } from "../../api/products";
 import { dropshipOrderRequestsApi } from "../../api/dropshipOrderRequests";
+import { wholesaleOrderRequestsApi } from "../../api/wholesaleOrderRequests";
 import { resolveMediaUrl } from "../../lib/api";
 import { useToast } from "../../components/ui/Feedback";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
@@ -106,6 +107,11 @@ const NAV_ITEMS = [
 // (which all assume "my store's orders/inventory/customers") don't apply — Catalogue and Orders
 // here are dropshipper-specific views instead.
 const DROPSHIPPER_NAV_ITEMS = [
+  { id: "catalogue", label: "Catalogue", icon: Package },
+  { id: "orders", label: "My Orders", icon: ShoppingCart },
+];
+
+const WHOLESALER_NAV_ITEMS = [
   { id: "catalogue", label: "Catalogue", icon: Package },
   { id: "orders", label: "My Orders", icon: ShoppingCart },
 ];
@@ -1400,6 +1406,244 @@ function DropshipOrdersTab() {
   );
 }
 
+const EMPTY_WHOLESALE_ORDER_FORM = {
+  quantity: 1,
+  addressLine1: "",
+  addressLine2: "",
+  city: "",
+  country: "",
+  postalCode: "",
+  purchaseOrderReference: "",
+  specialInstructions: "",
+};
+
+/** Browse-only catalogue for an approved wholesaler — same shape as the dropship catalogue, at
+ * wholesale pricing. "Request Order" is a bulk purchase for the wholesaler's own resale, shipped
+ * to their own business address (unlike dropship, there's no end customer here) — admin places
+ * and invoices the real order manually. */
+function WholesaleCatalogueTab() {
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [orderProduct, setOrderProduct] = useState(null);
+  const [orderForm, setOrderForm] = useState(EMPTY_WHOLESALE_ORDER_FORM);
+  const { toast } = useToast();
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["wholesale-catalogue", { search, page }],
+    queryFn: () => productsApi.listWholesaleCatalogue({ search: search || undefined, page, limit: PAGE_SIZE }),
+  });
+
+  const submitOrderMutation = useMutation({
+    mutationFn: (payload) => wholesaleOrderRequestsApi.create(payload),
+    onSuccess: () => {
+      toast({ title: "Order request sent to Veluntra", variant: "success" });
+      setOrderProduct(null);
+      setOrderForm(EMPTY_WHOLESALE_ORDER_FORM);
+    },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't submit order request", variant: "error" }),
+  });
+
+  const products = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+  const setOrderField = (field) => (e) => setOrderForm((f) => ({ ...f, [field]: e.target.value }));
+
+  const submitOrder = () => {
+    submitOrderMutation.mutate({
+      productId: orderProduct.id,
+      quantity: Number(orderForm.quantity) || 1,
+      addressLine1: orderForm.addressLine1,
+      addressLine2: orderForm.addressLine2 || undefined,
+      city: orderForm.city,
+      country: orderForm.country,
+      postalCode: orderForm.postalCode,
+      purchaseOrderReference: orderForm.purchaseOrderReference || undefined,
+      specialInstructions: orderForm.specialInstructions || undefined,
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-black/5 bg-white dark:border-white/10 dark:bg-neutral-900">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-black/5 p-5 dark:border-white/10">
+          <div>
+            <h3 className="text-base font-bold text-neutral-900 dark:text-white">Wholesale Catalogue</h3>
+            <p className="text-xs text-neutral-400">{data?.meta?.total ?? 0} products available</p>
+          </div>
+          <input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Search products…"
+            className="rounded-full border border-black/10 bg-transparent px-4 py-2 text-xs dark:border-white/15 dark:text-white"
+          />
+        </div>
+        {isLoading ? (
+          <div className="p-10 text-center text-sm text-neutral-400">Loading catalogue…</div>
+        ) : isError ? (
+          <div className="p-6"><ErrorNotice onRetry={refetch} /></div>
+        ) : products.length === 0 ? (
+          <EmptyState icon={Package} title="No products found" description="Try a different search." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-black/5 text-xs uppercase tracking-wider text-neutral-400 dark:border-white/10">
+                  <th className="px-5 py-3 font-medium">Product</th>
+                  <th className="px-5 py-3 font-medium">Category</th>
+                  <th className="px-5 py-3 font-medium">Your Price</th>
+                  <th className="px-5 py-3 font-medium">Suggested Selling Price</th>
+                  <th className="px-5 py-3 font-medium">Est. Profit</th>
+                  <th className="px-5 py-3 font-medium">Stock</th>
+                  <th className="px-5 py-3 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map((product) => {
+                  const yourPrice = Number(product.wholesalePrice);
+                  const suggestedPrice = Number(product.price);
+                  const profit = suggestedPrice - yourPrice;
+                  return (
+                    <tr key={product.id} className="border-b border-black/5 last:border-b-0 dark:border-white/10">
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-950">
+                            {product.images?.[0]?.url ? (
+                              <img src={resolveMediaUrl(product.images[0].url)} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <Package className="h-4 w-4 text-white/60" />
+                            )}
+                          </div>
+                          <span className="font-medium text-neutral-900 dark:text-white">{product.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{product.category?.name}</td>
+                      <td className="px-5 py-4 font-semibold text-neutral-900 dark:text-white">£{yourPrice.toFixed(2)}</td>
+                      <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">£{suggestedPrice.toFixed(2)}</td>
+                      <td className={`px-5 py-4 font-medium ${profit > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-400"}`}>
+                        {profit > 0 ? `£${profit.toFixed(2)}` : "—"}
+                      </td>
+                      <td className="px-5 py-4">
+                        <StockMeter stock={product.stock} />
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <OutlineButton
+                          size="sm"
+                          disabled={product.stock === 0}
+                          onClick={() => { setOrderProduct(product); setOrderForm(EMPTY_WHOLESALE_ORDER_FORM); }}
+                        >
+                          Request Order
+                        </OutlineButton>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+
+      <Modal
+        open={Boolean(orderProduct)}
+        onClose={() => setOrderProduct(null)}
+        title={`Request order — ${orderProduct?.name || ""}`}
+        footer={
+          <>
+            <SecondaryButton onClick={() => setOrderProduct(null)}>Cancel</SecondaryButton>
+            <PrimaryButton onClick={submitOrder} loading={submitOrderMutation.isPending}>Submit Request</PrimaryButton>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            This sends a bulk order request to Veluntra to fulfil manually — it doesn't take payment. You'll be invoiced
+            at your wholesale price (£{Number(orderProduct?.wholesalePrice ?? 0).toFixed(2)} each) separately.
+          </p>
+          <Input label="Quantity" type="number" min="1" value={orderForm.quantity} onChange={setOrderField("quantity")} />
+          <Input label="Delivery address line 1" value={orderForm.addressLine1} onChange={setOrderField("addressLine1")} />
+          <Input label="Delivery address line 2 (optional)" value={orderForm.addressLine2} onChange={setOrderField("addressLine2")} />
+          <div className="grid grid-cols-3 gap-3">
+            <Input label="City" value={orderForm.city} onChange={setOrderField("city")} />
+            <Input label="Country" value={orderForm.country} onChange={setOrderField("country")} />
+            <Input label="Postal code" value={orderForm.postalCode} onChange={setOrderField("postalCode")} />
+          </div>
+          <Input label="Your PO reference (optional)" value={orderForm.purchaseOrderReference} onChange={setOrderField("purchaseOrderReference")} />
+          <Textarea
+            label="Special instructions (optional)"
+            value={orderForm.specialInstructions}
+            onChange={setOrderField("specialInstructions")}
+          />
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/** Read-only history of what this wholesaler has submitted — status is set by admin as the
+ * manual order actually gets placed/shipped, not editable here. */
+function WholesaleOrdersTab() {
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["my-wholesale-orders", page],
+    queryFn: () => wholesaleOrderRequestsApi.list({ page, limit: PAGE_SIZE }),
+  });
+
+  const requests = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-black/5 bg-white dark:border-white/10 dark:bg-neutral-900">
+        <div className="border-b border-black/5 p-5 dark:border-white/10">
+          <h3 className="text-base font-bold text-neutral-900 dark:text-white">My Order Requests</h3>
+          <p className="text-xs text-neutral-400">{data?.meta?.total ?? 0} submitted</p>
+        </div>
+        {isLoading ? (
+          <div className="p-10 text-center text-sm text-neutral-400">Loading…</div>
+        ) : isError ? (
+          <div className="p-6"><ErrorNotice onRetry={refetch} /></div>
+        ) : requests.length === 0 ? (
+          <EmptyState icon={ShoppingCart} title="No order requests yet" description="Request an order from the Catalogue tab." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-black/5 text-xs uppercase tracking-wider text-neutral-400 dark:border-white/10">
+                  <th className="px-5 py-3 font-medium">Product</th>
+                  <th className="px-5 py-3 font-medium">Delivery to</th>
+                  <th className="px-5 py-3 font-medium">Qty</th>
+                  <th className="px-5 py-3 font-medium">Total</th>
+                  <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium">Submitted</th>
+                </tr>
+              </thead>
+              <tbody>
+                {requests.map((r) => (
+                  <tr key={r.id} className="border-b border-black/5 last:border-b-0 dark:border-white/10">
+                    <td className="px-5 py-4 font-medium text-neutral-900 dark:text-white">{r.product?.name}</td>
+                    <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{r.city}, {r.country}</td>
+                    <td className="px-5 py-4">{r.quantity}</td>
+                    <td className="px-5 py-4">£{(Number(r.unitPrice) * r.quantity).toFixed(2)}</td>
+                    <td className="px-5 py-4">
+                      <Badge
+                        variant={r.status === "new" ? "warning" : r.status === "fulfilled" ? "success" : r.status === "cancelled" ? "error" : "neutral"}
+                      >
+                        {DROPSHIP_ORDER_STATUS_LABELS[r.status] || r.status}
+                      </Badge>
+                    </td>
+                    <td className="px-5 py-4 text-neutral-400">{new Date(r.createdAt).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+    </div>
+  );
+}
+
 function InventoryTab() {
   const [page, setPage] = useState(1);
   const [historyProduct, setHistoryProduct] = useState(null);
@@ -1771,10 +2015,11 @@ function Topbar({ title, onMenuClick, isDark, onToggleDark, accountLabel = "Velu
 function SellerDashboard() {
   const { user } = useAuth();
   const isDropshipper = user?.role === "dropshipper";
-  const portalLabel = isDropshipper ? "Dropshipper Dashboard" : "Seller Dashboard";
-  const navItems = isDropshipper ? DROPSHIPPER_NAV_ITEMS : NAV_ITEMS;
+  const isWholesaler = user?.role === "wholesaler";
+  const portalLabel = isDropshipper ? "Dropshipper Dashboard" : isWholesaler ? "Wholesaler Dashboard" : "Seller Dashboard";
+  const navItems = isDropshipper ? DROPSHIPPER_NAV_ITEMS : isWholesaler ? WHOLESALER_NAV_ITEMS : NAV_ITEMS;
   useDocumentTitle(portalLabel);
-  const [activeTab, setActiveTab] = useState(isDropshipper ? "catalogue" : "overview");
+  const [activeTab, setActiveTab] = useState(isDropshipper || isWholesaler ? "catalogue" : "overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [range, setRange] = useState("month");
   const [isDark, setIsDark] = useState(() => {                   
@@ -1810,14 +2055,19 @@ function SellerDashboard() {
           onMenuClick={() => setSidebarOpen(true)}
           isDark={isDark}
           onToggleDark={() => setIsDark((d) => !d)}
-          accountLabel={isDropshipper ? "Veluntra Dropshipper" : "Veluntra Seller"}
-          accountInitials={isDropshipper ? "VD" : "VS"}
+          accountLabel={isDropshipper ? "Veluntra Dropshipper" : isWholesaler ? "Veluntra Wholesaler" : "Veluntra Seller"}
+          accountInitials={isDropshipper ? "VD" : isWholesaler ? "VW" : "VS"}
         />
         <main className="flex-1 p-4 sm:p-6">
           {isDropshipper ? (
             <>
               {activeTab === "catalogue" && <DropshipCatalogueTab />}
               {activeTab === "orders" && <DropshipOrdersTab />}
+            </>
+          ) : isWholesaler ? (
+            <>
+              {activeTab === "catalogue" && <WholesaleCatalogueTab />}
+              {activeTab === "orders" && <WholesaleOrdersTab />}
             </>
           ) : (
             <>

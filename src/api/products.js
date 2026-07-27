@@ -9,6 +9,9 @@ export const productsApi = {
   /** Whole-catalogue browse at dropship pricing — approved dropshipper/admin only. */
   listDropshipCatalogue: (params) =>
     api.get("/products/dropship-catalogue", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
+  /** Whole-catalogue browse at wholesale pricing — approved wholesaler/admin only. */
+  listWholesaleCatalogue: (params) =>
+    api.get("/products/wholesale-catalogue", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
   create: (payload) => api.post("/products", payload).then(unwrap),
   update: (id, payload) => api.patch(`/products/${id}`, payload).then(unwrap),
   remove: (id) => api.delete(`/products/${id}`).then(unwrap),
