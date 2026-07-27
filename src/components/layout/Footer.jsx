@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { TrendingUp, Handshake, ThumbsUp, Flag, Star, ShieldCheck } from "lucide-react";
 import { settingsApi } from "../../api/catalog";
 
 /* Dense, marketplace-style footer (Flipkart/Argos-inspired) — matches the rest of the
@@ -71,6 +72,19 @@ const LINK_COLUMNS = [
   },
 ];
 
+// Business-development / trust links — mailto (with a distinct subject per link, so incoming
+// applications land in the inbox pre-sorted) until dedicated application pages exist. Google/
+// Trustpilot need the store's real review-page URLs filled in once available (never fabricate
+// a business's external profile links).
+const EXPLORE_LINKS = [
+  { label: "Apply For Wholesale", icon: TrendingUp, subject: "Wholesale Application" },
+  { label: "Apply for Dropshipping", icon: Handshake, subject: "Dropshipping Application" },
+  { label: "Register as an Affiliate / Influencer", icon: ThumbsUp, subject: "Affiliate / Influencer Enquiry" },
+  { label: "Report an Issue", icon: Flag, subject: "Issue Report" },
+  { label: "Review Us on Google", icon: Star, href: null },
+  { label: "Review Us on Trustpilot", icon: ShieldCheck, href: null },
+];
+
 const payments = ["Visa", "Mastercard", "Amex", "PayPal", "Apple Pay", "G Pay"];
 
 export default function Footer() {
@@ -84,7 +98,7 @@ export default function Footer() {
   return (
     <footer className="bg-neutral-950 text-neutral-300" aria-label="Site footer">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-[1.2fr_repeat(3,1fr)_1.2fr]">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-[1.1fr_repeat(4,1fr)_1.1fr]">
           {/* Brand */}
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">
             <span className="text-lg font-bold uppercase tracking-wide text-white">{storeName}</span>
@@ -124,6 +138,28 @@ export default function Footer() {
               </ul>
             </nav>
           ))}
+
+          <nav aria-label="Explore">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-white">Explore</h3>
+            <ul className="mt-3 flex flex-col gap-2.5">
+              {EXPLORE_LINKS.map((link) => {
+                const href =
+                  link.href !== undefined
+                    ? link.href || "#"
+                    : storeSettings?.contactEmail
+                    ? `mailto:${storeSettings.contactEmail}?subject=${encodeURIComponent(link.subject)}`
+                    : "#";
+                return (
+                  <li key={link.label}>
+                    <a href={href} className="flex items-center gap-2 text-sm text-neutral-400 transition-colors hover:text-white">
+                      <link.icon className="size-3.5 shrink-0" strokeWidth={1.75} />
+                      {link.label}
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
 
           {/* Contact */}
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">
