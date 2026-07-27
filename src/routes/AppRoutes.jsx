@@ -23,6 +23,7 @@ const Checkout = lazy(() => import("../pages/Checkout/Checkout"));
 const ReturnPolicy = lazy(() => import("../pages/Policies/ReturnPolicy"));
 const Dropshipping = lazy(() => import("../pages/Dropshipping/Dropshipping"));
 const Wholesale = lazy(() => import("../pages/Wholesale/Wholesale"));
+const Affiliate = lazy(() => import("../pages/Affiliate/Affiliate"));
 
 // React Router doesn't reset scroll position on navigation — without this, clicking a link while
 // scrolled down on one page lands you at the same scroll offset on the next page (often showing
@@ -58,6 +59,7 @@ function AppRoutes() {
             <Route path="/returns" element={<ReturnPolicy />} />
             <Route path="/dropshipping" element={<Dropshipping />} />
             <Route path="/wholesale" element={<Wholesale />} />
+            <Route path="/affiliate" element={<Affiliate />} />
             <Route
               path="/account"
               element={

@@ -80,7 +80,7 @@ const LINK_COLUMNS = [
 const EXPLORE_LINKS = [
   { label: "Apply For Wholesale", icon: TrendingUp, href: "/wholesale" },
   { label: "Apply for Dropshipping", icon: Handshake, href: "/dropshipping" },
-  { label: "Register as an Affiliate / Influencer", icon: ThumbsUp, subject: "Affiliate / Influencer Enquiry" },
+  { label: "Register as an Affiliate / Influencer", icon: ThumbsUp, href: "/affiliate" },
   { label: "Report an Issue", icon: Flag, subject: "Issue Report" },
   { label: "Review Us on Google", icon: Star, href: null },
   { label: "Review Us on Trustpilot", icon: ShieldCheck, href: null },
