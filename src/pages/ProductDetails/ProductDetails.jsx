@@ -24,6 +24,11 @@ import {
   Package,
   Sparkles,
   Flag,
+  ZoomIn,
+  Play,
+  X,
+  TrendingUp,
+  Award,
 } from "lucide-react";
 import { productsApi, reviewsApi } from "../../api/products";
 import { wishlistApi } from "../../api/orders";
@@ -59,12 +64,46 @@ function RatingStars({ rating, size = "h-3.5 w-3.5" }) {
   );
 }
 
-function ZoomGallery({ images, fallbackKey, activeIndex, onSelect }) {
-  const current = images[activeIndex] || {};
+// `media` is images followed by videos, in that fixed order — activeIndex always lands on an
+// image for indices < images.length, which is what the colour/storage variant-jump effect in
+// the parent relies on (it computes an index directly into product.images).
+function ZoomGallery({ images, videos = [], fallbackKey, activeIndex, onSelect }) {
+  const media = useMemo(
+    () => [...images.map((img) => ({ ...img, type: "image" })), ...videos.map((url) => ({ url, type: "video" }))],
+    [images, videos]
+  );
+  const current = media[activeIndex] || {};
+  const isZoomable = current.type !== "video" && Boolean(current.url);
+
+  const [zoomOrigin, setZoomOrigin] = useState("50% 50%");
+  const [isHovering, setIsHovering] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const frameRef = useRef(null);
+
+  useEffect(() => {
+    setLightboxOpen(false);
+  }, [activeIndex]);
+
+  const handleMouseMove = (e) => {
+    const rect = frameRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setZoomOrigin(`${Math.max(0, Math.min(100, x))}% ${Math.max(0, Math.min(100, y))}%`);
+  };
 
   return (
     <div>
-      <div className="relative aspect-square overflow-hidden rounded-3xl border border-black/5 bg-neutral-50 dark:border-white/10 dark:bg-neutral-900">
+      <div
+        ref={frameRef}
+        onMouseMove={isZoomable ? handleMouseMove : undefined}
+        onMouseEnter={isZoomable ? () => setIsHovering(true) : undefined}
+        onMouseLeave={isZoomable ? () => setIsHovering(false) : undefined}
+        onClick={isZoomable ? () => setLightboxOpen(true) : undefined}
+        className={`group relative aspect-square overflow-hidden rounded-3xl border border-black/5 bg-neutral-50 dark:border-white/10 dark:bg-neutral-900 ${
+          isZoomable ? "cursor-zoom-in" : ""
+        }`}
+      >
         <AnimatePresence mode="wait">
           <motion.div
             key={activeIndex}
@@ -76,26 +115,46 @@ function ZoomGallery({ images, fallbackKey, activeIndex, onSelect }) {
               current.url ? "" : `bg-gradient-to-br ${gradientFor(fallbackKey)}`
             }`}
           >
-            {current.url ? (
-              <img src={current.url} alt="" className="h-full w-full object-contain" />
+            {current.type === "video" && current.url ? (
+              <video src={current.url} className="h-full w-full object-contain" controls playsInline />
+            ) : current.url ? (
+              <img
+                src={current.url}
+                alt=""
+                className="h-full w-full object-contain transition-transform duration-200 ease-out"
+                style={isHovering ? { transform: "scale(2)", transformOrigin: zoomOrigin } : undefined}
+              />
             ) : (
               <Sparkles className="h-28 w-28 text-white/30 md:h-36 md:w-36" strokeWidth={0.75} />
             )}
           </motion.div>
         </AnimatePresence>
+        {isZoomable && (
+          <span className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
+            <ZoomIn className="h-3 w-3" /> Click to expand
+          </span>
+        )}
       </div>
-      {images.length > 1 && (
+
+      {media.length > 1 && (
         <div className="mt-4 flex gap-3">
-          {images.map((image, i) => (
+          {media.map((item, i) => (
             <button
               key={i}
               onClick={() => onSelect(i)}
-              className={`flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-neutral-50 transition-all dark:bg-neutral-900 ${
-                image.url ? "" : `bg-gradient-to-br ${gradientFor(fallbackKey)}`
+              className={`relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-neutral-50 transition-all dark:bg-neutral-900 ${
+                item.url ? "" : `bg-gradient-to-br ${gradientFor(fallbackKey)}`
               } ${i === activeIndex ? "ring-2 ring-neutral-900 ring-offset-2 dark:ring-white dark:ring-offset-neutral-950" : "opacity-60 hover:opacity-100"}`}
             >
-              {image.url ? (
-                <img src={image.url} alt="" className="h-full w-full object-contain" />
+              {item.type === "video" ? (
+                <>
+                  <video src={item.url} className="h-full w-full object-contain" />
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <Play className="h-6 w-6 fill-white text-white" />
+                  </span>
+                </>
+              ) : item.url ? (
+                <img src={item.url} alt="" className="h-full w-full object-contain" />
               ) : (
                 <Sparkles className="h-7 w-7 text-white/40" strokeWidth={1} />
               )}
@@ -103,6 +162,32 @@ function ZoomGallery({ images, fallbackKey, activeIndex, onSelect }) {
           ))}
         </div>
       )}
+
+      <AnimatePresence>
+        {lightboxOpen && isZoomable && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setLightboxOpen(false)}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-6"
+          >
+            <button
+              onClick={() => setLightboxOpen(false)}
+              aria-label="Close"
+              className="absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <img
+              src={current.url}
+              alt=""
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-full max-w-full cursor-default object-contain"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -563,8 +648,15 @@ function ProductDetails() {
   }
 
   const gallery = product.images?.length ? product.images.map((img) => ({ url: resolveProductImageUrl(img.url) })) : [{}];
+  const videos = (product.videos || []).map((url) => resolveMediaUrl(url)).filter(Boolean);
   const rating = Number(product.ratingAvg) || 0;
   const oldPrice = product.oldPrice ? Number(product.oldPrice) : null;
+  const badges = [
+    product.isBestSeller && { label: "Best Seller", icon: TrendingUp, className: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
+    product.isFeatured && { label: "Featured", icon: Award, className: "bg-violet-500/10 text-violet-600 dark:text-violet-400" },
+    product.isNew && { label: "New", icon: Sparkles, className: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
+    product.badge && { label: product.badge, icon: BadgeCheck, className: "bg-rose-500/10 text-rose-600 dark:text-rose-400" },
+  ].filter(Boolean);
 
   return (
     <div className="min-h-screen bg-white pb-24 dark:bg-neutral-950 lg:pb-0">
@@ -596,18 +688,45 @@ function ProductDetails() {
           <span className="text-neutral-600 dark:text-neutral-300">{product.name}</span>
         </div>
 
-        <div className="grid gap-12 lg:grid-cols-2">
-          <ZoomGallery images={gallery} fallbackKey={product.id} activeIndex={activeImage} onSelect={setActiveImage} />
+        <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
+          <ZoomGallery images={gallery} videos={videos} fallbackKey={product.id} activeIndex={activeImage} onSelect={setActiveImage} />
 
           <div ref={buyBoxRef} className="lg:sticky lg:top-24 lg:self-start">
-            <span className="text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-              {product.category?.name}
-            </span>
-            <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-neutral-900 dark:text-white md:text-3xl">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                {product.category?.name}
+              </span>
+              {product.brand?.slug && (
+                <>
+                  <span className="text-neutral-300 dark:text-neutral-700">·</span>
+                  <Link
+                    to={`/shop?category=${product.category?.slug || ""}&brand=${product.brand.slug}`}
+                    className="text-xs font-semibold uppercase tracking-wider text-neutral-600 hover:text-neutral-900 hover:underline dark:text-neutral-300 dark:hover:text-white"
+                  >
+                    {product.brand.name}
+                  </Link>
+                </>
+              )}
+            </div>
+
+            {badges.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {badges.map((b) => (
+                  <span
+                    key={b.label}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${b.className}`}
+                  >
+                    <b.icon className="h-3 w-3" /> {b.label}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <h1 className="mt-3 text-2xl font-bold tracking-tight text-neutral-900 dark:text-white md:text-3xl">
               {product.name}
             </h1>
 
-            <div className="mt-3 flex items-center gap-3">
+            <div className="mt-4 flex items-center gap-3">
               <RatingStars rating={rating} />
               <span className="text-sm text-neutral-500 dark:text-neutral-400">
                 {rating.toFixed(1)} ({product.ratingCount} reviews)
@@ -619,7 +738,7 @@ function ProductDetails() {
               )}
             </div>
 
-            <div className="mt-5 flex items-baseline gap-3">
+            <div className="mt-6 flex items-baseline gap-3">
               <span className="text-3xl font-bold text-neutral-900 dark:text-white">£{displayPrice.toFixed(2)}</span>
               {oldPrice && <span className="text-lg text-neutral-400 line-through">£{oldPrice.toFixed(2)}</span>}
               {oldPrice && (
@@ -630,7 +749,7 @@ function ProductDetails() {
             </div>
 
             {product.highlights?.length > 0 && (
-              <ul className="mt-5 space-y-1.5">
+              <ul className="mt-6 space-y-2">
                 {product.highlights.map((highlight) => (
                   <li key={highlight} className="flex items-start gap-2 text-sm text-neutral-500 dark:text-neutral-400">
                     <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" /> {highlight}
@@ -640,7 +759,7 @@ function ProductDetails() {
             )}
 
             {(colorOptions.length > 0 || sizeOptions.length > 0 || storageOptions.length > 0) && (
-              <div className="mt-7 space-y-6 border-t border-black/5 pt-6 dark:border-white/10">
+              <div className="mt-8 space-y-6 border-t border-black/5 pt-7 dark:border-white/10">
                 <ColorSelector
                   colors={colorOptions}
                   selected={selections.color}
@@ -659,9 +778,9 @@ function ProductDetails() {
               </div>
             )}
 
-            <p className={`mt-5 text-xs font-semibold ${stockStatus.tone}`}>{stockStatus.text}</p>
+            <p className={`mt-6 text-xs font-semibold ${stockStatus.tone}`}>{stockStatus.text}</p>
 
-            <div className="mt-3 flex flex-wrap items-center gap-3">
+            <div className="mt-4 flex flex-wrap items-center gap-3">
               <QuantityStepper
                 quantity={quantity}
                 onIncrease={() => setQuantity((q) => Math.min(maxQty || 9, q + 1))}
@@ -715,7 +834,7 @@ function ProductDetails() {
               <ShareMenu productName={product.name} />
             </div>
 
-            <div className="mt-7 grid grid-cols-2 gap-3 border-t border-black/5 pt-6 dark:border-white/10">
+            <div className="mt-8 grid grid-cols-2 gap-3 border-t border-black/5 pt-7 dark:border-white/10">
               <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
                 <Truck className="h-4 w-4 shrink-0 text-amber-500" /> Free shipping over £150
               </div>
