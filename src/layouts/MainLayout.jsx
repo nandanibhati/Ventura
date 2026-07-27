@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Outlet } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
@@ -19,6 +19,7 @@ import { resolveMediaUrl } from "../lib/api";
  * their own Admin/Seller dashboard UI. */
 function MainLayout() {
   const rootRef = useRef(null);
+  const [chatbotOpen, setChatbotOpen] = useState(false);
   const { data } = useQuery({
     queryKey: ["settings", "public"],
     queryFn: settingsApi.getPublic,
@@ -46,7 +47,7 @@ function MainLayout() {
   return (
     <div ref={rootRef} className="min-h-screen flex flex-col bg-white dark:bg-neutral-950">
 
-      <Navbar />
+      <Navbar onOpenChatbot={() => setChatbotOpen(true)} />
       <PerksStrip />
 
       <main className="flex-1">
@@ -57,7 +58,7 @@ function MainLayout() {
       <CookieConsentBanner />
       <PopupBanner />
       <SuggestionBox />
-      <ChatbotWidget />
+      <ChatbotWidget open={chatbotOpen} onOpenChange={setChatbotOpen} />
 
     </div>
   );

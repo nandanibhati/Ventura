@@ -23,6 +23,7 @@ import {
   Truck,
   RotateCcw,
   HelpCircle,
+  Bot,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
@@ -133,7 +134,7 @@ function UtilityDropdown({ icon: Icon, options, selected, onSelect, isOpen, onTo
   );
 }
 
-function Navbar() {
+function Navbar({ onOpenChatbot }) {
   const [scrolled, setScrolled] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
   const [query, setQuery] = useState("");
@@ -278,6 +279,13 @@ function Navbar() {
             <Link to="/orders" className="flex items-center gap-1.5 hover:text-neutral-900 dark:hover:text-white">
               <Truck className="h-3.5 w-3.5" /> Track Order
             </Link>
+            <button
+              type="button"
+              onClick={onOpenChatbot}
+              className="flex items-center gap-1.5 hover:text-neutral-900 dark:hover:text-white"
+            >
+              <Bot className="h-3.5 w-3.5" /> Veluntra Assistant
+            </button>
             <Link to="/orders" className="flex items-center gap-1.5 hover:text-neutral-900 dark:hover:text-white">
               <RotateCcw className="h-3.5 w-3.5" /> Returns
             </Link>

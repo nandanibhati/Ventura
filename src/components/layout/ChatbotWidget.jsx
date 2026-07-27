@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Bot, ArrowLeft, Truck, RotateCcw, PackageSearch, Phone, Send } from "lucide-react";
+import { ArrowLeft, Truck, RotateCcw, PackageSearch, Phone, Send } from "lucide-react";
 import Modal from "../ui/Overlay/Modal";
 import { Input } from "../ui/Input";
 import { PrimaryButton, OutlineButton } from "../ui/Button";
 import { settingsApi } from "../../api/catalog";
 import { ordersApi } from "../../api/orders";
-import { useDraggableFab } from "../../lib/useDraggableFab";
 
 const TOPICS = [
   { id: "shipping", label: "Shipping & delivery", icon: Truck },
@@ -17,13 +16,14 @@ const TOPICS = [
 
 /** Rule-based FAQ assistant — no AI/LLM involved, so it's free to run and answers only what's
  * covered below. Branded as "Veluntra Assistant"; answers are pulled live from Settings/order
- * data rather than hardcoded, so they never go stale as the admin changes policy. */
-export default function ChatbotWidget() {
-  const [open, setOpen] = useState(false);
+ * data rather than hardcoded, so they never go stale as the admin changes policy.
+ *
+ * `open`/`onOpenChange` are controlled from MainLayout — opened via the header's "Veluntra
+ * Assistant" link (beside Track Order). */
+export default function ChatbotWidget({ open, onOpenChange }) {
   const [view, setView] = useState("menu"); // "menu" | "shipping" | "returns" | "contact" | "track"
   const [trackForm, setTrackForm] = useState({ orderNumber: "", email: "" });
   const [trackError, setTrackError] = useState("");
-  const { ref: fabRef, style: fabStyle, dragHandlers, handleClick } = useDraggableFab("veluntra.chatbotFabPos", "left");
 
   const { data: settings } = useQuery({ queryKey: ["settings", "public"], queryFn: settingsApi.getPublic, staleTime: 5 * 60 * 1000 });
 
@@ -33,7 +33,7 @@ export default function ChatbotWidget() {
   });
 
   const close = () => {
-    setOpen(false);
+    onOpenChange(false);
     setTimeout(() => {
       setView("menu");
       setTrackForm({ orderNumber: "", email: "" });
@@ -51,20 +51,7 @@ export default function ChatbotWidget() {
   };
 
   return (
-    <>
-      <button
-        ref={fabRef}
-        onClick={handleClick(() => setOpen(true))}
-        {...dragHandlers}
-        style={fabStyle}
-        aria-label="Chat with Veluntra Assistant"
-        className="z-[70] flex cursor-grab items-center gap-2 rounded-full bg-neutral-900 px-4 py-3 text-sm font-medium text-white shadow-soft-lg transition-transform hover:scale-105 hover:bg-neutral-800 active:cursor-grabbing dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
-      >
-        <Bot className="size-4.5" />
-        <span className="hidden sm:inline">Veluntra Assistant</span>
-      </button>
-
-      <Modal open={open} onClose={close} title="Veluntra Assistant" description="Quick answers, no waiting." size="sm">
+    <Modal open={open} onClose={close} title="Veluntra Assistant" description="Quick answers, no waiting." size="sm">
         {view === "menu" && (
           <div className="flex flex-col gap-2">
             {TOPICS.map((t) => (
@@ -179,8 +166,7 @@ export default function ChatbotWidget() {
             )}
           </div>
         )}
-      </Modal>
-    </>
+    </Modal>
   );
 }
 
