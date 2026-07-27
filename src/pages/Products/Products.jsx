@@ -104,14 +104,16 @@ export default function Products() {
   // "New Arrivals" / "Sale" nav items) — re-applies whenever the URL's query changes, so
   // clicking a different navbar link while already on /shop updates the filters too.
   useEffect(() => {
-    const q = searchParams.get("search");
-    if (q) setSearch(q);
+    // Each param is authoritative, not just additive — when it's absent from the URL the
+    // corresponding filter must clear too, otherwise e.g. clicking a plain category link after
+    // "New Arrivals" leaves isNewOnly stuck true from the previous in-app navigation.
+    setSearch(searchParams.get("search") || "");
     const category = searchParams.get("category");
-    if (category) setCats([category]);
+    setCats(category ? [category] : []);
     const brand = searchParams.get("brand");
-    if (brand) setBrands([brand]);
-    if (searchParams.get("isNew") === "true") setIsNewOnly(true);
-    if (searchParams.get("sale") === "true") setSaleOnly(true);
+    setBrands(brand ? [brand] : []);
+    setIsNewOnly(searchParams.get("isNew") === "true");
+    setSaleOnly(searchParams.get("sale") === "true");
   }, [searchParams]);
 
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: categoriesApi.list });

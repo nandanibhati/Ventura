@@ -1341,7 +1341,7 @@ function CustomersTab() {
 function StoreSettingsTab() {
   const { data: store, isLoading } = useQuery({ queryKey: ["seller-store"], queryFn: sellerApi.getStore });
   const [form, setForm] = useState(null);
-  const toast = useToast();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (store) {

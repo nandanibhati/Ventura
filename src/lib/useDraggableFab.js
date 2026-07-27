@@ -1,11 +1,21 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 const MARGIN = 12;
 // Only used for the very first paint, before the button has ever been measured or dragged —
 // once elRef is attached we clamp against the button's real (possibly text-label-widened)
 // bounding box instead, so dragging a wide pill button to an edge never clips its label.
-const ESTIMATED_WIDTH = 190;
+// These buttons hide their text label below Tailwind's `sm` breakpoint (640px) and render as a
+// small icon-only circle instead — estimating the full labeled width on a narrow/phone screen
+// would place that much narrower button well short of the true edge, visibly close to the
+// horizontal center of the screen until the post-mount remeasure corrects it.
+const SM_BREAKPOINT = 640;
+const ESTIMATED_WIDTH_LABELED = 190;
+const ESTIMATED_WIDTH_ICON_ONLY = 56;
 const ESTIMATED_HEIGHT = 48;
+
+function estimatedWidth() {
+  return window.innerWidth < SM_BREAKPOINT ? ESTIMATED_WIDTH_ICON_ONLY : ESTIMATED_WIDTH_LABELED;
+}
 
 function clamp(x, y, width, height) {
   const maxX = window.innerWidth - width - MARGIN;
@@ -29,19 +39,23 @@ export function useDraggableFab(storageKey, side = "right") {
     } catch {
       // ignore malformed storage
     }
-    const x = side === "left" ? MARGIN + 4 : window.innerWidth - ESTIMATED_WIDTH - MARGIN - 4;
+    const width = estimatedWidth();
+    const x = side === "left" ? MARGIN + 4 : window.innerWidth - width - MARGIN - 4;
     const y = window.innerHeight - ESTIMATED_HEIGHT - 96; // matches the old bottom-24 offset
-    return clamp(x, y, ESTIMATED_WIDTH, ESTIMATED_HEIGHT);
+    return clamp(x, y, width, ESTIMATED_HEIGHT);
   });
 
   const measure = useCallback(() => {
     const rect = elRef.current?.getBoundingClientRect();
-    return rect ? { width: rect.width, height: rect.height } : { width: ESTIMATED_WIDTH, height: ESTIMATED_HEIGHT };
+    return rect ? { width: rect.width, height: rect.height } : { width: estimatedWidth(), height: ESTIMATED_HEIGHT };
   }, []);
 
   // Once the real element is on screen, snap any estimate-based position onto real bounds
-  // (covers the case where the estimate was too small/large for this particular label).
-  useEffect(() => {
+  // (covers the case where the estimate was too small/large for this particular label). Runs as
+  // a layout effect — synchronously before the browser paints — rather than a passive effect, so
+  // any remaining estimate error is corrected before the user ever sees it, instead of as a
+  // visible jump one frame after the initial (possibly wrong) position was already painted.
+  useLayoutEffect(() => {
     const { width, height } = measure();
     setPos((current) => clamp(current.x, current.y, width, height));
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -455,7 +455,10 @@ function ProductDetails() {
     return () => observer.disconnect();
   }, [product]);
 
-  // Initialize option selections (first available value per kind) once the product loads.
+  // Initialize option selections (first available value per kind) once the product loads. Also
+  // resets the gallery and quantity picker — this component stays mounted across /product/:id
+  // navigations (e.g. clicking a related-product card), so without this reset a quantity or
+  // gallery position set on the previous product would otherwise carry over onto the new one.
   useEffect(() => {
     if (!product?.options) return;
     const initial = {};
@@ -463,6 +466,8 @@ function ProductDetails() {
       if (!(opt.kind in initial)) initial[opt.kind] = opt.label;
     }
     setSelections(initial);
+    setActiveImage(0);
+    setQuantity(1);
   }, [product?.id]);
 
   const colorOptions = useMemo(() => (product?.options || []).filter((o) => o.kind === "color"), [product]);
@@ -495,6 +500,13 @@ function ProductDetails() {
       ? { text: `Only ${maxQty} left in stock`, tone: "text-amber-500" }
       : { text: `${maxQty} in stock`, tone: "text-emerald-600 dark:text-emerald-400" };
 
+  // Defense in depth against a stale quantity exceeding stock — covers a variant switch (e.g.
+  // selecting a colour with lower stock than the one previously selected), since maxQty depends
+  // on the selected variant, not just the product.
+  useEffect(() => {
+    setQuantity((q) => Math.min(q, Math.max(maxQty, 1)));
+  }, [maxQty]);
+
   // Jump the gallery to whichever photo was assigned to the selected colour/storage combination,
   // so the displayed image changes along with the variant — falls back to leaving it as-is when
   // that combination has no dedicated photo.
@@ -514,9 +526,10 @@ function ProductDetails() {
   };
 
   const handleAddToCart = async () => {
+    if (maxQty === 0) return;
     try {
       const variant = variantKeys.length ? Object.fromEntries(variantKeys.map((k) => [k, selections[k]])) : undefined;
-      await addItem({ productId: id, quantity, variant });
+      await addItem({ productId: id, quantity: Math.min(quantity, maxQty), variant });
       setAddedToCart(true);
       setTimeout(() => setAddedToCart(false), 2000);
     } catch (err) {
@@ -607,8 +620,8 @@ function ProductDetails() {
             </div>
 
             <div className="mt-5 flex items-baseline gap-3">
-              <span className="text-3xl font-bold text-neutral-900 dark:text-white">£{displayPrice.toLocaleString()}</span>
-              {oldPrice && <span className="text-lg text-neutral-400 line-through">£{oldPrice.toLocaleString()}</span>}
+              <span className="text-3xl font-bold text-neutral-900 dark:text-white">£{displayPrice.toFixed(2)}</span>
+              {oldPrice && <span className="text-lg text-neutral-400 line-through">£{oldPrice.toFixed(2)}</span>}
               {oldPrice && (
                 <span className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
                   Save £{(oldPrice - displayPrice).toFixed(0)}
@@ -933,7 +946,7 @@ function ProductDetails() {
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-neutral-900 dark:text-white">{product.name}</p>
-                <p className="text-sm font-bold text-neutral-900 dark:text-white">£{displayPrice.toLocaleString()}</p>
+                <p className="text-sm font-bold text-neutral-900 dark:text-white">£{displayPrice.toFixed(2)}</p>
               </div>
               <button
                 onClick={handleAddToCart}

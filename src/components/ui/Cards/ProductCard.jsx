@@ -196,12 +196,12 @@ export default function ProductCard({
             <span className="flex items-baseline gap-1">
               <span className="text-sm font-semibold text-[var(--text-primary)]">
                 {currency}
-                {Number(price).toLocaleString()}
+                {Number(price).toFixed(2)}
               </span>
               {oldPrice && (
                 <s className="text-[10.5px] font-normal text-[var(--text-muted)]">
                   {currency}
-                  {Number(oldPrice).toLocaleString()}
+                  {Number(oldPrice).toFixed(2)}
                 </s>
               )}
             </span>
@@ -267,11 +267,11 @@ export default function ProductCard({
               {oldPrice && (
                 <s className="mr-1.5 text-[13px] font-normal text-[var(--text-muted)]">
                   {currency}
-                  {Number(oldPrice).toLocaleString()}
+                  {Number(oldPrice).toFixed(2)}
                 </s>
               )}
               {currency}
-              {Number(price).toLocaleString()}
+              {Number(price).toFixed(2)}
             </span>
             {onAdd &&
               (cfg.cta === "link" ? (

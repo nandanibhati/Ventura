@@ -93,6 +93,16 @@ export default function Checkout() {
     else if (codEnabled) setPayment("cod");
   }, [settings, cardEnabled, demoCardEnabled, codEnabled, payment]);
 
+  // An empty cart shouldn't be checked out — but this must run as an effect, not during render:
+  // navigating mid-render is an unsafe "update a component while rendering" pattern. Skipped
+  // once placedOrder is set, since a successful order empties the cart server-side too and we
+  // don't want to bounce the user away from their own order confirmation screen.
+  useEffect(() => {
+    if (!cartLoading && !placedOrder && cart.items.length === 0) {
+      navigate("/cart", { replace: true });
+    }
+  }, [cartLoading, placedOrder, cart.items.length, navigate]);
+
   /* — Pricing (subtotal/discount authoritative from the live cart; delivery/tax/COD are previews — the
      server recomputes everything from scratch when the order is actually placed) — */
   const subtotal = cart.subtotal;
@@ -186,7 +196,6 @@ export default function Checkout() {
   }
 
   if (cart.items.length === 0) {
-    navigate("/cart", { replace: true });
     return null;
   }
 
@@ -526,7 +535,7 @@ function OrderSummary({
                 </p>
               </div>
               <span className="text-sm text-[var(--text-primary)] shrink-0">
-                {CURRENCY}{item.lineTotal.toLocaleString()}
+                {CURRENCY}{item.lineTotal.toFixed(2)}
               </span>
             </li>
           );
@@ -564,7 +573,7 @@ function OrderSummary({
 
       {/* Totals */}
       <div className="flex flex-col gap-2.5 border-t border-[var(--border)] pt-4 text-sm">
-        <Row label="Subtotal" value={`${CURRENCY}${subtotal.toLocaleString()}`} />
+        <Row label="Subtotal" value={`${CURRENCY}${subtotal.toFixed(2)}`} />
         {discount > 0 && (
           <Row label="Discount" value={`-${CURRENCY}${discount.toFixed(2)}`} valueClass="text-success-600" />
         )}

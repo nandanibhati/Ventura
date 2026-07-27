@@ -2017,7 +2017,7 @@ function WarehouseStockSection() {
   const [delta, setDelta] = useState("");
   const [reason, setReason] = useState("");
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { toast } = useToast();
 
   const {
     data: stockList = [],

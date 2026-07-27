@@ -388,7 +388,7 @@ function Navbar({ onOpenChatbot }) {
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium text-neutral-900 dark:text-white">{p.name}</span>
-                          <span className="text-xs text-neutral-400">£{Number(p.price).toLocaleString()}</span>
+                          <span className="text-xs text-neutral-400">£{Number(p.price).toFixed(2)}</span>
                         </span>
                       </button>
                     ))}
