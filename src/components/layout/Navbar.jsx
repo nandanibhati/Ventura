@@ -272,7 +272,7 @@ function Navbar({ onOpenChatbot }) {
       >
         <p className="flex items-center gap-1.5 tracking-wide">
           <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-          Complimentary shipping on orders over $150
+          Complimentary shipping on orders over £150
         </p>
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-4 border-r border-black/10 pr-6 dark:border-white/10">

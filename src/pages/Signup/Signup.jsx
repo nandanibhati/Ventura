@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { UserPlus } from "lucide-react";
-import { Input, Select } from "../../components/ui/Input";
+import { Input } from "../../components/ui/Input";
 import { PrimaryButton } from "../../components/ui/Button";
 import { useAuth } from "../../context/AuthContext";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
@@ -11,7 +11,7 @@ export default function Signup() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "customer" });
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -76,17 +76,6 @@ export default function Signup() {
             error={errors.password}
             required
           />
-          <Select
-            label="Account type"
-            value={form.role}
-            onChange={setField("role")}
-            options={[
-              { value: "customer", label: "Customer — shop on Veluntra" },
-              { value: "seller", label: "Seller — sell on Veluntra" },
-              { value: "dropshipper", label: "Dropshipper — sell without holding stock" },
-            ]}
-          />
-
           {formError && <p className="text-sm text-error-500">{formError}</p>}
 
           <div className="mt-2">

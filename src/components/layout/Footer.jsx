@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { TrendingUp, Handshake, ThumbsUp, Flag, Star, ShieldCheck } from "lucide-react";
 import { settingsApi } from "../../api/catalog";
 
@@ -78,7 +79,7 @@ const LINK_COLUMNS = [
 // a business's external profile links).
 const EXPLORE_LINKS = [
   { label: "Apply For Wholesale", icon: TrendingUp, subject: "Wholesale Application" },
-  { label: "Apply for Dropshipping", icon: Handshake, subject: "Dropshipping Application" },
+  { label: "Apply for Dropshipping", icon: Handshake, href: "/dropshipping" },
   { label: "Register as an Affiliate / Influencer", icon: ThumbsUp, subject: "Affiliate / Influencer Enquiry" },
   { label: "Report an Issue", icon: Flag, subject: "Issue Report" },
   { label: "Review Us on Google", icon: Star, href: null },
@@ -143,6 +144,16 @@ export default function Footer() {
             <h3 className="text-xs font-semibold uppercase tracking-wider text-white">Explore</h3>
             <ul className="mt-3 flex flex-col gap-2.5">
               {EXPLORE_LINKS.map((link) => {
+                if (link.href?.startsWith("/")) {
+                  return (
+                    <li key={link.label}>
+                      <Link to={link.href} className="flex items-center gap-2 text-sm text-neutral-400 transition-colors hover:text-white">
+                        <link.icon className="size-3.5 shrink-0" strokeWidth={1.75} />
+                        {link.label}
+                      </Link>
+                    </li>
+                  );
+                }
                 const href =
                   link.href !== undefined
                     ? link.href || "#"

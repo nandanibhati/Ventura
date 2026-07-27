@@ -43,6 +43,11 @@ export const adminApi = {
   setSuggestionStatus: (id, status) => api.patch(`/admin/suggestions/${id}/status`, { status }).then(unwrap),
   deleteSuggestion: (id) => api.delete(`/admin/suggestions/${id}`).then(unwrap),
 
+  listPartnerApplications: (params) =>
+    api.get("/admin/partner-applications", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
+  setPartnerApplicationStatus: (id, status) => api.patch(`/admin/partner-applications/${id}/status`, { status }).then(unwrap),
+  deletePartnerApplication: (id) => api.delete(`/admin/partner-applications/${id}`).then(unwrap),
+
   listReviews: (params) => api.get("/admin/reviews", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
   approveReview: (id) => api.post(`/admin/reviews/${id}/approve`).then(unwrap),
   rejectReview: (id) => api.post(`/admin/reviews/${id}/reject`).then(unwrap),
