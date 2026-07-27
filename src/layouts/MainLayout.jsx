@@ -31,17 +31,26 @@ function MainLayout() {
   }, [data]);
 
   // Use the store's own uploaded logo as the browser-tab icon instead of the generic
-  // placeholder favicon.svg left over from the project template.
+  // placeholder favicon.svg left over from the project template. Preloads the image first
+  // and only swaps the <link> on success — a stale logoUrl (e.g. an old local-disk upload
+  // from before Cloudinary was configured, wiped by the host's ephemeral filesystem on a
+  // later redeploy) would otherwise silently leave the tab showing the browser's own blank
+  // fallback icon instead of the static favicon.svg that was there before.
   useEffect(() => {
     if (!data?.logoUrl) return;
-    let link = document.querySelector("link[rel='icon']");
-    if (!link) {
-      link = document.createElement("link");
-      link.rel = "icon";
-      document.head.appendChild(link);
-    }
-    link.type = "";
-    link.href = resolveMediaUrl(data.logoUrl);
+    const url = resolveMediaUrl(data.logoUrl);
+    const probe = new Image();
+    probe.onload = () => {
+      let link = document.querySelector("link[rel='icon']");
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = "icon";
+        document.head.appendChild(link);
+      }
+      link.type = "";
+      link.href = url;
+    };
+    probe.src = url;
   }, [data?.logoUrl]);
 
   return (
