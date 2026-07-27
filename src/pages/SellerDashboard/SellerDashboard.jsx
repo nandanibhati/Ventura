@@ -7,6 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import { productsApi } from "../../api/products";
 import { categoriesApi, brandsApi } from "../../api/catalog";
 import { uploadsApi } from "../../api/products";
+import { dropshipOrderRequestsApi } from "../../api/dropshipOrderRequests";
 import { resolveMediaUrl } from "../../lib/api";
 import { useToast } from "../../components/ui/Feedback";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
@@ -57,7 +58,7 @@ import {
   Upload,
 } from "lucide-react";
 import { PrimaryButton, SecondaryButton, OutlineButton, IconButton } from "../../components/ui/Button";
-import { Input, Select, Checkbox } from "../../components/ui/Input";
+import { Input, Select, Checkbox, Textarea } from "../../components/ui/Input";
 import { EmptyState, Badge, Chip } from "../../components/ui/Feedback";
 import { Modal, Drawer, Dropdown } from "../../components/ui/Overlay";
 import { Pagination } from "../../components/ui/Navigation";
@@ -102,10 +103,12 @@ const NAV_ITEMS = [
 ];
 
 // A promoted dropshipper owns no store/products of their own, so the seller-side tabs above
-// (which all assume "my store's orders/inventory/customers") don't apply yet — phase 1 is just
-// browsing the catalogue at dropship pricing. Placing manual orders happens outside the
-// dashboard for now (by phone/email), so there's no Orders tab here yet either.
-const DROPSHIPPER_NAV_ITEMS = [{ id: "catalogue", label: "Catalogue", icon: Package }];
+// (which all assume "my store's orders/inventory/customers") don't apply — Catalogue and Orders
+// here are dropshipper-specific views instead.
+const DROPSHIPPER_NAV_ITEMS = [
+  { id: "catalogue", label: "Catalogue", icon: Package },
+  { id: "orders", label: "My Orders", icon: ShoppingCart },
+];
 
 const RANGE_OPTIONS = [
   { id: "day", label: "Daily" },
@@ -1139,22 +1142,70 @@ function ProductsTab({ tokens, categoryColors }) {
   );
 }
 
+const EMPTY_ORDER_FORM = {
+  quantity: 1,
+  customerName: "",
+  customerEmail: "",
+  customerPhone: "",
+  addressLine1: "",
+  addressLine2: "",
+  city: "",
+  country: "",
+  postalCode: "",
+  shippingService: "",
+  customerReference: "",
+  specialInstructions: "",
+};
+
 /** Browse-only catalogue for an approved dropshipper — every published product across the
  * whole store at their special dropship price, with the retail price shown alongside as the
  * "suggested selling price" and the difference as estimated profit per unit. No add/edit here;
- * a dropshipper doesn't own these listings. Placing an order is still manual (phone/email) in
- * this first version, so there's no cart/checkout action on this screen yet. */
+ * a dropshipper doesn't own these listings. "Request Order" submits the end-customer's details
+ * to admin, who places and pays for the real order manually (bank transfer/invoice) — there's no
+ * in-app checkout/payment yet. */
 function DropshipCatalogueTab() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [orderProduct, setOrderProduct] = useState(null);
+  const [orderForm, setOrderForm] = useState(EMPTY_ORDER_FORM);
+  const { toast } = useToast();
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["dropship-catalogue", { search, page }],
     queryFn: () => productsApi.listDropshipCatalogue({ search: search || undefined, page, limit: PAGE_SIZE }),
   });
 
+  const submitOrderMutation = useMutation({
+    mutationFn: (payload) => dropshipOrderRequestsApi.create(payload),
+    onSuccess: () => {
+      toast({ title: "Order request sent to Veluntra", variant: "success" });
+      setOrderProduct(null);
+      setOrderForm(EMPTY_ORDER_FORM);
+    },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't submit order request", variant: "error" }),
+  });
+
   const products = data?.items || [];
   const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+  const setOrderField = (field) => (e) => setOrderForm((f) => ({ ...f, [field]: e.target.value }));
+
+  const submitOrder = () => {
+    submitOrderMutation.mutate({
+      productId: orderProduct.id,
+      quantity: Number(orderForm.quantity) || 1,
+      customerName: orderForm.customerName,
+      customerEmail: orderForm.customerEmail,
+      customerPhone: orderForm.customerPhone,
+      addressLine1: orderForm.addressLine1,
+      addressLine2: orderForm.addressLine2 || undefined,
+      city: orderForm.city,
+      country: orderForm.country,
+      postalCode: orderForm.postalCode,
+      shippingService: orderForm.shippingService || undefined,
+      customerReference: orderForm.customerReference || undefined,
+      specialInstructions: orderForm.specialInstructions || undefined,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -1188,6 +1239,7 @@ function DropshipCatalogueTab() {
                   <th className="px-5 py-3 font-medium">Suggested Selling Price</th>
                   <th className="px-5 py-3 font-medium">Est. Profit</th>
                   <th className="px-5 py-3 font-medium">Stock</th>
+                  <th className="px-5 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1218,9 +1270,126 @@ function DropshipCatalogueTab() {
                       <td className="px-5 py-4">
                         <StockMeter stock={product.stock} />
                       </td>
+                      <td className="px-5 py-4 text-right">
+                        <OutlineButton
+                          size="sm"
+                          disabled={product.stock === 0}
+                          onClick={() => { setOrderProduct(product); setOrderForm(EMPTY_ORDER_FORM); }}
+                        >
+                          Request Order
+                        </OutlineButton>
+                      </td>
                     </tr>
                   );
                 })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+
+      <Modal
+        open={Boolean(orderProduct)}
+        onClose={() => setOrderProduct(null)}
+        title={`Request order — ${orderProduct?.name || ""}`}
+        footer={
+          <>
+            <SecondaryButton onClick={() => setOrderProduct(null)}>Cancel</SecondaryButton>
+            <PrimaryButton onClick={submitOrder} loading={submitOrderMutation.isPending}>Submit Request</PrimaryButton>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            This sends the end customer's details to Veluntra to fulfil manually — it doesn't take payment. You'll be
+            invoiced at your dropship price (£{Number(orderProduct?.dropshipPrice ?? 0).toFixed(2)} each) separately.
+          </p>
+          <Input label="Quantity" type="number" min="1" value={orderForm.quantity} onChange={setOrderField("quantity")} />
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Customer name" value={orderForm.customerName} onChange={setOrderField("customerName")} />
+            <Input label="Customer email" type="email" value={orderForm.customerEmail} onChange={setOrderField("customerEmail")} />
+          </div>
+          <Input label="Customer phone" value={orderForm.customerPhone} onChange={setOrderField("customerPhone")} />
+          <Input label="Address line 1" value={orderForm.addressLine1} onChange={setOrderField("addressLine1")} />
+          <Input label="Address line 2 (optional)" value={orderForm.addressLine2} onChange={setOrderField("addressLine2")} />
+          <div className="grid grid-cols-3 gap-3">
+            <Input label="City" value={orderForm.city} onChange={setOrderField("city")} />
+            <Input label="Country" value={orderForm.country} onChange={setOrderField("country")} />
+            <Input label="Postal code" value={orderForm.postalCode} onChange={setOrderField("postalCode")} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Shipping service (optional)" value={orderForm.shippingService} onChange={setOrderField("shippingService")} />
+            <Input label="Your order reference (optional)" value={orderForm.customerReference} onChange={setOrderField("customerReference")} />
+          </div>
+          <Textarea
+            label="Special instructions (optional)"
+            value={orderForm.specialInstructions}
+            onChange={setOrderField("specialInstructions")}
+          />
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+const DROPSHIP_ORDER_STATUS_LABELS = { new: "New", processing: "Processing", fulfilled: "Fulfilled", cancelled: "Cancelled" };
+
+/** Read-only history of what this dropshipper has submitted — status is set by admin as the
+ * manual order actually gets placed/shipped, not editable here. */
+function DropshipOrdersTab() {
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["my-dropship-orders", page],
+    queryFn: () => dropshipOrderRequestsApi.list({ page, limit: PAGE_SIZE }),
+  });
+
+  const requests = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-black/5 bg-white dark:border-white/10 dark:bg-neutral-900">
+        <div className="border-b border-black/5 p-5 dark:border-white/10">
+          <h3 className="text-base font-bold text-neutral-900 dark:text-white">My Order Requests</h3>
+          <p className="text-xs text-neutral-400">{data?.meta?.total ?? 0} submitted</p>
+        </div>
+        {isLoading ? (
+          <div className="p-10 text-center text-sm text-neutral-400">Loading…</div>
+        ) : isError ? (
+          <div className="p-6"><ErrorNotice onRetry={refetch} /></div>
+        ) : requests.length === 0 ? (
+          <EmptyState icon={ShoppingCart} title="No order requests yet" description="Request an order from the Catalogue tab." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-black/5 text-xs uppercase tracking-wider text-neutral-400 dark:border-white/10">
+                  <th className="px-5 py-3 font-medium">Product</th>
+                  <th className="px-5 py-3 font-medium">Customer</th>
+                  <th className="px-5 py-3 font-medium">Qty</th>
+                  <th className="px-5 py-3 font-medium">Total</th>
+                  <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium">Submitted</th>
+                </tr>
+              </thead>
+              <tbody>
+                {requests.map((r) => (
+                  <tr key={r.id} className="border-b border-black/5 last:border-b-0 dark:border-white/10">
+                    <td className="px-5 py-4 font-medium text-neutral-900 dark:text-white">{r.product?.name}</td>
+                    <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{r.customerName}</td>
+                    <td className="px-5 py-4">{r.quantity}</td>
+                    <td className="px-5 py-4">£{(Number(r.unitPrice) * r.quantity).toFixed(2)}</td>
+                    <td className="px-5 py-4">
+                      <Badge
+                        variant={r.status === "new" ? "warning" : r.status === "fulfilled" ? "success" : r.status === "cancelled" ? "error" : "neutral"}
+                      >
+                        {DROPSHIP_ORDER_STATUS_LABELS[r.status] || r.status}
+                      </Badge>
+                    </td>
+                    <td className="px-5 py-4 text-neutral-400">{new Date(r.createdAt).toLocaleDateString()}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -1646,7 +1815,10 @@ function SellerDashboard() {
         />
         <main className="flex-1 p-4 sm:p-6">
           {isDropshipper ? (
-            activeTab === "catalogue" && <DropshipCatalogueTab />
+            <>
+              {activeTab === "catalogue" && <DropshipCatalogueTab />}
+              {activeTab === "orders" && <DropshipOrdersTab />}
+            </>
           ) : (
             <>
               {activeTab === "overview" && (

@@ -93,6 +93,7 @@ import { CARD_TEMPLATES } from "../../lib/cardTemplates";
 import { cn } from "../../lib/utils";
 import { useAuth } from "../../context/AuthContext";
 import { adminApi } from "../../api/admin";
+import { dropshipOrderRequestsApi } from "../../api/dropshipOrderRequests";
 import { productsApi, uploadsApi } from "../../api/products";
 import { resolveMediaUrl } from "../../lib/api";
 import { categoriesApi, brandsApi, promotionsApi, settingsApi, homepageApi, permissionsApi } from "../../api/catalog";
@@ -124,6 +125,7 @@ const NAV_GROUPS = [
       { id: "reviews", label: "Reviews", icon: Star },
       { id: "suggestions", label: "Suggestions", icon: MessageSquarePlus },
       { id: "partnerApplications", label: "Partner Applications", icon: Truck },
+      { id: "dropshipOrders", label: "Dropship Orders", icon: ShoppingCart },
       { id: "fulfillmentRequests", label: "Fulfillment Requests", icon: PackageX },
       { id: "warehouse", label: "Warehouse Stock", icon: Warehouse },
       { id: "homepage", label: "Homepage CMS", icon: Layout },
@@ -238,6 +240,7 @@ export default function AdminDashboard() {
               {activeTab === "reviews" && <ReviewsSection />}
               {activeTab === "suggestions" && <SuggestionsSection />}
               {activeTab === "partnerApplications" && <PartnerApplicationsSection />}
+              {activeTab === "dropshipOrders" && <DropshipOrdersSection />}
               {activeTab === "fulfillmentRequests" && <FulfillmentRequestsSection />}
               {activeTab === "warehouse" && <WarehouseStockSection />}
               {activeTab === "homepage" && <HomepageCmsSection />}
@@ -2033,6 +2036,122 @@ function PartnerApplicationsSection() {
             </div>
           ))}
         </div>
+      )}
+
+      <div className="mt-6">
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      </div>
+    </div>
+  );
+}
+
+/* — Dropship Order Requests — */
+
+const DROPSHIP_ORDER_STATUS_LABELS = { new: "New", processing: "Processing", fulfilled: "Fulfilled", cancelled: "Cancelled" };
+
+function DropshipOrdersSection() {
+  const [statusFilter, setStatusFilter] = useState("new");
+  const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-dropship-orders", { statusFilter, page }],
+    queryFn: () => dropshipOrderRequestsApi.list({ status: statusFilter, page, limit: PAGE_SIZE }),
+  });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-dropship-orders"] });
+  const setStatusMutation = useMutation({
+    mutationFn: ({ id, status }) => dropshipOrderRequestsApi.setStatus(id, status),
+    onSuccess: invalidate,
+  });
+
+  const requests = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+
+  return (
+    <div>
+      <SectionTitle
+        eyebrow="Manage"
+        title="Dropship Orders"
+        description="Manual order requests submitted by approved dropshippers — place and invoice the real order outside the platform, then update its status here."
+      />
+
+      <Toolbar search="" onSearch={() => {}}>
+        {["new", "processing", "fulfilled", "cancelled", "all"].map((s) => (
+          <Chip key={s} selected={statusFilter === s} onClick={() => { setStatusFilter(s); setPage(1); }}>
+            {s === "all" ? "All" : DROPSHIP_ORDER_STATUS_LABELS[s]}
+          </Chip>
+        ))}
+      </Toolbar>
+
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading order requests…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : requests.length === 0 ? (
+        <EmptyState icon={ShoppingCart} title="No order requests here" description="Nothing in this filter yet." />
+      ) : (
+        <TableShell>
+          <thead>
+            <tr>
+              <Th>Product</Th>
+              <Th>Dropshipper</Th>
+              <Th>Customer</Th>
+              <Th>Qty</Th>
+              <Th>Total</Th>
+              <Th>Status</Th>
+              <Th>Submitted</Th>
+              <Th className="text-right">Actions</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {requests.map((r) => (
+              <tr key={r.id}>
+                <Td className="font-medium">{r.product?.name}</Td>
+                <Td>
+                  <p>{r.dropshipper?.name}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{r.dropshipper?.email}</p>
+                </Td>
+                <Td>
+                  <p>{r.customerName}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{r.customerEmail} · {r.customerPhone}</p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {r.addressLine1}, {r.city}, {r.country} {r.postalCode}
+                  </p>
+                  {r.specialInstructions && <p className="mt-1 text-xs italic text-[var(--text-muted)]">{r.specialInstructions}</p>}
+                </Td>
+                <Td>{r.quantity}</Td>
+                <Td>£{(Number(r.unitPrice) * r.quantity).toFixed(2)}</Td>
+                <Td>
+                  <Badge
+                    variant={r.status === "new" ? "warning" : r.status === "fulfilled" ? "success" : r.status === "cancelled" ? "error" : "neutral"}
+                  >
+                    {DROPSHIP_ORDER_STATUS_LABELS[r.status] || r.status}
+                  </Badge>
+                </Td>
+                <Td className="text-[var(--text-muted)]">{new Date(r.createdAt).toLocaleDateString()}</Td>
+                <Td className="text-right">
+                  <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
+                    {r.status !== "processing" && (
+                      <Dropdown.Item icon={Package} onClick={() => setStatusMutation.mutate({ id: r.id, status: "processing" })}>
+                        Mark processing
+                      </Dropdown.Item>
+                    )}
+                    {r.status !== "fulfilled" && (
+                      <Dropdown.Item icon={CheckCircle2} onClick={() => setStatusMutation.mutate({ id: r.id, status: "fulfilled" })}>
+                        Mark fulfilled
+                      </Dropdown.Item>
+                    )}
+                    {r.status !== "cancelled" && (
+                      <Dropdown.Item icon={Ban} destructive onClick={() => setStatusMutation.mutate({ id: r.id, status: "cancelled" })}>
+                        Cancel
+                      </Dropdown.Item>
+                    )}
+                  </Dropdown>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </TableShell>
       )}
 
       <div className="mt-6">
