@@ -57,6 +57,7 @@ import {
   Mail,
   Warehouse,
   Truck,
+  Gift,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -128,6 +129,7 @@ const NAV_GROUPS = [
       { id: "partnerApplications", label: "Partner Applications", icon: Truck },
       { id: "dropshipOrders", label: "Dropship Orders", icon: ShoppingCart },
       { id: "wholesaleOrders", label: "Wholesale Orders", icon: ShoppingCart },
+      { id: "affiliates", label: "Affiliates", icon: Gift },
       { id: "fulfillmentRequests", label: "Fulfillment Requests", icon: PackageX },
       { id: "warehouse", label: "Warehouse Stock", icon: Warehouse },
       { id: "homepage", label: "Homepage CMS", icon: Layout },
@@ -244,6 +246,7 @@ export default function AdminDashboard() {
               {activeTab === "partnerApplications" && <PartnerApplicationsSection />}
               {activeTab === "dropshipOrders" && <DropshipOrdersSection />}
               {activeTab === "wholesaleOrders" && <WholesaleOrdersSection />}
+              {activeTab === "affiliates" && <AffiliatesSection />}
               {activeTab === "fulfillmentRequests" && <FulfillmentRequestsSection />}
               {activeTab === "warehouse" && <WarehouseStockSection />}
               {activeTab === "homepage" && <HomepageCmsSection />}
@@ -429,6 +432,11 @@ function UsersSection() {
     },
     onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't update role", variant: "error" }),
   });
+  const createAffiliateMutation = useMutation({
+    mutationFn: (userId) => adminApi.createAffiliateProfile({ userId }),
+    onSuccess: (profile) => toast({ title: `Affiliate profile created — code ${profile.referralCode}`, variant: "success" }),
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't create affiliate profile", variant: "error" }),
+  });
   const createAdminMutation = useMutation({
     mutationFn: (payload) => adminApi.createAdmin(payload),
     onSuccess: () => {
@@ -531,6 +539,11 @@ function UsersSection() {
                         }
                       >
                         {u.role === "wholesaler" ? "Remove wholesaler access" : "Approve as wholesaler"}
+                      </Dropdown.Item>
+                    )}
+                    {u.role === "customer" && (
+                      <Dropdown.Item icon={Gift} onClick={() => createAffiliateMutation.mutate(u.id)}>
+                        Create affiliate profile
                       </Dropdown.Item>
                     )}
                     <Dropdown.Separator />
@@ -2295,6 +2308,180 @@ function WholesaleOrdersSection() {
       <div className="mt-6">
         <Pagination page={page} totalPages={totalPages} onChange={setPage} />
       </div>
+    </div>
+  );
+}
+
+/* — Affiliates — */
+
+const EMPTY_COMMISSION_FORM = { description: "", saleAmount: "", commissionAmount: "" };
+
+function AffiliatesSection() {
+  const [page, setPage] = useState(1);
+  const [managingProfile, setManagingProfile] = useState(null);
+  const [commissionForm, setCommissionForm] = useState(EMPTY_COMMISSION_FORM);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-affiliates", page],
+    queryFn: () => adminApi.listAffiliates({ page, limit: PAGE_SIZE }),
+  });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-affiliates"] });
+
+  const addCommissionMutation = useMutation({
+    mutationFn: ({ id, payload }) => adminApi.addAffiliateCommission(id, payload),
+    onSuccess: () => {
+      invalidate();
+      setCommissionForm(EMPTY_COMMISSION_FORM);
+      toast({ title: "Commission recorded", variant: "success" });
+    },
+    onError: (err) => toast({ title: err.response?.data?.error?.message || "Couldn't record commission", variant: "error" }),
+  });
+  const setCommissionStatusMutation = useMutation({
+    mutationFn: ({ commissionId, status }) => adminApi.setAffiliateCommissionStatus(commissionId, status),
+    onSuccess: invalidate,
+  });
+
+  const profiles = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+  // Keep the drawer showing fresh data as mutations invalidate the list underneath it.
+  const liveManagingProfile = managingProfile ? profiles.find((p) => p.id === managingProfile.id) || managingProfile : null;
+
+  return (
+    <div>
+      <SectionTitle
+        eyebrow="Manage"
+        title="Affiliates"
+        description="Referral codes and commission ledger. Create a profile from Users once you've approved an affiliate application, then record commissions here as sales come in."
+      />
+
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading affiliates…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : profiles.length === 0 ? (
+        <EmptyState icon={Gift} title="No affiliates yet" description="Create a profile for an approved applicant from the Users tab." />
+      ) : (
+        <TableShell>
+          <thead>
+            <tr>
+              <Th>Affiliate</Th>
+              <Th>Referral Code</Th>
+              <Th>Rate</Th>
+              <Th>Pending</Th>
+              <Th>Approved</Th>
+              <Th>Paid</Th>
+              <Th className="text-right">Actions</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {profiles.map((p) => (
+              <tr key={p.id}>
+                <Td>
+                  <p className="font-medium">{p.user?.name}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{p.user?.email}</p>
+                </Td>
+                <Td className="font-mono text-xs">{p.referralCode}</Td>
+                <Td>{Number(p.commissionRate)}%</Td>
+                <Td>£{p.totals.pending.toFixed(2)}</Td>
+                <Td>£{p.totals.approved.toFixed(2)}</Td>
+                <Td>£{p.totals.paid.toFixed(2)}</Td>
+                <Td className="text-right">
+                  <OutlineButton size="sm" onClick={() => setManagingProfile(p)}>Manage</OutlineButton>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </TableShell>
+      )}
+
+      <div className="mt-6">
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      </div>
+
+      <Drawer open={Boolean(managingProfile)} onClose={() => setManagingProfile(null)} title={`Commissions — ${liveManagingProfile?.user?.name || ""}`}>
+        {liveManagingProfile && (
+          <div className="flex flex-col gap-5">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                addCommissionMutation.mutate({
+                  id: liveManagingProfile.id,
+                  payload: {
+                    description: commissionForm.description,
+                    saleAmount: Number(commissionForm.saleAmount) || 0,
+                    commissionAmount: Number(commissionForm.commissionAmount) || 0,
+                  },
+                });
+              }}
+              className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] p-4"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Record a commission</p>
+              <Input
+                label="Description"
+                placeholder="e.g. Order VNT-100234"
+                value={commissionForm.description}
+                onChange={(e) => setCommissionForm((f) => ({ ...f, description: e.target.value }))}
+                required
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Sale amount"
+                  type="number"
+                  leftIcon={PoundSterling}
+                  value={commissionForm.saleAmount}
+                  onChange={(e) => setCommissionForm((f) => ({ ...f, saleAmount: e.target.value }))}
+                  required
+                />
+                <Input
+                  label="Commission amount"
+                  type="number"
+                  leftIcon={PoundSterling}
+                  value={commissionForm.commissionAmount}
+                  onChange={(e) => setCommissionForm((f) => ({ ...f, commissionAmount: e.target.value }))}
+                  required
+                />
+              </div>
+              <PrimaryButton type="submit" size="sm" loading={addCommissionMutation.isPending}>Add commission</PrimaryButton>
+            </form>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">History</p>
+              {(liveManagingProfile.commissions || []).length === 0 ? (
+                <p className="text-sm text-[var(--text-muted)]">No commissions recorded yet.</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {liveManagingProfile.commissions.map((c) => (
+                    <div key={c.id} className="rounded-[var(--radius-md)] border border-[var(--border)] p-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{c.description}</span>
+                        <Badge variant={c.status === "paid" ? "success" : c.status === "approved" ? "gold" : "warning"}>{c.status}</Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        Sale £{Number(c.saleAmount).toFixed(2)} · Commission £{Number(c.commissionAmount).toFixed(2)} ·{" "}
+                        {new Date(c.createdAt).toLocaleDateString()}
+                      </p>
+                      <div className="mt-2 flex gap-2">
+                        {c.status !== "approved" && (
+                          <OutlineButton size="sm" onClick={() => setCommissionStatusMutation.mutate({ commissionId: c.id, status: "approved" })}>
+                            Mark approved
+                          </OutlineButton>
+                        )}
+                        {c.status !== "paid" && (
+                          <OutlineButton size="sm" onClick={() => setCommissionStatusMutation.mutate({ commissionId: c.id, status: "paid" })}>
+                            Mark paid
+                          </OutlineButton>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 }

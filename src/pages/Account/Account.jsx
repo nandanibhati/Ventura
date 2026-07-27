@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Plus, Pencil, Trash2, LogOut, Award } from "lucide-react";
+import { MapPin, Plus, Pencil, Trash2, LogOut, Award, Copy, Check, Gift } from "lucide-react";
 import { addressesApi } from "../../api/orders";
+import { affiliatesApi } from "../../api/affiliates";
 import { useAuth } from "../../context/AuthContext";
 import { Input, Checkbox } from "../../components/ui/Input";
 import { PrimaryButton, SecondaryButton, IconButton } from "../../components/ui/Button";
@@ -68,11 +69,79 @@ function AddressForm({ initial, onSubmit, onCancel, submitting }) {
   );
 }
 
+/** Only rendered for users who already have an affiliate profile (created by admin after
+ * approving their partner application) — the vast majority of customers never see this. */
+function AffiliateCard({ profile }) {
+  const [copied, setCopied] = useState(false);
+  const referralLink = `${window.location.origin}/?ref=${profile.referralCode}`;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <div className="mb-8 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5">
+      <div className="flex items-center gap-4">
+        <span className="grid size-11 shrink-0 place-items-center rounded-full bg-gold-400/12 text-gold-500">
+          <Gift className="size-5" />
+        </span>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-[var(--text-primary)]">Affiliate Program</p>
+          <p className="text-xs text-[var(--text-muted)]">Share your link — you'll earn {Number(profile.commissionRate)}% commission on sales it brings in.</p>
+        </div>
+      </div>
+      <div className="mt-4 flex items-center gap-2">
+        <div className="flex-1 truncate rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-inset)] px-3 py-2 text-xs text-[var(--text-muted)]">
+          {referralLink}
+        </div>
+        <SecondaryButton size="sm" leftIcon={copied ? Check : Copy} onClick={handleCopy}>
+          {copied ? "Copied" : "Copy"}
+        </SecondaryButton>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+        <div className="rounded-[var(--radius-md)] bg-[var(--surface-inset)] p-3">
+          <p className="text-lg font-semibold text-[var(--text-primary)]">£{profile.totals.pending.toFixed(2)}</p>
+          <p className="text-[11px] text-[var(--text-muted)]">Pending</p>
+        </div>
+        <div className="rounded-[var(--radius-md)] bg-[var(--surface-inset)] p-3">
+          <p className="text-lg font-semibold text-[var(--text-primary)]">£{profile.totals.approved.toFixed(2)}</p>
+          <p className="text-[11px] text-[var(--text-muted)]">Approved</p>
+        </div>
+        <div className="rounded-[var(--radius-md)] bg-[var(--surface-inset)] p-3">
+          <p className="text-lg font-semibold text-[var(--text-primary)]">£{profile.totals.paid.toFixed(2)}</p>
+          <p className="text-[11px] text-[var(--text-muted)]">Paid</p>
+        </div>
+      </div>
+      {profile.commissions.length > 0 && (
+        <div className="mt-4 border-t border-[var(--border)] pt-3">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">Recent commissions</p>
+          <div className="flex flex-col gap-2">
+            {profile.commissions.slice(0, 5).map((c) => (
+              <div key={c.id} className="flex items-center justify-between text-xs">
+                <span className="text-[var(--text-muted)]">{c.description}</span>
+                <span className="font-medium text-[var(--text-primary)]">£{Number(c.commissionAmount).toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Account() {
   useDocumentTitle("My Account");
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const { data: affiliateProfile } = useQuery({ queryKey: ["affiliates", "me"], queryFn: affiliatesApi.getMine });
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
@@ -153,6 +222,8 @@ export default function Account() {
             </p>
           </div>
         </div>
+
+        {affiliateProfile && <AffiliateCard profile={affiliateProfile} />}
 
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-medium text-[var(--text-primary)]" style={{ fontFamily: "var(--font-display)" }}>

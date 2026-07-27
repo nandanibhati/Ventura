@@ -48,6 +48,12 @@ export const adminApi = {
   setPartnerApplicationStatus: (id, status) => api.patch(`/admin/partner-applications/${id}/status`, { status }).then(unwrap),
   deletePartnerApplication: (id) => api.delete(`/admin/partner-applications/${id}`).then(unwrap),
 
+  listAffiliates: (params) => api.get("/admin/affiliates", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
+  createAffiliateProfile: (payload) => api.post("/admin/affiliates", payload).then(unwrap),
+  addAffiliateCommission: (id, payload) => api.post(`/admin/affiliates/${id}/commissions`, payload).then(unwrap),
+  setAffiliateCommissionStatus: (commissionId, status) =>
+    api.patch(`/admin/affiliates/commissions/${commissionId}/status`, { status }).then(unwrap),
+
   listReviews: (params) => api.get("/admin/reviews", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
   approveReview: (id) => api.post(`/admin/reviews/${id}/approve`).then(unwrap),
   rejectReview: (id) => api.post(`/admin/reviews/${id}/reject`).then(unwrap),
