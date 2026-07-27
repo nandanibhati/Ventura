@@ -137,7 +137,7 @@ function ZoomGallery({ images, videos = [], fallbackKey, activeIndex, onSelect }
       </div>
 
       {media.length > 1 && (
-        <div className="mt-4 flex gap-3">
+        <div className="mt-4 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {media.map((item, i) => (
             <button
               key={i}
