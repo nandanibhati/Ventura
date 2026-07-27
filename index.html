@@ -34,7 +34,18 @@
       name="twitter:description"
       content="Shop the latest electronics at Veluntra — laptops, audio, smart home, and more, with fast shipping and secure checkout."
     />
-    <!-- Set VITE_SITE_URL and add rel=canonical / og:url / og:image once the production domain and a real OG image asset are finalized. -->
+    <!-- Add og:image once a real 1200x630 marketing asset exists — no placeholder fabricated here. -->
+    <link rel="canonical" href="https://veluntra.co.uk/" />
+    <meta property="og:url" content="https://veluntra.co.uk/" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Veluntra",
+        "url": "https://veluntra.co.uk/"
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

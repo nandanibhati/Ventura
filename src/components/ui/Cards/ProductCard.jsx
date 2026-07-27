@@ -143,6 +143,8 @@ export default function ProductCard({
           <img
             src={image}
             alt={name}
+            loading="lazy"
+            decoding="async"
             // object-contain regardless of template: object-cover crops any photo that isn't
             // itself square to fill the box, which for a tall/portrait product shot reads as a
             // random zoomed-in slice rather than the actual product (same issue fixed on the

@@ -22,7 +22,7 @@ export default function BrandCard({ name, tagline, logo, href = "#", className }
       )}
     >
       {logo ? (
-        <img src={logo} alt={name} className="h-9 object-contain opacity-80 grayscale transition-all group-hover:opacity-100 group-hover:grayscale-0" />
+        <img src={logo} alt={name} loading="lazy" decoding="async" className="h-9 object-contain opacity-80 grayscale transition-all group-hover:opacity-100 group-hover:grayscale-0" />
       ) : (
         <span
           className="text-2xl font-medium tracking-wide text-[var(--text-primary)] transition-colors group-hover:text-gold-500"

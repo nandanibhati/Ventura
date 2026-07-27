@@ -566,6 +566,8 @@ function PromoTilesRow() {
                   <img
                     src={resolveMediaUrl(cat.imageUrl)}
                     alt=""
+                    loading="lazy"
+                    decoding="async"
                     className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
@@ -623,7 +625,7 @@ function CategoriesSection() {
                       )}
                     >
                       {cat.imageUrl ? (
-                        <img src={resolveMediaUrl(cat.imageUrl)} alt="" className="size-full object-cover" />
+                        <img src={resolveMediaUrl(cat.imageUrl)} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
                       ) : (
                         <Icon className="h-6 w-6 text-white sm:h-7 sm:w-7" strokeWidth={1.5} />
                       )}
@@ -798,6 +800,8 @@ function CollectionsSection({ section }) {
                       <img
                         src={resolveMediaUrl(cat.imageUrl)}
                         alt=""
+                        loading="lazy"
+                        decoding="async"
                         className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
@@ -846,7 +850,7 @@ function BrandsSection({ section }) {
               className="relative flex items-center justify-center rounded-sm border border-black/5 p-3 opacity-60 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0 dark:border-white/10"
             >
               {brand.logoUrl ? (
-                <img src={resolveMediaUrl(brand.logoUrl)} alt={brand.name} className="h-8 max-w-full object-contain sm:h-10" />
+                <img src={resolveMediaUrl(brand.logoUrl)} alt={brand.name} loading="lazy" decoding="async" className="h-8 max-w-full object-contain sm:h-10" />
               ) : (
                 <span className="text-xs font-bold tracking-wide text-neutral-900 dark:text-white sm:text-sm">{brand.name.toUpperCase()}</span>
               )}

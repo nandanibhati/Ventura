@@ -38,7 +38,7 @@ import ProductCard from "../../components/ui/Cards/ProductCard";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { useToast, LoadingSpinner, ErrorState } from "../../components/ui/Feedback";
-import { useDocumentTitle } from "../../lib/useDocumentTitle";
+import { useMetaTags } from "../../lib/useMetaTags";
 
 const TABS = [
   { id: "description", label: "Description", icon: FileText },
@@ -142,6 +142,8 @@ function ZoomGallery({ images, videos = [], fallbackKey, activeIndex, onSelect }
             <button
               key={i}
               onClick={() => onSelect(i)}
+              aria-label={item.type === "video" ? `Play video ${i + 1}` : `View image ${i + 1}`}
+              aria-pressed={i === activeIndex}
               className={`relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-neutral-50 transition-all dark:bg-neutral-900 ${
                 item.url ? "" : `bg-gradient-to-br ${gradientFor(fallbackKey)}`
               } ${i === activeIndex ? "ring-2 ring-neutral-900 ring-offset-2 dark:ring-white dark:ring-offset-neutral-950" : "opacity-60 hover:opacity-100"}`}
@@ -154,7 +156,7 @@ function ZoomGallery({ images, videos = [], fallbackKey, activeIndex, onSelect }
                   </span>
                 </>
               ) : item.url ? (
-                <img src={item.url} alt="" className="h-full w-full object-contain" />
+                <img src={item.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain" />
               ) : (
                 <Sparkles className="h-7 w-7 text-white/40" strokeWidth={1} />
               )}
@@ -470,7 +472,38 @@ function ProductDetails() {
   });
   const isWishlisted = wishlistItems.some((w) => w.product.id === id);
 
-  useDocumentTitle(product?.name);
+  useMetaTags({
+    title: product?.name,
+    description: product?.shortDescription || product?.description?.slice(0, 160),
+    path: `/product/${id}`,
+    structuredData: product
+      ? {
+          "@context": "https://schema.org",
+          "@type": "Product",
+          name: product.name,
+          description: product.description,
+          image: (product.images || []).map((img) => resolveProductImageUrl(img.url)).filter(Boolean),
+          sku: product.sku,
+          ...(product.brand?.name ? { brand: { "@type": "Brand", name: product.brand.name } } : {}),
+          offers: {
+            "@type": "Offer",
+            priceCurrency: "GBP",
+            price: Number(product.price),
+            availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+            url: `https://veluntra.co.uk/product/${product.id}`,
+          },
+          ...(product.ratingCount > 0
+            ? {
+                aggregateRating: {
+                  "@type": "AggregateRating",
+                  ratingValue: Number(product.ratingAvg) || 0,
+                  reviewCount: product.ratingCount,
+                },
+              }
+            : {}),
+        }
+      : undefined,
+  });
 
   const { data: relatedResult } = useQuery({
     queryKey: ["products", "related", product?.category?.slug],
@@ -985,7 +1018,13 @@ function ProductDetails() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-neutral-900 dark:text-white">Your rating:</span>
                         {[1, 2, 3, 4, 5].map((n) => (
-                          <button type="button" key={n} onClick={() => setReviewForm((f) => ({ ...f, rating: n }))}>
+                          <button
+                            type="button"
+                            key={n}
+                            aria-label={`Rate ${n} star${n === 1 ? "" : "s"}`}
+                            aria-pressed={n === reviewForm.rating}
+                            onClick={() => setReviewForm((f) => ({ ...f, rating: n }))}
+                          >
                             <Star
                               className={`h-5 w-5 ${n <= reviewForm.rating ? "fill-amber-400 text-amber-400" : "fill-neutral-200 text-neutral-200 dark:fill-neutral-700 dark:text-neutral-700"}`}
                             />

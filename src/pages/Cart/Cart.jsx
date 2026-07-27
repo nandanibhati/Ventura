@@ -82,7 +82,7 @@ function CartLineItem({ item, onIncrease, onDecrease, onRemove, isMutating }) {
         }`}
       >
         {item.image ? (
-          <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+          <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
         ) : (
           <Package className="h-10 w-10 text-white/40" strokeWidth={1} />
         )}
