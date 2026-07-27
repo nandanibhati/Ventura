@@ -6,6 +6,9 @@ export const productsApi = {
   getById: (id) => api.get(`/products/${id}`).then(unwrap),
   /** Full edit-form detail (cost price, reserved stock) — owning seller or admin only. */
   getByIdForManage: (id) => api.get(`/products/${id}/manage`).then(unwrap),
+  /** Whole-catalogue browse at dropship pricing — approved dropshipper/admin only. */
+  listDropshipCatalogue: (params) =>
+    api.get("/products/dropship-catalogue", { params }).then((r) => ({ items: r.data.data, meta: r.data.meta })),
   create: (payload) => api.post("/products", payload).then(unwrap),
   update: (id, payload) => api.patch(`/products/${id}`, payload).then(unwrap),
   remove: (id) => api.delete(`/products/${id}`).then(unwrap),

@@ -101,6 +101,12 @@ const NAV_ITEMS = [
   { id: "settings", label: "Store Settings", icon: Store },
 ];
 
+// A promoted dropshipper owns no store/products of their own, so the seller-side tabs above
+// (which all assume "my store's orders/inventory/customers") don't apply yet — phase 1 is just
+// browsing the catalogue at dropship pricing. Placing manual orders happens outside the
+// dashboard for now (by phone/email), so there's no Orders tab here yet either.
+const DROPSHIPPER_NAV_ITEMS = [{ id: "catalogue", label: "Catalogue", icon: Package }];
+
 const RANGE_OPTIONS = [
   { id: "day", label: "Daily" },
   { id: "week", label: "Weekly" },
@@ -1133,6 +1139,98 @@ function ProductsTab({ tokens, categoryColors }) {
   );
 }
 
+/** Browse-only catalogue for an approved dropshipper — every published product across the
+ * whole store at their special dropship price, with the retail price shown alongside as the
+ * "suggested selling price" and the difference as estimated profit per unit. No add/edit here;
+ * a dropshipper doesn't own these listings. Placing an order is still manual (phone/email) in
+ * this first version, so there's no cart/checkout action on this screen yet. */
+function DropshipCatalogueTab() {
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["dropship-catalogue", { search, page }],
+    queryFn: () => productsApi.listDropshipCatalogue({ search: search || undefined, page, limit: PAGE_SIZE }),
+  });
+
+  const products = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-black/5 bg-white dark:border-white/10 dark:bg-neutral-900">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-black/5 p-5 dark:border-white/10">
+          <div>
+            <h3 className="text-base font-bold text-neutral-900 dark:text-white">Dropship Catalogue</h3>
+            <p className="text-xs text-neutral-400">{data?.meta?.total ?? 0} products available</p>
+          </div>
+          <input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Search products…"
+            className="rounded-full border border-black/10 bg-transparent px-4 py-2 text-xs dark:border-white/15 dark:text-white"
+          />
+        </div>
+        {isLoading ? (
+          <div className="p-10 text-center text-sm text-neutral-400">Loading catalogue…</div>
+        ) : isError ? (
+          <div className="p-6"><ErrorNotice onRetry={refetch} /></div>
+        ) : products.length === 0 ? (
+          <EmptyState icon={Package} title="No products found" description="Try a different search." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-black/5 text-xs uppercase tracking-wider text-neutral-400 dark:border-white/10">
+                  <th className="px-5 py-3 font-medium">Product</th>
+                  <th className="px-5 py-3 font-medium">Category</th>
+                  <th className="px-5 py-3 font-medium">Your Price</th>
+                  <th className="px-5 py-3 font-medium">Suggested Selling Price</th>
+                  <th className="px-5 py-3 font-medium">Est. Profit</th>
+                  <th className="px-5 py-3 font-medium">Stock</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map((product) => {
+                  const yourPrice = Number(product.dropshipPrice);
+                  const suggestedPrice = Number(product.price);
+                  const profit = suggestedPrice - yourPrice;
+                  return (
+                    <tr key={product.id} className="border-b border-black/5 last:border-b-0 dark:border-white/10">
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-950">
+                            {product.images?.[0]?.url ? (
+                              <img src={resolveMediaUrl(product.images[0].url)} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <Package className="h-4 w-4 text-white/60" />
+                            )}
+                          </div>
+                          <span className="font-medium text-neutral-900 dark:text-white">{product.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">{product.category?.name}</td>
+                      <td className="px-5 py-4 font-semibold text-neutral-900 dark:text-white">£{yourPrice.toFixed(2)}</td>
+                      <td className="px-5 py-4 text-neutral-500 dark:text-neutral-400">£{suggestedPrice.toFixed(2)}</td>
+                      <td className={`px-5 py-4 font-medium ${profit > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-400"}`}>
+                        {profit > 0 ? `£${profit.toFixed(2)}` : "—"}
+                      </td>
+                      <td className="px-5 py-4">
+                        <StockMeter stock={product.stock} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+    </div>
+  );
+}
+
 function InventoryTab() {
   const [page, setPage] = useState(1);
   const [historyProduct, setHistoryProduct] = useState(null);
@@ -1409,7 +1507,7 @@ function StoreSettingsTab() {
   );
 }
 
-function Sidebar({ activeTab, onSelect, isOpen, onClose, portalLabel }) {
+function Sidebar({ activeTab, onSelect, isOpen, onClose, portalLabel, navItems = NAV_ITEMS }) {
   return (
     <>
       <AnimatePresence>
@@ -1433,7 +1531,7 @@ function Sidebar({ activeTab, onSelect, isOpen, onClose, portalLabel }) {
         </div>
         <p className="px-6 pb-4 text-[11px] font-medium uppercase tracking-wider text-neutral-500">{portalLabel}</p>
         <nav className="flex-1 space-y-1 px-3">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => {
@@ -1503,9 +1601,11 @@ function Topbar({ title, onMenuClick, isDark, onToggleDark, accountLabel = "Velu
 
 function SellerDashboard() {
   const { user } = useAuth();
-  const portalLabel = user?.role === "dropshipper" ? "Dropshipper Dashboard" : "Seller Dashboard";
+  const isDropshipper = user?.role === "dropshipper";
+  const portalLabel = isDropshipper ? "Dropshipper Dashboard" : "Seller Dashboard";
+  const navItems = isDropshipper ? DROPSHIPPER_NAV_ITEMS : NAV_ITEMS;
   useDocumentTitle(portalLabel);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(isDropshipper ? "catalogue" : "overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [range, setRange] = useState("month");
   const [isDark, setIsDark] = useState(() => {                   
@@ -1523,7 +1623,7 @@ function SellerDashboard() {
 
   const tokens = isDark ? CHART_TOKENS.dark : CHART_TOKENS.light;
   const categoryColors = isDark ? CATEGORY_COLORS.dark : CATEGORY_COLORS.light;
-  const activeNavItem = NAV_ITEMS.find((item) => item.id === activeTab);
+  const activeNavItem = navItems.find((item) => item.id === activeTab);
 
   return (
     <div className="flex min-h-screen bg-neutral-50 dark:bg-neutral-950">
@@ -1533,6 +1633,7 @@ function SellerDashboard() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         portalLabel={portalLabel}
+        navItems={navItems}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
@@ -1540,18 +1641,24 @@ function SellerDashboard() {
           onMenuClick={() => setSidebarOpen(true)}
           isDark={isDark}
           onToggleDark={() => setIsDark((d) => !d)}
-          accountLabel={user?.role === "dropshipper" ? "Veluntra Dropshipper" : "Veluntra Seller"}
-          accountInitials={user?.role === "dropshipper" ? "VD" : "VS"}
+          accountLabel={isDropshipper ? "Veluntra Dropshipper" : "Veluntra Seller"}
+          accountInitials={isDropshipper ? "VD" : "VS"}
         />
         <main className="flex-1 p-4 sm:p-6">
-          {activeTab === "overview" && (
-            <OverviewTab tokens={tokens} categoryColors={categoryColors} range={range} onRangeChange={setRange} />
+          {isDropshipper ? (
+            activeTab === "catalogue" && <DropshipCatalogueTab />
+          ) : (
+            <>
+              {activeTab === "overview" && (
+                <OverviewTab tokens={tokens} categoryColors={categoryColors} range={range} onRangeChange={setRange} />
+              )}
+              {activeTab === "orders" && <OrdersTab />}
+              {activeTab === "products" && <ProductsTab tokens={tokens} categoryColors={categoryColors} />}
+              {activeTab === "inventory" && <InventoryTab />}
+              {activeTab === "customers" && <CustomersTab />}
+              {activeTab === "settings" && <StoreSettingsTab />}
+            </>
           )}
-          {activeTab === "orders" && <OrdersTab />}
-          {activeTab === "products" && <ProductsTab tokens={tokens} categoryColors={categoryColors} />}
-          {activeTab === "inventory" && <InventoryTab />}
-          {activeTab === "customers" && <CustomersTab />}
-          {activeTab === "settings" && <StoreSettingsTab />}
         </main>
       </div>
     </div>

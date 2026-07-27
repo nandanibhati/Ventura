@@ -56,6 +56,7 @@ import {
   Archive,
   Mail,
   Warehouse,
+  Truck,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -504,6 +505,16 @@ function UsersSection() {
                         {u.role === "admin" ? "Remove admin access" : "Make admin"}
                       </Dropdown.Item>
                     )}
+                    {(u.role === "customer" || u.role === "dropshipper") && (
+                      <Dropdown.Item
+                        icon={Truck}
+                        onClick={() =>
+                          roleMutation.mutate({ id: u.id, role: u.role === "dropshipper" ? "customer" : "dropshipper" })
+                        }
+                      >
+                        {u.role === "dropshipper" ? "Remove dropshipper access" : "Approve as dropshipper"}
+                      </Dropdown.Item>
+                    )}
                     <Dropdown.Separator />
                     <Dropdown.Item icon={Trash2} destructive onClick={() => deleteMutation.mutate(u.id)}>Delete</Dropdown.Item>
                   </Dropdown>
@@ -824,7 +835,7 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
     setEditing(null);
     setForm({
       name: "", description: "", categoryId: categories[0]?.id, brandId: brands[0]?.id, storeId: stores[0]?.id,
-      price: "", stock: 0, status: "draft", images: [],
+      price: "", dropshipPrice: "", stock: 0, status: "draft", images: [],
       sku: "", barcode: "", condition: "",
       isFeatured: false, isTrending: false, isBestSeller: false, isNew: false, badge: "",
       animationOverride: null,
@@ -842,7 +853,7 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
       const full = await productsApi.getByIdForManage(p.id);
       setEditing(full);
       setForm({
-        name: full.name, description: full.description || "", price: full.price, stock: full.stock, status: full.status, categoryId: full.categoryId, brandId: full.brandId,
+        name: full.name, description: full.description || "", price: full.price, dropshipPrice: full.dropshipPrice ?? "", stock: full.stock, status: full.status, categoryId: full.categoryId, brandId: full.brandId,
         images: full.images?.map((i) => resolveMediaUrl(i.url)) || [],
         sku: full.sku || "", barcode: full.barcode || "", condition: full.condition || "",
         isFeatured: !!full.isFeatured, isTrending: !!full.isTrending, isBestSeller: !!full.isBestSeller, isNew: !!full.isNew,
@@ -904,17 +915,18 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
       barcode: form.barcode?.trim() || null,
     };
     const variantsPayload = buildOptionsAndVariantsPayload(form);
+    const dropshipPrice = form.dropshipPrice !== "" && form.dropshipPrice != null ? Number(form.dropshipPrice) : null;
     if (editing) {
       updateMutation.mutate({
         id: editing.id,
         payload: {
-          name: form.name, description: form.description, price: Number(form.price), stock: Number(form.stock), status: form.status, images: form.images,
+          name: form.name, description: form.description, price: Number(form.price), dropshipPrice, stock: Number(form.stock), status: form.status, images: form.images,
           ...merchandising, ...catalog, ...identifiers, ...variantsPayload,
         },
       });
     } else {
       const { sku, barcode, colorOptions, storageOptions, variants, ...formRest } = form;
-      createMutation.mutate({ ...formRest, ...merchandising, ...catalog, ...identifiers, ...variantsPayload, price: Number(form.price), stock: Number(form.stock) });
+      createMutation.mutate({ ...formRest, ...merchandising, ...catalog, ...identifiers, ...variantsPayload, price: Number(form.price), dropshipPrice, stock: Number(form.stock) });
     }
   };
 
@@ -1078,6 +1090,15 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
             <Input label="Price" type="number" leftIcon={PoundSterling} value={form.price ?? ""} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} />
             <Input label="Stock quantity" type="number" value={form.stock ?? ""} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))} />
           </div>
+          <Input
+            label="Dropship price (optional)"
+            type="number"
+            leftIcon={PoundSterling}
+            placeholder="Same as price if left blank"
+            helperText="What an approved dropshipper pays — never shown to regular customers."
+            value={form.dropshipPrice ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, dropshipPrice: e.target.value }))}
+          />
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="SKU"
