@@ -75,30 +75,15 @@ function ZoomGallery({ images, videos = [], fallbackKey, activeIndex, onSelect }
   const current = media[activeIndex] || {};
   const isZoomable = current.type !== "video" && Boolean(current.url);
 
-  const [zoomOrigin, setZoomOrigin] = useState("50% 50%");
-  const [isHovering, setIsHovering] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const frameRef = useRef(null);
 
   useEffect(() => {
     setLightboxOpen(false);
   }, [activeIndex]);
 
-  const handleMouseMove = (e) => {
-    const rect = frameRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setZoomOrigin(`${Math.max(0, Math.min(100, x))}% ${Math.max(0, Math.min(100, y))}%`);
-  };
-
   return (
     <div>
       <div
-        ref={frameRef}
-        onMouseMove={isZoomable ? handleMouseMove : undefined}
-        onMouseEnter={isZoomable ? () => setIsHovering(true) : undefined}
-        onMouseLeave={isZoomable ? () => setIsHovering(false) : undefined}
         onClick={isZoomable ? () => setLightboxOpen(true) : undefined}
         className={`group relative aspect-square overflow-hidden rounded-3xl border border-black/5 bg-neutral-50 dark:border-white/10 dark:bg-neutral-900 ${
           isZoomable ? "cursor-zoom-in" : ""
@@ -118,12 +103,7 @@ function ZoomGallery({ images, videos = [], fallbackKey, activeIndex, onSelect }
             {current.type === "video" && current.url ? (
               <video src={current.url} className="h-full w-full object-contain" controls playsInline />
             ) : current.url ? (
-              <img
-                src={current.url}
-                alt=""
-                className="h-full w-full object-contain transition-transform duration-200 ease-out"
-                style={isHovering ? { transform: "scale(2)", transformOrigin: zoomOrigin } : undefined}
-              />
+              <img src={current.url} alt="" className="h-full w-full object-contain" />
             ) : (
               <Sparkles className="h-28 w-28 text-white/30 md:h-36 md:w-36" strokeWidth={0.75} />
             )}
