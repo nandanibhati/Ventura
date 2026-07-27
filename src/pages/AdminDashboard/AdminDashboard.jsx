@@ -123,6 +123,7 @@ const NAV_GROUPS = [
       { id: "promotions", label: "Offers", icon: PercentIcon },
       { id: "reviews", label: "Reviews", icon: Star },
       { id: "suggestions", label: "Suggestions", icon: MessageSquarePlus },
+      { id: "partnerApplications", label: "Partner Applications", icon: Truck },
       { id: "fulfillmentRequests", label: "Fulfillment Requests", icon: PackageX },
       { id: "warehouse", label: "Warehouse Stock", icon: Warehouse },
       { id: "homepage", label: "Homepage CMS", icon: Layout },
@@ -236,6 +237,7 @@ export default function AdminDashboard() {
               {activeTab === "promotions" && <PromotionsSection />}
               {activeTab === "reviews" && <ReviewsSection />}
               {activeTab === "suggestions" && <SuggestionsSection />}
+              {activeTab === "partnerApplications" && <PartnerApplicationsSection />}
               {activeTab === "fulfillmentRequests" && <FulfillmentRequestsSection />}
               {activeTab === "warehouse" && <WarehouseStockSection />}
               {activeTab === "homepage" && <HomepageCmsSection />}
@@ -1909,6 +1911,122 @@ function SuggestionsSection() {
                   </OutlineButton>
                 )}
                 <OutlineButton size="sm" leftIcon={Trash2} onClick={() => deleteMutation.mutate(s.id)}>
+                  Delete
+                </OutlineButton>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-6">
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      </div>
+    </div>
+  );
+}
+
+/* — Partner Applications — */
+
+const PARTNER_APPLICATION_TYPE_LABELS = { dropship: "Dropship", wholesale: "Wholesale", affiliate: "Affiliate" };
+
+function PartnerApplicationsSection() {
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("new");
+  const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-partner-applications", { typeFilter, statusFilter, page }],
+    queryFn: () => adminApi.listPartnerApplications({ type: typeFilter, status: statusFilter, page, limit: PAGE_SIZE }),
+  });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-partner-applications"] });
+
+  const setStatusMutation = useMutation({
+    mutationFn: ({ id, status }) => adminApi.setPartnerApplicationStatus(id, status),
+    onSuccess: invalidate,
+  });
+  const deleteMutation = useMutation({ mutationFn: (id) => adminApi.deletePartnerApplication(id), onSuccess: invalidate });
+
+  const applications = data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+  const newCount = data?.meta?.newCount || 0;
+
+  return (
+    <div>
+      <SectionTitle
+        eyebrow="Manage"
+        title="Partner Applications"
+        description="Dropship, wholesale, and affiliate applications submitted from the storefront. Approving here doesn't grant access by itself — promote the applicant's account from Users once you're ready."
+      />
+
+      <Toolbar search="" onSearch={() => {}}>
+        {["all", "dropship", "wholesale", "affiliate"].map((t) => (
+          <Chip key={t} selected={typeFilter === t} onClick={() => { setTypeFilter(t); setPage(1); }}>
+            {t === "all" ? "All types" : PARTNER_APPLICATION_TYPE_LABELS[t]}
+          </Chip>
+        ))}
+        <span className="mx-1 h-4 w-px bg-[var(--border)]" aria-hidden="true" />
+        {["new", "reviewed", "approved", "rejected", "all"].map((s) => (
+          <Chip key={s} selected={statusFilter === s} onClick={() => { setStatusFilter(s); setPage(1); }}>
+            {s[0].toUpperCase() + s.slice(1)}
+            {s === "new" && newCount > 0 && ` (${newCount})`}
+          </Chip>
+        ))}
+      </Toolbar>
+
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading applications…</div>
+      ) : isError ? (
+        <ErrorNotice onRetry={refetch} />
+      ) : applications.length === 0 ? (
+        <EmptyState icon={Truck} title="No applications here" description="Nothing in this filter yet." />
+      ) : (
+        <div className="flex flex-col gap-4">
+          {applications.map((a) => (
+            <div key={a.id} className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-soft-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                      {a.firstName} {a.lastName}
+                    </p>
+                    <Badge variant="neutral">{PARTNER_APPLICATION_TYPE_LABELS[a.type] || a.type}</Badge>
+                    {a.companyName && <span className="text-xs text-[var(--text-muted)]">{a.companyName}</span>}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
+                    <span className="flex items-center gap-1"><Mail className="size-3" /> {a.email}</span>
+                    {a.phone && <span>{a.phone}</span>}
+                    {a.website && <span>{a.website}</span>}
+                    <span>{new Date(a.createdAt).toLocaleString()}</span>
+                  </div>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--text-muted)]">{a.message}</p>
+                </div>
+                <Badge
+                  variant={
+                    a.status === "new" ? "warning" : a.status === "approved" ? "success" : a.status === "rejected" ? "error" : "neutral"
+                  }
+                >
+                  {a.status}
+                </Badge>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {a.status !== "reviewed" && (
+                  <OutlineButton size="sm" leftIcon={Eye} onClick={() => setStatusMutation.mutate({ id: a.id, status: "reviewed" })}>
+                    Mark reviewed
+                  </OutlineButton>
+                )}
+                {a.status !== "approved" && (
+                  <OutlineButton size="sm" leftIcon={CheckCircle2} onClick={() => setStatusMutation.mutate({ id: a.id, status: "approved" })}>
+                    Approve
+                  </OutlineButton>
+                )}
+                {a.status !== "rejected" && (
+                  <OutlineButton size="sm" leftIcon={Ban} onClick={() => setStatusMutation.mutate({ id: a.id, status: "rejected" })}>
+                    Reject
+                  </OutlineButton>
+                )}
+                <OutlineButton size="sm" leftIcon={Trash2} onClick={() => deleteMutation.mutate(a.id)}>
                   Delete
                 </OutlineButton>
               </div>
