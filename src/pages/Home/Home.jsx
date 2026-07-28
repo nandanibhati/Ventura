@@ -18,7 +18,6 @@ import {
   Users,
   Package,
   Globe2,
-  Diamond,
   Camera,
   AtSign,
   Watch,
@@ -478,9 +477,22 @@ function BannerCarousel({ heroConfig, isLoading }) {
             className={cn("absolute inset-0 flex items-center bg-gradient-to-br", slide.gradient)}
           >
             {slide.video ? (
-              <video src={slide.video} className="absolute inset-0 h-full w-full object-cover" autoPlay muted loop playsInline />
+              <video
+                src={slide.video}
+                // Banner media is uploaded at a wide ~4:1 ratio (matching the desktop box) — the
+                // much squarer mobile box would otherwise crop most of the width away with
+                // object-cover, cutting off any text baked into the graphic. object-contain below
+                // the sm breakpoint shows the whole image instead (letterboxed into the slide's
+                // own gradient background), switching to object-cover once the box's aspect ratio
+                // is close enough to the source media's that cropping is minimal.
+                className="absolute inset-0 h-full w-full object-contain sm:object-cover"
+                autoPlay
+                muted
+                loop
+                playsInline
+              />
             ) : slide.image ? (
-              <img src={slide.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              <img src={slide.image} alt="" className="absolute inset-0 h-full w-full object-contain sm:object-cover" />
             ) : null}
             {(slide.title || slide.subtitle || slide.cta) && (slide.image || slide.video) && (
               <div className="absolute inset-0 bg-black/30" />
@@ -1156,39 +1168,6 @@ function NewsletterSection() {
   );
 }
 
-function CTASection() {
-  const { data: stats } = useQuery({ queryKey: ["stats"], queryFn: statsApi.getPublicStats });
-
-  return (
-    <div className="mx-auto max-w-7xl px-2 pb-4 sm:px-3">
-      <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-amber-500 via-amber-400 to-orange-400 px-6 py-8 text-center sm:px-10 sm:py-10">
-        <Diamond className="relative mx-auto mb-3 h-7 w-7 text-white/80" />
-        <h2 className="relative text-xl font-bold text-neutral-900 sm:text-2xl">Ready to Upgrade Your Everyday?</h2>
-        <p className="relative mx-auto mt-2 max-w-md text-sm text-neutral-800/80">
-          Join a growing community who trust Veluntra for quality, value and effortless shopping.
-        </p>
-        <div className="relative mt-5 flex flex-wrap items-center justify-center gap-3">
-          <Link to="/shop" className="inline-flex items-center gap-2 rounded-sm bg-neutral-900 px-6 py-3 text-sm font-semibold text-white">
-            Start Shopping <ArrowRight className="h-4 w-4" />
-          </Link>
-          <Link to="/signup" className="inline-flex items-center gap-2 rounded-sm border-2 border-neutral-900/20 px-6 py-3 text-sm font-semibold text-neutral-900">
-            Create Account
-          </Link>
-        </div>
-        {stats && (
-          <div className="relative mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-neutral-900/10 pt-5">
-            <span className="text-xs font-semibold text-neutral-900 sm:text-sm">{stats.happyCustomers}+ members</span>
-            <div className="flex items-center gap-1.5">
-              <StarRating rating={stats.averageRating} size="h-3.5 w-3.5" />
-              <span className="text-xs font-semibold text-neutral-900 sm:text-sm">{stats.averageRating}/5 average rating</span>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /** Simple text/image banner rendered from a CMS section's `config` — no fixed component of its own. */
 function AnnouncementBanner({ section }) {
   const { text, link, linkLabel } = section.config || {};
@@ -1351,7 +1330,7 @@ function Home() {
         <InstagramSection />
         <FAQSection />
         <NewsletterSection />
-        <CTASection />
+        <TestimonialsSection />
       </div>
     </div>
   );
