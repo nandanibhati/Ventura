@@ -9,7 +9,7 @@ const PERKS = [
 
 function PerkItem({ perk, hidden }) {
   return (
-    <div className="flex shrink-0 items-center gap-2.5 pr-16" aria-hidden={hidden || undefined}>
+    <div className="flex shrink-0 items-center gap-2.5 pr-32" aria-hidden={hidden || undefined}>
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
         <perk.icon className="h-4 w-4" strokeWidth={1.75} />
       </span>
@@ -28,7 +28,7 @@ function PerkItem({ perk, hidden }) {
 export default function PerksStrip() {
   return (
     <div className="overflow-hidden border-b border-black/5 bg-white dark:border-white/10 dark:bg-neutral-950">
-      <div className="flex w-max animate-[marquee-rtl_22s_linear_infinite] py-3 sm:py-3.5">
+      <div className="flex w-max animate-[marquee-rtl_48s_linear_infinite] py-3 sm:py-3.5">
         {PERKS.map((perk) => (
           <PerkItem key={perk.title} perk={perk} />
         ))}
