@@ -96,15 +96,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Continuous ticker for the header announcement bar (Navbar.jsx) — two identical copies of the
-   message sit side by side in a track twice the container's width; animating from -50% to 0%
-   slides the second copy in from the left edge and the first copy out past the right edge, so
-   the loop point is invisible. */
-@keyframes marquee-ltr {
+/* Header announcement bar (Navbar.jsx) — the whole line drifts right and back rather than
+   scrolling through a cropped window, so the full message always stays readable. */
+@keyframes drift-x {
   from {
-    transform: translateX(-50%);
+    transform: translateX(0);
   }
   to {
-    transform: translateX(0%);
+    transform: translateX(28px);
   }
 }

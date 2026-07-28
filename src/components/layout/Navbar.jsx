@@ -270,17 +270,11 @@ function Navbar({ onOpenChatbot }) {
           scrolled ? "h-0 overflow-hidden opacity-0" : "h-9 opacity-100"
         } bg-white/70 backdrop-blur-xl dark:bg-neutral-950/70`}
       >
-        <div className="w-60 shrink-0 overflow-hidden">
-          <div className="flex w-max animate-[marquee-ltr_14s_linear_infinite]">
-            <p className="flex shrink-0 items-center gap-1.5 whitespace-nowrap pr-12 tracking-wide">
-              <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-              Complimentary shipping on orders over £150
-            </p>
-            <p aria-hidden="true" className="flex shrink-0 items-center gap-1.5 whitespace-nowrap pr-12 tracking-wide">
-              <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-              Complimentary shipping on orders over £150
-            </p>
-          </div>
+        <div className="overflow-visible">
+          <p className="flex shrink-0 items-center gap-1.5 whitespace-nowrap tracking-wide animate-[drift-x_3s_ease-in-out_infinite_alternate]">
+            <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+            Complimentary shipping on orders over £150
+          </p>
         </div>
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-4 border-r border-black/10 pr-6 dark:border-white/10">
