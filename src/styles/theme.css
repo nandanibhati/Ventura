@@ -96,13 +96,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Header announcement bar (Navbar.jsx) — the whole line drifts right and back rather than
-   scrolling through a cropped window, so the full message always stays readable. */
-@keyframes drift-x {
+/* Perks strip ticker (PerksStrip.jsx) — two identical copies of the perk list sit side by side
+   in a track twice the container's width; animating from 0% to -50% slides the whole thing
+   leftward continuously, and since both halves are identical the loop point is invisible. */
+@keyframes marquee-rtl {
   from {
-    transform: translateX(0);
+    transform: translateX(0%);
   }
   to {
-    transform: translateX(28px);
+    transform: translateX(-50%);
   }
 }
