@@ -416,7 +416,7 @@ export default function Products() {
             ) : pageItems.length === 0 ? (
               <EmptyState title="No products match your filters" description="Try widening your price range or clearing a filter." />
             ) : (
-              <div className={view === "list" ? "flex flex-col gap-4" : "grid grid-cols-2 gap-4 sm:grid-cols-3"}>
+              <div className={view === "list" ? "flex flex-col gap-4" : "grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"}>
                 {pageItems.map((p, i) => (
                   <ProductCard
                     key={p.id}
@@ -426,6 +426,12 @@ export default function Products() {
                     wished={wishedIds.has(p.id)}
                     onWishlistToggle={() => toggleWish(p.id)}
                     onAdd={() => handleAddToBag(p.id)}
+                    // The scroll-reveal entrance animation's whileInView trigger doesn't fire
+                    // reliably for every card in a dense multi-row grid (confirmed live: cards
+                    // past the first row were stuck permanently at their pre-animation
+                    // opacity:0) — disabling it here shows the catalogue immediately instead of
+                    // silently hiding most of a page of results.
+                    disableEntrance
                   />
                 ))}
               </div>
