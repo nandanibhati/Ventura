@@ -235,11 +235,16 @@ function HomeProductCard({ product, index, compact, template }) {
  * rather than boxes stacking into several rows. */
 function HorizontalProductRow({ children }) {
   const scrollRef = useRef(null);
-  // Scroll by a full viewport-width "page" (not a fixed pixel amount) so the arrow always lands
-  // on a card boundary instead of stopping mid-card — paired with scroll-snap below.
+  // Scroll by exactly one card (not a full-container "page") so the arrow advances the row one
+  // card at a time instead of swapping the whole visible set at once. Measured directly from two
+  // consecutive cards' rendered positions (card width + gap) rather than hardcoding either, so
+  // this keeps working across the row's responsive width/gap breakpoints above.
   const scrollBy = (dir) => {
     const el = scrollRef.current;
-    if (el) el.scrollBy({ left: dir * el.clientWidth, behavior: "smooth" });
+    if (!el) return;
+    const [first, second] = el.children;
+    const step = first && second ? second.offsetLeft - first.offsetLeft : el.clientWidth;
+    el.scrollBy({ left: dir * step, behavior: "smooth" });
   };
   return (
     <div className="relative">
@@ -389,7 +394,7 @@ function ProductGridSection({ section, defaults }) {
       {!isLoading && !isError && products.length > 0 && (
         <HorizontalProductRow>
           {products.map((product, i) => (
-            <div key={product.id} className="relative w-[72vw] shrink-0 snap-start sm:w-[270px] lg:w-[calc((100%-3*1.5rem)/4)]">
+            <div key={product.id} className="relative w-[72vw] shrink-0 snap-start sm:w-[270px] lg:w-[calc((100%-4*1.5rem)/5)]">
               <HomeProductCard product={product} index={i} template={template} />
               {isPreview && <CmsEditOverlay onEdit={() => requestEdit("product", product.id)} />}
             </div>
@@ -755,7 +760,7 @@ function FlashSaleSection({ section }) {
       ) : (
         <HorizontalProductRow>
           {products.map((product, i) => (
-            <div key={product.id} className="relative w-[72vw] shrink-0 snap-start sm:w-[270px] lg:w-[calc((100%-3*1.5rem)/4)]">
+            <div key={product.id} className="relative w-[72vw] shrink-0 snap-start sm:w-[270px] lg:w-[calc((100%-4*1.5rem)/5)]">
               <HomeProductCard product={product} index={i} template={template} />
               {isPreview && <CmsEditOverlay onEdit={() => requestEdit("product", product.id)} />}
             </div>
