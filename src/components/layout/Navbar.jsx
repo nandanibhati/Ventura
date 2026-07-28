@@ -727,19 +727,60 @@ function Navbar({ onOpenChatbot }) {
                 </button>
               </div>
 
-              <form
-                onSubmit={handleSearchSubmit}
-                className="mx-5 mt-4 flex items-center gap-2 rounded-full border border-black/10 bg-black/[0.03] px-3.5 py-2.5 dark:border-white/10 dark:bg-white/5"
-              >
-                <Search className="h-4 w-4 shrink-0 text-neutral-400" />
-                <input
-                  aria-label="Search products"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search products..."
-                  className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-400 dark:text-white"
-                />
-              </form>
+              <div className="relative mx-5 mt-4">
+                <form
+                  onSubmit={handleSearchSubmit}
+                  className="flex items-center gap-2 rounded-full border border-black/10 bg-black/[0.03] px-3.5 py-2.5 dark:border-white/10 dark:bg-white/5"
+                >
+                  <Search className="h-4 w-4 shrink-0 text-neutral-400" />
+                  <input
+                    aria-label="Search products"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onFocus={() => setOpenMenu("search")}
+                    placeholder="Search products..."
+                    className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-400 dark:text-white"
+                  />
+                </form>
+
+                {openMenu === "search" && debouncedQuery.length >= 2 && (
+                  <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-[60vh] overflow-y-auto rounded-2xl border border-black/5 bg-white p-2 shadow-xl shadow-black/10 dark:border-white/10 dark:bg-neutral-900">
+                    {searchSuggestions.length === 0 ? (
+                      <p className="px-3 py-4 text-center text-sm text-neutral-400">No products match "{debouncedQuery}"</p>
+                    ) : (
+                      <>
+                        {searchSuggestions.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => goToSuggestedProduct(p.id)}
+                            className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+                          >
+                            <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--surface-inset)]">
+                              {p.images?.[0]?.url ? (
+                                <img src={resolveProductImageUrl(p.images[0].url)} alt="" className="h-full w-full object-contain" />
+                              ) : (
+                                <Search className="h-4 w-4 text-neutral-300" />
+                              )}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-medium text-neutral-900 dark:text-white">{p.name}</span>
+                              <span className="text-xs text-neutral-400">£{Number(p.price).toFixed(2)}</span>
+                            </span>
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={handleSearchSubmit}
+                          className="mt-1 w-full rounded-xl px-3 py-2 text-center text-sm font-medium text-gold-600 transition-colors hover:bg-black/5 dark:text-gold-400 dark:hover:bg-white/10"
+                        >
+                          See all results for "{debouncedQuery}"
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <nav className="mt-2 flex flex-col px-2">
                 <NavLink
