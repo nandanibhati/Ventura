@@ -125,7 +125,7 @@ export default function Products() {
     isError: productsError,
     refetch: refetchProducts,
   } = useQuery({
-    queryKey: ["products", { search, price, minRating, sortBy }],
+    queryKey: ["products", { search, price, minRating, sortBy, cats, brands }],
     queryFn: () =>
       productsApi.list({
         search: search || undefined,
@@ -133,6 +133,12 @@ export default function Products() {
         maxPrice: price[1] < MAX_PRICE ? price[1] : undefined,
         minRating: minRating || undefined,
         sort: sortBy,
+        // Filtered server-side across the whole catalogue — previously these two were applied
+        // client-side over just this batch, which silently showed zero results for any
+        // category/brand combination not present in the first 60 (sorted-by-"featured")
+        // products once the catalogue grew past a few hundred items.
+        category: cats.length ? cats.join(",") : undefined,
+        brand: brands.length ? brands.join(",") : undefined,
         limit: 60,
       }),
   });
@@ -187,20 +193,16 @@ export default function Products() {
     });
   };
 
-  // Category/brand are multi-select in this UI, which the backend's single-value filters don't
-  // support directly — so those two are applied client-side over the (search/price/rating-filtered,
-  // server-sorted) batch above. Fine for a catalogue of this size; would need a backend `categories[]`
-  // param to scale past a few hundred products.
+  // Category/brand are now filtered server-side (passed into the query above), so this only
+  // needs to apply the filters the backend doesn't support directly.
   const specFacetSource = useMemo(() => {
     return allProducts.filter((p) => {
-      if (cats.length && !cats.includes(p.categorySlug)) return false;
-      if (brands.length && !brands.includes(p.brandSlug)) return false;
       if (conditions.length && !conditions.includes(p.condition)) return false;
       if (isNewOnly && !p.isNew) return false;
       if (saleOnly && !p.oldPrice) return false;
       return true;
     });
-  }, [allProducts, cats, brands, conditions, isNewOnly, saleOnly]);
+  }, [allProducts, conditions, isNewOnly, saleOnly]);
 
   const conditionFacets = useMemo(() => {
     const counts = new Map();
