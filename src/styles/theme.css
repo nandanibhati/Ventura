@@ -95,3 +95,16 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
+
+/* Continuous ticker for the header announcement bar (Navbar.jsx) — two identical copies of the
+   message sit side by side in a track twice the container's width; animating from -50% to 0%
+   slides the second copy in from the left edge and the first copy out past the right edge, so
+   the loop point is invisible. */
+@keyframes marquee-ltr {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0%);
+  }
+}
