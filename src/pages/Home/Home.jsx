@@ -611,54 +611,51 @@ function CategoriesSection() {
     queryFn: categoriesApi.list,
   });
   const scrollRef = useRef(null);
-  const scrollBy = (dir) => scrollRef.current?.scrollBy({ left: dir * 240, behavior: "smooth" });
+  const scrollBy = (dir) => scrollRef.current?.scrollBy({ left: dir * 280, behavior: "smooth" });
   const { isPreview, requestEdit } = useCmsEditClick();
 
   return (
-    <SectionCard padded={false}>
-      <div className="p-6 sm:p-8">
+    <div className="bg-[var(--surface-muted)] py-6 sm:py-8">
+      <div className="mx-auto max-w-7xl px-2 sm:px-3">
         <SectionStatus isLoading={isLoading} isError={isError} isEmpty={categories.length === 0} onRetry={refetch} />
         {!isLoading && !isError && categories.length > 0 && (
           <div className="relative">
-            <h2 className="mb-6 text-center text-lg font-bold text-neutral-900 dark:text-white sm:text-xl" style={{ fontFamily: "var(--font-display)" }}>
-              Shop by Category
-            </h2>
-            <div ref={scrollRef} className="flex items-start gap-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:gap-10 sm:px-10 [&::-webkit-scrollbar]:hidden">
+            {/* Flat, uncropped product renders on the section's own background (Apple-style
+                category nav) rather than a cropped circular photo — object-contain so nothing
+                of the source image is ever cut off, whatever its native aspect ratio. */}
+            <div ref={scrollRef} className="flex items-start gap-6 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:gap-12 sm:px-10 [&::-webkit-scrollbar]:hidden">
               {categories.slice(0, 12).map((cat) => {
                 const Icon = iconFor(cat.name);
                 return (
-                  <Link key={cat.id} to={`/shop?category=${cat.slug}`} className="group flex shrink-0 flex-col items-center gap-3 text-center">
-                    <div
-                      className={cn(
-                        "relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-[var(--surface-inset)] shadow-sm ring-1 ring-black/5 transition-transform group-hover:scale-105 dark:ring-white/10 sm:h-20 sm:w-20",
-                        !cat.imageUrl && "bg-gradient-to-br",
-                        !cat.imageUrl && gradientClassFor(cat.id)
-                      )}
-                    >
+                  <Link key={cat.id} to={`/shop?category=${cat.slug}`} className="group flex shrink-0 flex-col items-center gap-2 text-center">
+                    <div className="relative flex h-20 w-20 items-center justify-center sm:h-28 sm:w-28">
                       {cat.imageUrl ? (
-                        <img src={resolveMediaUrl(cat.imageUrl)} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
+                        <img
+                          src={resolveMediaUrl(cat.imageUrl)}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          className="size-full object-contain transition-transform duration-300 group-hover:scale-105"
+                        />
                       ) : (
-                        <Icon className="h-5 w-5 text-white sm:h-7 sm:w-7" strokeWidth={1.5} />
+                        <div className={cn("flex size-full items-center justify-center rounded-full bg-gradient-to-br", gradientClassFor(cat.id))}>
+                          <Icon className="h-7 w-7 text-white sm:h-9 sm:w-9" strokeWidth={1.5} />
+                        </div>
                       )}
                       {isPreview && <CmsEditOverlay onEdit={() => requestEdit("category", cat.id)} />}
                     </div>
-                    <span className="w-14 truncate text-[11px] font-medium text-neutral-700 dark:text-neutral-300 sm:w-20 sm:text-xs">
-                      {cat.name}
-                    </span>
+                    <span className="text-[13px] font-semibold text-neutral-900 dark:text-white sm:text-base">{cat.name}</span>
                   </Link>
                 );
               })}
             </div>
-            {categories.length > 4 && (
-              <div className="pointer-events-none absolute right-0 top-0 h-14 w-10 bg-gradient-to-l from-white to-transparent dark:from-neutral-900 sm:hidden" />
-            )}
             {categories.length > 6 && (
               <>
                 <button
                   type="button"
                   onClick={() => scrollBy(-1)}
                   aria-label="Scroll categories left"
-                  className="absolute left-0 top-16 hidden size-9 items-center justify-center rounded-full bg-gold-400 text-white shadow-soft-md hover:bg-gold-500 sm:flex"
+                  className="absolute left-0 top-6 hidden size-9 items-center justify-center rounded-full bg-white text-neutral-700 shadow-md hover:bg-neutral-100 dark:bg-neutral-800 dark:text-white sm:flex sm:top-10"
                 >
                   <ChevronLeft className="size-5" />
                 </button>
@@ -666,7 +663,7 @@ function CategoriesSection() {
                   type="button"
                   onClick={() => scrollBy(1)}
                   aria-label="Scroll categories right"
-                  className="absolute right-0 top-16 hidden size-9 items-center justify-center rounded-full bg-gold-400 text-white shadow-soft-md hover:bg-gold-500 sm:flex"
+                  className="absolute right-0 top-6 hidden size-9 items-center justify-center rounded-full bg-white text-neutral-700 shadow-md hover:bg-neutral-100 dark:bg-neutral-800 dark:text-white sm:flex sm:top-10"
                 >
                   <ChevronRight className="size-5" />
                 </button>
@@ -675,7 +672,7 @@ function CategoriesSection() {
           </div>
         )}
       </div>
-    </SectionCard>
+    </div>
   );
 }
 
