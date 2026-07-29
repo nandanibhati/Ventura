@@ -615,7 +615,7 @@ function CategoriesSection() {
   const { isPreview, requestEdit } = useCmsEditClick();
 
   return (
-    <div className="bg-[#f5f5f7] py-6 sm:py-8">
+    <div className="bg-white py-6 sm:py-8">
       <div className="mx-auto max-w-7xl px-2 sm:px-3">
         <SectionStatus isLoading={isLoading} isError={isError} isEmpty={categories.length === 0} onRetry={refetch} />
         {!isLoading && !isError && categories.length > 0 && (
