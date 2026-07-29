@@ -964,7 +964,7 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
 
   // The RAM/Processor/MPN-style spec presets are mobile-specific — only suggest them when
   // that's the product's category, so a furniture or kitchen listing doesn't see them.
-  const isMobileCategory = categories.find((c) => c.id === form.categoryId)?.slug === "mobile-tablets";
+  const isMobileCategory = ["phones", "tablets"].includes(categories.find((c) => c.id === form.categoryId)?.slug);
 
   return (
     <div>
