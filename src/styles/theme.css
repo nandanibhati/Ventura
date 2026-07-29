@@ -95,15 +95,3 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
-
-/* Perks strip ticker (PerksStrip.jsx) — two identical copies of the perk list sit side by side
-   in a track twice the container's width; animating from 0% to -50% slides the whole thing
-   leftward continuously, and since both halves are identical the loop point is invisible. */
-@keyframes marquee-rtl {
-  from {
-    transform: translateX(0%);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
