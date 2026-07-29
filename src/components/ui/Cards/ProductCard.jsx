@@ -79,12 +79,12 @@ export default function ProductCard({
       index={index}
       as="article"
       disableEntrance={disableEntrance}
-      className={cn("group flex flex-col bg-[var(--surface-inset)]", cfg.bordered && "overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)]", className)}
+      className={cn("group flex flex-col", cfg.bordered && "overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)]", className)}
     >
       <Link
         to={href}
         className={cn(
-          "relative block overflow-hidden bg-[var(--surface)]",
+          "relative block overflow-hidden bg-[var(--surface-inset)]",
           cfg.dense ? "aspect-square" : cfg.tall ? "aspect-[3/4]" : "aspect-[4/5]"
         )}
       >

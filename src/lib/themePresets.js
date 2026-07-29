@@ -12,6 +12,7 @@ export const FONT_PRESETS = {
   geometric: { label: "Geometric", display: '"Space Grotesk", system-ui, sans-serif', sans: '"Inter", system-ui, sans-serif' },
   warm: { label: "Warm", display: '"Lora", ui-serif, Georgia, serif', sans: '"Nunito Sans", system-ui, sans-serif' },
   luxury: { label: "Luxury Serif", display: '"Cinzel", ui-serif, Georgia, serif', sans: '"Inter", system-ui, sans-serif' },
+  friendly: { label: "Friendly", display: '"Nunito Sans", system-ui, sans-serif', sans: '"Nunito Sans", system-ui, sans-serif' },
 };
 
 export const DEFAULT_THEME = {
@@ -20,7 +21,7 @@ export const DEFAULT_THEME = {
   secondary: "#f97316",
   surfaceLight: "#ffffff",
   surfaceDark: "#0f172a",
-  font: "modern",
+  font: "friendly",
   buttonStyle: "rounded",
   cardTemplate: "marketplace",
 };
@@ -51,6 +52,12 @@ export function applyTheme(theme, target) {
   const preset = FONT_PRESETS[t.font] || FONT_PRESETS.modern;
   el.style.setProperty("--font-display", preset.display);
   el.style.setProperty("--font-sans", preset.sans);
+  // The custom properties above only reach descendants that themselves reference
+  // var(--font-sans)/var(--font-display) explicitly. Plain text with no such declaration
+  // just inherits font-family's already-resolved value from <body> (the global default),
+  // never re-evaluating the variable. Setting font-family here too makes the override a
+  // normal inherited value, so it reaches every descendant the way body's own default does.
+  el.style.fontFamily = preset.sans;
 }
 
 /** Custom favicon (Settings > Theme & Design) — a browser-tab concern, so unlike applyTheme
