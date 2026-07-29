@@ -471,7 +471,7 @@ function BannerCarousel({ heroConfig, isLoading }) {
 
   return (
     <div className="mx-auto max-w-7xl px-2 sm:px-3">
-      <div className="relative h-[170px] overflow-hidden rounded-md sm:h-[240px] md:h-[320px]">
+      <div className="relative aspect-[4/1] overflow-hidden rounded-md">
         <AnimatePresence mode="wait">
           <motion.div
             key={slide.id}
@@ -484,20 +484,14 @@ function BannerCarousel({ heroConfig, isLoading }) {
             {slide.video ? (
               <video
                 src={slide.video}
-                // Banner media is uploaded at a wide ~4:1 ratio (matching the desktop box) — the
-                // much squarer mobile box would otherwise crop most of the width away with
-                // object-cover, cutting off any text baked into the graphic. object-contain below
-                // the sm breakpoint shows the whole image instead (letterboxed into the slide's
-                // own gradient background), switching to object-cover once the box's aspect ratio
-                // is close enough to the source media's that cropping is minimal.
-                className="absolute inset-0 h-full w-full object-contain sm:object-cover"
+                className="absolute inset-0 h-full w-full object-cover"
                 autoPlay
                 muted
                 loop
                 playsInline
               />
             ) : slide.image ? (
-              <img src={slide.image} alt="" className="absolute inset-0 h-full w-full object-contain sm:object-cover" />
+              <img src={slide.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
             ) : null}
             {(slide.title || slide.subtitle || slide.cta) && (slide.image || slide.video) && (
               <div className="absolute inset-0 bg-black/30" />
@@ -565,7 +559,7 @@ function PromoTilesRow() {
 
   return (
     <div className="mx-auto max-w-7xl px-2 sm:px-3">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
         {tiles.map((cat) => {
           const Icon = iconFor(cat.name);
           return (
@@ -573,7 +567,7 @@ function PromoTilesRow() {
               key={cat.id}
               to={`/shop?category=${cat.slug}`}
               className={cn(
-                "group relative flex h-40 items-end overflow-hidden rounded-lg px-6 py-5 sm:h-56",
+                "group relative flex h-40 w-[75vw] shrink-0 snap-start items-end overflow-hidden rounded-lg px-6 py-5 sm:h-56 sm:w-auto",
                 !cat.imageUrl && "bg-gradient-to-br",
                 !cat.imageUrl && gradientClassFor(cat.id)
               )}
@@ -629,14 +623,14 @@ function CategoriesSection() {
             <h2 className="mb-6 text-center text-lg font-bold text-neutral-900 dark:text-white sm:text-xl" style={{ fontFamily: "var(--font-display)" }}>
               Shop by Category
             </h2>
-            <div ref={scrollRef} className="flex items-start gap-8 overflow-x-auto px-10 pb-1 [scrollbar-width:none] sm:gap-10 [&::-webkit-scrollbar]:hidden">
+            <div ref={scrollRef} className="flex items-start gap-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:gap-10 sm:px-10 [&::-webkit-scrollbar]:hidden">
               {categories.slice(0, 12).map((cat) => {
                 const Icon = iconFor(cat.name);
                 return (
                   <Link key={cat.id} to={`/shop?category=${cat.slug}`} className="group flex shrink-0 flex-col items-center gap-3 text-center">
                     <div
                       className={cn(
-                        "relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-[var(--surface-inset)] shadow-sm ring-1 ring-black/5 transition-transform group-hover:scale-105 dark:ring-white/10 sm:h-20 sm:w-20",
+                        "relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-[var(--surface-inset)] shadow-sm ring-1 ring-black/5 transition-transform group-hover:scale-105 dark:ring-white/10 sm:h-20 sm:w-20",
                         !cat.imageUrl && "bg-gradient-to-br",
                         !cat.imageUrl && gradientClassFor(cat.id)
                       )}
@@ -644,17 +638,20 @@ function CategoriesSection() {
                       {cat.imageUrl ? (
                         <img src={resolveMediaUrl(cat.imageUrl)} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
                       ) : (
-                        <Icon className="h-6 w-6 text-white sm:h-7 sm:w-7" strokeWidth={1.5} />
+                        <Icon className="h-5 w-5 text-white sm:h-7 sm:w-7" strokeWidth={1.5} />
                       )}
                       {isPreview && <CmsEditOverlay onEdit={() => requestEdit("category", cat.id)} />}
                     </div>
-                    <span className="w-16 truncate text-[11px] font-medium text-neutral-700 dark:text-neutral-300 sm:w-20 sm:text-xs">
+                    <span className="w-14 truncate text-[11px] font-medium text-neutral-700 dark:text-neutral-300 sm:w-20 sm:text-xs">
                       {cat.name}
                     </span>
                   </Link>
                 );
               })}
             </div>
+            {categories.length > 4 && (
+              <div className="pointer-events-none absolute right-0 top-0 h-14 w-10 bg-gradient-to-l from-white to-transparent dark:from-neutral-900 sm:hidden" />
+            )}
             {categories.length > 6 && (
               <>
                 <button
@@ -1335,7 +1332,6 @@ function Home() {
         <InstagramSection />
         <FAQSection />
         <NewsletterSection />
-        <TestimonialsSection />
       </div>
     </div>
   );
