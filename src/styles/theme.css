@@ -68,6 +68,13 @@
 
   /* ---------- Motion ---------- */
   --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Site-wide content width (every page's `mx-auto max-w-7xl` wrapper — Navbar,
+     Footer, Home sections, Shop, product detail, cart) was capped at the
+     Tailwind default of 80rem/1280px, leaving large empty margins on wide
+     monitors. Widened here rather than per-file so every section stays
+     consistent with a single change. */
+  --container-7xl: 100rem;
 }
 
 /* ---------- Base surface variables (light / dark aware) ---------- */
