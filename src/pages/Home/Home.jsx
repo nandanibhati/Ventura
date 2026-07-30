@@ -18,8 +18,6 @@ import {
   Users,
   Package,
   Globe2,
-  Camera,
-  AtSign,
   Watch,
   Sofa,
   Sparkles,
@@ -814,7 +812,7 @@ function CollectionsSection({ section }) {
                   <div
                     className={cn(
                       "relative aspect-[4/3] w-full overflow-hidden rounded-md",
-                      !cat.imageUrl && "bg-gradient-to-br",
+                      cat.imageUrl ? "bg-white" : "bg-gradient-to-br",
                       !cat.imageUrl && gradientClassFor(cat.id)
                     )}
                   >
@@ -824,7 +822,7 @@ function CollectionsSection({ section }) {
                         alt=""
                         loading="lazy"
                         decoding="async"
-                        className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="absolute inset-0 size-full object-contain p-3 transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
                       <Icon className="absolute right-3 top-3 h-10 w-10 text-white/20" strokeWidth={1} />
@@ -1041,33 +1039,6 @@ function TestimonialsSection({ section }) {
           </div>
         </div>
       )}
-    </SectionCard>
-  );
-}
-
-const INSTAGRAM_TILES = Array.from({ length: 6 }).map((_, i) => ({
-  id: `ig-${i}`,
-  gradient: gradientClassFor(`ig-${i}`),
-}));
-
-function InstagramSection() {
-  return (
-    <SectionCard>
-      <SectionHeaderRow title="#PoweredByVeluntra" />
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-        {INSTAGRAM_TILES.map((tile) => (
-          <div key={tile.id} className={cn("group relative aspect-square overflow-hidden rounded-sm bg-gradient-to-br", tile.gradient)}>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Camera className="h-5 w-5 text-white/30" strokeWidth={1.5} />
-            </div>
-            <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-100">
-              <span className="flex items-center gap-1 text-[10px] text-white/70">
-                <AtSign className="h-2.5 w-2.5" /> Veluntra
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
     </SectionCard>
   );
 }
@@ -1337,7 +1308,6 @@ function Home() {
             return <SectionComponent key={section.id} section={section} />;
           })}
         <StatsSection />
-        <InstagramSection />
         <FAQSection />
         <NewsletterSection />
       </div>
