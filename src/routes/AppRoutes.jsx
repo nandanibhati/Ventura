@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 
 import MainLayout from "../layouts/MainLayout";
@@ -10,20 +10,21 @@ import Login from "../pages/Login/Login";
 import Signup from "../pages/Signup/Signup";
 import ProtectedRoute from "./ProtectedRoute";
 import { LoadingSpinner } from "../components/ui/Feedback";
+import { lazyWithRetry } from "./lazyWithRetry";
 
 // Not first-paint-critical — loaded on demand instead of bloating the initial bundle.
-const ForgotPassword = lazy(() => import("../pages/ForgotPassword/ForgotPassword"));
-const ResetPassword = lazy(() => import("../pages/ResetPassword/ResetPassword"));
-const Account = lazy(() => import("../pages/Account/Account"));
-const Wishlist = lazy(() => import("../pages/Wishlist/Wishlist"));
-const Orders = lazy(() => import("../pages/Orders/Orders"));
-const SellerDashboard = lazy(() => import("../pages/SellerDashboard/SellerDashboard"));
-const AdminDashboard = lazy(() => import("../pages/AdminDashboard/AdminDashboard"));
-const Checkout = lazy(() => import("../pages/Checkout/Checkout"));
-const ReturnPolicy = lazy(() => import("../pages/Policies/ReturnPolicy"));
-const Dropshipping = lazy(() => import("../pages/Dropshipping/Dropshipping"));
-const Wholesale = lazy(() => import("../pages/Wholesale/Wholesale"));
-const Affiliate = lazy(() => import("../pages/Affiliate/Affiliate"));
+const ForgotPassword = lazyWithRetry(() => import("../pages/ForgotPassword/ForgotPassword"));
+const ResetPassword = lazyWithRetry(() => import("../pages/ResetPassword/ResetPassword"));
+const Account = lazyWithRetry(() => import("../pages/Account/Account"));
+const Wishlist = lazyWithRetry(() => import("../pages/Wishlist/Wishlist"));
+const Orders = lazyWithRetry(() => import("../pages/Orders/Orders"));
+const SellerDashboard = lazyWithRetry(() => import("../pages/SellerDashboard/SellerDashboard"));
+const AdminDashboard = lazyWithRetry(() => import("../pages/AdminDashboard/AdminDashboard"));
+const Checkout = lazyWithRetry(() => import("../pages/Checkout/Checkout"));
+const ReturnPolicy = lazyWithRetry(() => import("../pages/Policies/ReturnPolicy"));
+const Dropshipping = lazyWithRetry(() => import("../pages/Dropshipping/Dropshipping"));
+const Wholesale = lazyWithRetry(() => import("../pages/Wholesale/Wholesale"));
+const Affiliate = lazyWithRetry(() => import("../pages/Affiliate/Affiliate"));
 
 // React Router doesn't reset scroll position on navigation — without this, clicking a link while
 // scrolled down on one page lands you at the same scroll offset on the next page (often showing
