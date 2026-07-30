@@ -266,12 +266,12 @@ function Navbar({ onOpenChatbot }) {
   return (
     <header ref={navRef} className="sticky top-0 z-50">
       <div
-        className={`hidden border-b border-black/5 px-6 text-xs text-neutral-500 transition-all duration-300 dark:border-white/10 dark:text-neutral-400 lg:flex lg:items-center lg:justify-between ${
+        className={`hidden border-b border-black/5 px-6 text-xs text-gold-700 transition-all duration-300 dark:border-white/10 dark:text-gold-100 lg:flex lg:items-center lg:justify-between ${
           scrolled ? "h-0 overflow-hidden opacity-0" : "h-9 opacity-100"
-        } bg-white/70 backdrop-blur-xl dark:bg-neutral-950/70`}
+        } bg-gold-100/90 backdrop-blur-xl dark:bg-[#2e1065]/70`}
       >
         <p className="flex items-center gap-1.5 tracking-wide">
-          <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+          <Sparkles className="h-3.5 w-3.5 text-gold-500 dark:text-gold-300" />
           Complimentary shipping on orders over £150
         </p>
         <div className="flex items-center gap-6">
@@ -570,7 +570,7 @@ function Navbar({ onOpenChatbot }) {
                 </Link>
                 <Link
                   to="/signup"
-                  className="rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
+                  className="rounded-full bg-gold-400 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gold-500"
                 >
                   Sign up
                 </Link>

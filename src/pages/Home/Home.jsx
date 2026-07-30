@@ -566,33 +566,25 @@ function PromoTilesRow() {
             <Link
               key={cat.id}
               to={`/shop?category=${cat.slug}`}
-              className={cn(
-                "group relative flex h-40 w-[75vw] shrink-0 snap-start items-end overflow-hidden rounded-lg px-6 py-5 sm:h-56 sm:w-auto",
-                !cat.imageUrl && "bg-gradient-to-br",
-                !cat.imageUrl && gradientClassFor(cat.id)
-              )}
+              className="group relative flex h-40 w-[75vw] shrink-0 snap-start items-center overflow-hidden rounded-lg bg-gold-100/70 px-6 py-5 dark:bg-[#2e1065]/40 sm:h-56 sm:w-auto"
             >
-              {cat.imageUrl && (
-                <>
-                  <img
-                    src={resolveMediaUrl(cat.imageUrl)}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
-                </>
-              )}
-              <div className="relative z-10">
-                <p className="text-xs font-semibold uppercase tracking-wider text-white/70">{cat.productCount}+ items</p>
-                <h3 className="mt-1 text-xl font-bold text-white sm:text-2xl">{cat.name}</h3>
-                <span className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-white/90">
+              <div className="relative z-10 max-w-[55%]">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gold-600 dark:text-gold-300">{cat.productCount}+ items</p>
+                <h3 className="mt-1 text-xl font-bold text-neutral-900 dark:text-white sm:text-2xl">{cat.name}</h3>
+                <span className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-gold-600 dark:text-gold-300">
                   Shop now <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </span>
               </div>
-              {!cat.imageUrl && (
-                <Icon className="absolute right-4 top-4 z-0 h-16 w-16 shrink-0 text-white/15 sm:h-20 sm:w-20" strokeWidth={1} />
+              {cat.imageUrl ? (
+                <img
+                  src={resolveMediaUrl(cat.imageUrl)}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-y-0 right-0 h-full w-[52%] object-contain p-3 transition-transform duration-500 group-hover:scale-105 sm:p-6"
+                />
+              ) : (
+                <Icon className="absolute right-4 top-4 z-0 h-16 w-16 shrink-0 text-gold-400/25 sm:h-20 sm:w-20" strokeWidth={1} />
               )}
             </Link>
           );

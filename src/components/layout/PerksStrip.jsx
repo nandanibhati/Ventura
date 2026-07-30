@@ -11,11 +11,11 @@ const PERKS = [
  * this only appeared once, buried partway down the homepage. */
 export default function PerksStrip() {
   return (
-    <div className="border-b border-black/5 bg-white dark:border-white/10 dark:bg-neutral-950">
+    <div className="border-b border-black/5 bg-gold-100/70 dark:border-white/10 dark:bg-[#2e1065]/40">
       <div className="mx-auto grid max-w-7xl grid-cols-2 gap-3 px-6 py-3 sm:grid-cols-4 sm:gap-4 sm:py-3.5">
         {PERKS.map((perk) => (
           <div key={perk.title} className="flex items-center gap-2.5">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gold-400/15 text-gold-600 dark:text-gold-300">
               <perk.icon className="h-4 w-4" strokeWidth={1.75} />
             </span>
             <div className="min-w-0">
