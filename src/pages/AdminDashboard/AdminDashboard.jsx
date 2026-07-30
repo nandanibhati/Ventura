@@ -58,6 +58,8 @@ import {
   Warehouse,
   Truck,
   Gift,
+  Search,
+  ArrowUpRight,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -187,6 +189,23 @@ export default function AdminDashboard() {
   }, []);
   const clearPendingEdit = () => setPendingEdit(null);
 
+  // The dashboard home's quick-search box jumps straight to a pre-filtered Products or Orders
+  // tab rather than living as decoration — order numbers (VNT-######) route to Orders, anything
+  // else searches Products by name/SKU.
+  const [pendingProductSearch, setPendingProductSearch] = useState(null);
+  const [pendingOrderSearch, setPendingOrderSearch] = useState(null);
+  const handleQuickSearch = (query) => {
+    const q = query.trim();
+    if (!q) return;
+    if (/^VNT-/i.test(q)) {
+      setPendingOrderSearch(q);
+      setActiveTab("orders");
+    } else {
+      setPendingProductSearch(q);
+      setActiveTab("products");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[var(--surface-muted)]">
       <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-5 py-4 lg:hidden">
@@ -217,14 +236,21 @@ export default function AdminDashboard() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             >
-              {activeTab === "dashboard" && <DashboardHomeSection onNavigate={setActiveTab} />}
+              {activeTab === "dashboard" && <DashboardHomeSection onNavigate={setActiveTab} onQuickSearch={handleQuickSearch} />}
               {activeTab === "users" && <UsersSection />}
               {activeTab === "sellers" && <SellersSection />}
-              {activeTab === "orders" && <OrdersSection />}
+              {activeTab === "orders" && (
+                <OrdersSection
+                  pendingSearch={pendingOrderSearch}
+                  onConsumePendingSearch={() => setPendingOrderSearch(null)}
+                />
+              )}
               {activeTab === "products" && (
                 <ProductsSection
                   pendingEditId={pendingEdit?.entityType === "product" ? pendingEdit.entityId : null}
                   onConsumePendingEdit={clearPendingEdit}
+                  pendingSearch={pendingProductSearch}
+                  onConsumePendingSearch={() => setPendingProductSearch(null)}
                 />
               )}
               {activeTab === "categories" && (
@@ -726,7 +752,7 @@ function OrderItemsModal({ order, onClose }) {
 
 const UNFULFILLED_STATUSES = ["pending", "processing"];
 
-function OrdersSection() {
+function OrdersSection({ pendingSearch, onConsumePendingSearch } = {}) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -735,6 +761,15 @@ function OrdersSection() {
   const [bulkPending, setBulkPending] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (pendingSearch == null) return;
+    setSearch(pendingSearch);
+    setStatusFilter("all");
+    setPage(1);
+    onConsumePendingSearch?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingSearch]);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-orders", { search, statusFilter, page }],
@@ -881,7 +916,7 @@ const PRODUCT_STATUSES = ["draft", "published", "archived", "hidden", "upcoming"
 const PRODUCT_STATUS_VARIANT = { draft: "neutral", published: "success", archived: "neutral", hidden: "neutral", upcoming: "gold", discontinued: "error" };
 const PRODUCT_STATUS_LABEL = { draft: "Draft", published: "Active", archived: "Archived", hidden: "Hidden", upcoming: "Upcoming", discontinued: "Discontinued" };
 
-function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
+function ProductsSection({ pendingEditId, onConsumePendingEdit, pendingSearch, onConsumePendingSearch } = {}) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
@@ -891,6 +926,14 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
   const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (pendingSearch == null) return;
+    setSearch(pendingSearch);
+    setPage(1);
+    onConsumePendingSearch?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingSearch]);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-products", { search, page }],
@@ -3709,9 +3752,33 @@ function HomepageCmsSection() {
 
 /* — Analytics — */
 
+/** One stat in the "last 30 days" strip — value plus a real period-over-period % change
+ * (current 30 days vs the 30 days before that), never a decorative placeholder number. */
+function TrendStat({ label, value, changePct }) {
+  const hasChange = typeof changePct === "number";
+  const isUp = hasChange && changePct > 0;
+  const isDown = hasChange && changePct < 0;
+  return (
+    <div>
+      <p className="text-xs text-[var(--text-muted)]">{label}</p>
+      <div className="mt-1 flex items-center gap-1.5">
+        <span className="text-base font-semibold text-[var(--text-primary)]">{value}</span>
+        {hasChange && changePct !== 0 && (
+          <span className={cn("flex items-center gap-0.5 text-xs font-medium", isUp ? "text-success-500" : "text-error-500")}>
+            {isUp ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />}
+            {Math.abs(changePct)}%
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /** Lands here on login instead of a raw user list — what an owner actually wants to see first:
  * headline numbers, what needs action right now, and quick links into the sections that matter. */
-function DashboardHomeSection({ onNavigate }) {
+function DashboardHomeSection({ onNavigate, onQuickSearch }) {
+  const { user } = useAuth();
+  const [quickQuery, setQuickQuery] = useState("");
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-dashboard-summary"],
     queryFn: () => adminApi.dashboardSummary(),
@@ -3722,9 +3789,82 @@ function DashboardHomeSection({ onNavigate }) {
 
   const d = data || {};
   const needsAttention = d.needsAttention || 0;
+  const last30 = d.last30 || {};
+  const firstName = user?.name?.split(" ")[0] || "there";
+
+  const submitQuickSearch = (e) => {
+    e.preventDefault();
+    if (!quickQuery.trim()) return;
+    onQuickSearch?.(quickQuery);
+    setQuickQuery("");
+  };
 
   return (
     <div>
+      <div className="mb-6 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] px-6 py-8 shadow-soft-sm sm:px-10 sm:py-10">
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-4 border-b border-[var(--border)] pb-5">
+          <p className="pt-1 text-xs font-medium text-[var(--text-muted)]">Last 30 days</p>
+          <div className="flex flex-wrap gap-x-8 gap-y-3">
+            <TrendStat label="Total sales" value={`${CURRENCY}${Math.round(last30.revenue || 0).toLocaleString()}`} changePct={last30.revenueChangePct} />
+            <TrendStat label="Orders" value={last30.orders || 0} changePct={last30.ordersChangePct} />
+            <TrendStat label="New customers" value={last30.newCustomers || 0} changePct={last30.newCustomersChangePct} />
+          </div>
+        </div>
+
+        <h1
+          className="text-center text-2xl font-medium text-[var(--text-primary)] sm:text-3xl"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          Hey {firstName}! Let's continue growing your business.
+        </h1>
+
+        <form onSubmit={submitQuickSearch} className="mx-auto mt-6 flex max-w-xl items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-inset)] px-4 py-2.5">
+          <Search className="size-4 shrink-0 text-[var(--text-muted)]" />
+          <input
+            value={quickQuery}
+            onChange={(e) => setQuickQuery(e.target.value)}
+            placeholder="Search products, or an order number (VNT-…)"
+            className="w-full min-w-0 flex-1 bg-transparent text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
+          />
+          <button
+            type="submit"
+            aria-label="Search"
+            disabled={!quickQuery.trim()}
+            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gold-500 text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+          >
+            <ArrowUpRight className="size-4" />
+          </button>
+        </form>
+
+        <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+          <button
+            onClick={() => onNavigate?.("orders")}
+            className="flex items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:border-gold-400"
+          >
+            Fulfill orders
+            {needsAttention > 0 && (
+              <span className="flex size-5 items-center justify-center rounded-full bg-gold-500 text-[11px] font-semibold text-white">
+                {needsAttention}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => onNavigate?.("products")}
+            className="flex items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:border-gold-400"
+          >
+            Low stock
+            <span
+              className={cn(
+                "flex min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold text-white",
+                (d.lowStockProducts?.length || 0) > 0 ? "bg-amber-500" : "bg-neutral-400"
+              )}
+            >
+              {d.lowStockProducts?.length || 0}
+            </span>
+          </button>
+        </div>
+      </div>
+
       <SectionTitle eyebrow="Overview" title="Dashboard" description="What's happening in your store today." />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
