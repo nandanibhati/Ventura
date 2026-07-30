@@ -13,15 +13,16 @@ export const FONT_PRESETS = {
   warm: { label: "Warm", display: '"Lora", ui-serif, Georgia, serif', sans: '"Nunito Sans", system-ui, sans-serif' },
   luxury: { label: "Luxury Serif", display: '"Cinzel", ui-serif, Georgia, serif', sans: '"Inter", system-ui, sans-serif' },
   friendly: { label: "Friendly", display: '"Nunito Sans", system-ui, sans-serif', sans: '"Nunito Sans", system-ui, sans-serif' },
+  boldBrand: { label: "Bold Brand", display: '"Ragonte DEMO", "Nunito Sans", system-ui, sans-serif', sans: '"Nunito Sans", system-ui, sans-serif' },
 };
 
 export const DEFAULT_THEME = {
-  primary: "#3b82f6",
-  accent: "#2563eb",
+  primary: "#7c3aed",
+  accent: "#6d28d9",
   secondary: "#f97316",
   surfaceLight: "#ffffff",
   surfaceDark: "#0f172a",
-  font: "friendly",
+  font: "boldBrand",
   buttonStyle: "rounded",
   cardTemplate: "marketplace",
 };

@@ -13,20 +13,31 @@
    `dark` on <html> (e.g. via a theme switcher). */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Self-hosted (not a Google Fonts CDN font) — used for the "Bold Brand" preset's
+   display face. Licensed for personal use only per the foundry (Ragonte DEMO);
+   swap for the paid full-family file if/when a commercial license is purchased. */
+@font-face {
+  font-family: "Ragonte DEMO";
+  src: url("../assets/fonts/RagonteDEMO-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   /* ---------- Brand palette ---------- */
   /* "gold-*" is the historical token name (kept so the hundreds of existing
      bg-gold-400 / text-gold-500 / etc. classes don't need renaming) — it's a
-     professional blue scale now, not literal gold. See lib/themePresets.js
+     violet/purple brand scale now, not literal gold. See lib/themePresets.js
      for the admin-configurable primary/accent (gold-400/500) override. */
-  --color-gold-50:  #eff6ff;
-  --color-gold-100: #dbeafe;
-  --color-gold-200: #bfdbfe;
-  --color-gold-300: #93c5fd;
-  --color-gold-400: #3b82f6;
-  --color-gold-500: #2563eb;
-  --color-gold-600: #1d4ed8;
-  --color-gold-700: #1e40af;
+  --color-gold-50:  #f5f3ff;
+  --color-gold-100: #ede9fe;
+  --color-gold-200: #ddd6fe;
+  --color-gold-300: #c4b5fd;
+  --color-gold-400: #7c3aed;
+  --color-gold-500: #6d28d9;
+  --color-gold-600: #5b21b6;
+  --color-gold-700: #4c1d95;
 
   --color-ink-0:   #ffffff;
   --color-ink-50:  #f8fafc;
@@ -88,9 +99,9 @@
 }
 
 .dark {
-  --surface: var(--color-ink-900);
-  --surface-muted: var(--color-ink-800);
-  --surface-inset: var(--color-ink-700);
+  --surface: var(--color-ink-950);
+  --surface-muted: var(--color-ink-900);
+  --surface-inset: var(--color-ink-800);
   --border: rgb(148 163 184 / 0.16);
   --text-primary: var(--color-ink-50);
   --text-muted: var(--color-ink-300);
