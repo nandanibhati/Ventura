@@ -82,7 +82,7 @@ function ZoomGallery({ images, videos = [], fallbackKey, activeIndex, onSelect }
   }, [activeIndex]);
 
   return (
-    <div>
+    <div className="min-w-0">
       <div
         onClick={isZoomable ? () => setLightboxOpen(true) : undefined}
         className={`group relative aspect-square overflow-hidden rounded-3xl border border-black/5 bg-neutral-50 dark:border-white/10 dark:bg-neutral-900 ${
