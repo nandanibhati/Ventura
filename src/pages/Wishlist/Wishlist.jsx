@@ -6,6 +6,7 @@ import { resolveProductImageUrl } from "../../lib/api";
 import { useCart } from "../../context/CartContext";
 import ProductCard from "../../components/ui/Cards/ProductCard";
 import { LoadingSpinner, EmptyState, ErrorState } from "../../components/ui/Feedback";
+import { useToast } from "../../components/ui/Feedback/useToast";
 import { Breadcrumb } from "../../components/ui/Navigation";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 
@@ -13,6 +14,15 @@ export default function Wishlist() {
   useDocumentTitle("Wishlist");
   const queryClient = useQueryClient();
   const { addItem } = useCart();
+  const { toast } = useToast();
+  const handleAdd = async (productId) => {
+    try {
+      await addItem({ productId, quantity: 1 });
+      toast({ title: "Added to bag", variant: "success" });
+    } catch (err) {
+      toast({ title: err.response?.data?.error?.message || "Couldn't add to bag", variant: "error" });
+    }
+  };
 
   const { data: items = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["wishlist"],
@@ -71,7 +81,7 @@ export default function Wishlist() {
                 image={resolveProductImageUrl(product.images?.[0]?.url)}
                 wished
                 onWishlistToggle={() => removeMutation.mutate(product.id)}
-                onAdd={() => addItem({ productId: product.id, quantity: 1 })}
+                onAdd={() => handleAdd(product.id)}
               />
             ))}
           </div>

@@ -34,6 +34,7 @@ import { productsApi, reviewsApi } from "../../api/products";
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
 import { LoadingSpinner, EmptyState } from "../../components/ui/Feedback";
+import { useToast } from "../../components/ui/Feedback/useToast";
 import { gradientClassFor } from "../../lib/gradientFor";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import { resolveMediaUrl, resolveProductImageUrl } from "../../lib/api";
@@ -212,6 +213,16 @@ function useGlobalCardTemplate() {
  * while wiring the shared component's onAdd through this page's cart context. */
 function HomeProductCard({ product, index, compact, template }) {
   const { addItem, isMutating } = useCart();
+  const { toast } = useToast();
+  const handleAdd = async () => {
+    if (isMutating) return;
+    try {
+      await addItem({ productId: product.id, quantity: 1 });
+      toast({ title: "Added to bag", variant: "success" });
+    } catch (err) {
+      toast({ title: err.response?.data?.error?.message || "Couldn't add to bag", variant: "error" });
+    }
+  };
   return (
     <ProductCard
       product={product}
@@ -225,7 +236,7 @@ function HomeProductCard({ product, index, compact, template }) {
       // cards getting stuck at their pre-animation opacity:0 (looks exactly like a missing
       // image: the surface-inset placeholder color shows through forever).
       disableEntrance
-      onAdd={() => !isMutating && addItem({ productId: product.id, quantity: 1 })}
+      onAdd={handleAdd}
     />
   );
 }

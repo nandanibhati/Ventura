@@ -24,6 +24,7 @@ import { productsApi } from "../../api/products";
 import { resolveProductImageUrl } from "../../lib/api";
 import { gradientClassFor as gradientFor } from "../../lib/gradientFor";
 import { LoadingSpinner } from "../../components/ui/Feedback";
+import { useToast } from "../../components/ui/Feedback/useToast";
 import { useDocumentTitle } from "../../lib/useDocumentTitle";
 import ProductCard from "../../components/ui/Cards/ProductCard";
 
@@ -333,6 +334,15 @@ function couponLabel(coupon) {
 function Cart() {
   useDocumentTitle("Your Cart");
   const { cart, isLoading, addItem, updateItem, removeItem, applyCoupon, removeCoupon, isMutating, couponError } = useCart();
+  const { toast } = useToast();
+  const handleAddRecommended = async (productId) => {
+    try {
+      await addItem({ productId, quantity: 1 });
+      toast({ title: "Added to bag", variant: "success" });
+    } catch (err) {
+      toast({ title: err.response?.data?.error?.message || "Couldn't add to bag", variant: "error" });
+    }
+  };
   const [shippingId, setShippingId] = useState(null);
   const [couponInput, setCouponInput] = useState("");
 
@@ -486,7 +496,7 @@ function Cart() {
                     product={product}
                     image={product.image}
                     index={i}
-                    onAdd={() => addItem({ productId: product.id, quantity: 1 })}
+                    onAdd={() => handleAddRecommended(product.id)}
                   />
                 </div>
               ))}
