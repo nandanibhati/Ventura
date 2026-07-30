@@ -607,17 +607,17 @@ function CategoriesSection() {
   const { isPreview, requestEdit } = useCmsEditClick();
 
   return (
-    <div className="bg-white py-6 dark:bg-neutral-950 sm:py-8">
+    <div className="bg-white py-6 sm:py-8">
       <div className="mx-auto max-w-7xl px-2 sm:px-3">
         <SectionStatus isLoading={isLoading} isError={isError} isEmpty={categories.length === 0} onRetry={refetch} />
         {!isLoading && !isError && categories.length > 0 && (
           <div className="relative">
             {/* Flat, uncropped product renders directly on the section's own background
-                (Apple-style category nav) — no card/tile behind each image, since the source
-                photos are stored with a transparent background (Cloudinary e_make_transparent)
-                instead of a plain white canvas, so they sit correctly on either theme without
-                a mismatched box. object-contain so nothing of the source image is ever
-                cropped, whatever its native aspect ratio. */}
+                (Apple-style category nav). The source photos are used as-is (real, unedited
+                images with their own plain white canvas + circle backdrop baked in) - so this
+                section is pinned to a fixed light background regardless of site theme, since
+                that's the only way those photos sit on it with no visible seam. object-contain
+                so nothing of the source image is ever cropped, whatever its aspect ratio. */}
             <div ref={scrollRef} className="flex items-start gap-6 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:gap-12 sm:px-10 [&::-webkit-scrollbar]:hidden">
               {categories.slice(0, 12).map((cat) => {
                 const Icon = iconFor(cat.name);
@@ -639,7 +639,7 @@ function CategoriesSection() {
                       )}
                       {isPreview && <CmsEditOverlay onEdit={() => requestEdit("category", cat.id)} />}
                     </div>
-                    <span className="text-[13px] font-semibold text-neutral-900 dark:text-white sm:text-base">{cat.name}</span>
+                    <span className="text-[13px] font-semibold text-neutral-900 sm:text-base">{cat.name}</span>
                   </Link>
                 );
               })}
@@ -650,7 +650,7 @@ function CategoriesSection() {
                   type="button"
                   onClick={() => scrollBy(-1)}
                   aria-label="Scroll categories left"
-                  className="absolute left-0 top-6 hidden size-9 items-center justify-center rounded-full bg-white text-neutral-700 shadow-md hover:bg-neutral-100 dark:bg-neutral-800 dark:text-white sm:flex sm:top-10"
+                  className="absolute left-0 top-6 hidden size-9 items-center justify-center rounded-full bg-white text-neutral-700 shadow-md hover:bg-neutral-100 sm:flex sm:top-10"
                 >
                   <ChevronLeft className="size-5" />
                 </button>
@@ -658,7 +658,7 @@ function CategoriesSection() {
                   type="button"
                   onClick={() => scrollBy(1)}
                   aria-label="Scroll categories right"
-                  className="absolute right-0 top-6 hidden size-9 items-center justify-center rounded-full bg-white text-neutral-700 shadow-md hover:bg-neutral-100 dark:bg-neutral-800 dark:text-white sm:flex sm:top-10"
+                  className="absolute right-0 top-6 hidden size-9 items-center justify-center rounded-full bg-white text-neutral-700 shadow-md hover:bg-neutral-100 sm:flex sm:top-10"
                 >
                   <ChevronRight className="size-5" />
                 </button>
