@@ -97,7 +97,7 @@ export default function ProductCard({
             )
           ) : (
             badge && (
-              <Badge variant="gold" className="absolute left-3 top-3 z-10">
+              <Badge variant="gold" className="absolute left-3 top-3 z-10 border-transparent bg-gold-400 text-white shadow-sm">
                 {badge}
               </Badge>
             )
