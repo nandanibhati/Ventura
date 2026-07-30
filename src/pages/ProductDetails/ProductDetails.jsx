@@ -652,7 +652,11 @@ function ProductDetails() {
       const variant = variantKeys.length ? Object.fromEntries(variantKeys.map((k) => [k, selections[k]])) : undefined;
       await addItem({ productId: id, quantity: Math.min(quantity, maxQty), variant });
       setAddedToCart(true);
-      toast({ title: "Added to bag", variant: "success" });
+      toast({
+        title: "Added to bag",
+        variant: "success",
+        action: { label: "View Bag", onClick: () => navigate("/cart") },
+      });
       setTimeout(() => setAddedToCart(false), 2000);
     } catch (err) {
       toast({ title: err.response?.data?.error?.message || "Couldn't add to cart", variant: "error" });

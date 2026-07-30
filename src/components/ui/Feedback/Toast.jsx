@@ -27,9 +27,9 @@ export function ToastProvider({ children }) {
   }, []);
 
   const toast = useCallback(
-    ({ title, description, variant = "info", duration = 4000 }) => {
+    ({ title, description, variant = "info", duration = 4000, action }) => {
       const id = Date.now() + Math.random();
-      setToasts((t) => [...t, { id, title, description, variant }]);
+      setToasts((t) => [...t, { id, title, description, variant, action }]);
       if (duration) setTimeout(() => dismiss(id), duration);
       return id;
     },
@@ -53,7 +53,7 @@ export function ToastProvider({ children }) {
   );
 }
 
-function ToastItem({ title, description, variant, onClose }) {
+function ToastItem({ title, description, variant, action, onClose }) {
   const { icon: Icon, color } = VARIANTS[variant] ?? VARIANTS.info;
 
   return (
@@ -73,6 +73,17 @@ function ToastItem({ title, description, variant, onClose }) {
       <div className="flex-1 min-w-0">
         {title && <p className="text-sm font-medium text-[var(--text-primary)]">{title}</p>}
         {description && <p className="text-xs text-[var(--text-muted)] mt-0.5">{description}</p>}
+        {action && (
+          <button
+            onClick={() => {
+              action.onClick?.();
+              onClose();
+            }}
+            className="mt-1.5 text-xs font-semibold text-gold-600 hover:underline dark:text-gold-400"
+          >
+            {action.label}
+          </button>
+        )}
       </div>
       <button
         onClick={onClose}

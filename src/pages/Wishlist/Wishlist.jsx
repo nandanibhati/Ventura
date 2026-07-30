@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Heart } from "lucide-react";
 import { wishlistApi } from "../../api/orders";
 import { resolveProductImageUrl } from "../../lib/api";
@@ -15,10 +15,15 @@ export default function Wishlist() {
   const queryClient = useQueryClient();
   const { addItem } = useCart();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const handleAdd = async (productId) => {
     try {
       await addItem({ productId, quantity: 1 });
-      toast({ title: "Added to bag", variant: "success" });
+      toast({
+        title: "Added to bag",
+        variant: "success",
+        action: { label: "View Bag", onClick: () => navigate("/cart") },
+      });
     } catch (err) {
       toast({ title: err.response?.data?.error?.message || "Couldn't add to bag", variant: "error" });
     }

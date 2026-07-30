@@ -173,7 +173,11 @@ export default function Products() {
   const handleAddToBag = async (productId) => {
     try {
       await addItem({ productId, quantity: 1 });
-      toast({ title: "Added to bag", variant: "success" });
+      toast({
+        title: "Added to bag",
+        variant: "success",
+        action: { label: "View Bag", onClick: () => navigate("/cart") },
+      });
     } catch (err) {
       toast({ title: err.response?.data?.error?.message || "Couldn't add to bag", variant: "error" });
     }

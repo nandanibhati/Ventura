@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -214,11 +214,16 @@ function useGlobalCardTemplate() {
 function HomeProductCard({ product, index, compact, template }) {
   const { addItem, isMutating } = useCart();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const handleAdd = async () => {
     if (isMutating) return;
     try {
       await addItem({ productId: product.id, quantity: 1 });
-      toast({ title: "Added to bag", variant: "success" });
+      toast({
+        title: "Added to bag",
+        variant: "success",
+        action: { label: "View Bag", onClick: () => navigate("/cart") },
+      });
     } catch (err) {
       toast({ title: err.response?.data?.error?.message || "Couldn't add to bag", variant: "error" });
     }
