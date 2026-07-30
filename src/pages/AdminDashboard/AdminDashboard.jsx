@@ -724,12 +724,17 @@ function OrderItemsModal({ order, onClose }) {
   );
 }
 
+const UNFULFILLED_STATUSES = ["pending", "processing"];
+
 function OrdersSection() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [itemsOrder, setItemsOrder] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkPending, setBulkPending] = useState(false);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-orders", { search, statusFilter, page }],
@@ -743,10 +748,41 @@ function OrdersSection() {
 
   const orders = data?.items || [];
   const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+  const allOnPageSelected = orders.length > 0 && orders.every((o) => selectedIds.includes(o.id));
+  const toggleSelectAll = () => setSelectedIds(allOnPageSelected ? [] : orders.map((o) => o.id));
+  const toggleSelectOne = (id) => setSelectedIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+
+  const runBulkStatus = async (status) => {
+    setBulkPending(true);
+    try {
+      await Promise.all(selectedIds.map((id) => adminApi.updateOrderStatus(id, { status })));
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      toast({ title: `Marked ${selectedIds.length} order${selectedIds.length === 1 ? "" : "s"} as ${status.replace(/_/g, " ")}`, variant: "success" });
+      setSelectedIds([]);
+    } catch {
+      toast({ title: "Couldn't update all selected orders", variant: "error" });
+    } finally {
+      setBulkPending(false);
+    }
+  };
+
+  const batchUnfulfilled = () => {
+    const ids = orders.filter((o) => UNFULFILLED_STATUSES.includes(o.status)).map((o) => o.id);
+    if (ids.length === 0) {
+      toast({ title: "No unfulfilled orders on this page", variant: "info" });
+      return;
+    }
+    setSelectedIds(ids);
+  };
 
   return (
     <div>
-      <SectionTitle eyebrow="Manage" title="Orders" description="Every transaction across the storefront, in one queue." />
+      <SectionTitle
+        eyebrow="Manage"
+        title="Orders"
+        description="Every transaction across the storefront, in one queue."
+        action={<OutlineButton onClick={batchUnfulfilled}>Batch unfulfilled orders</OutlineButton>}
+      />
 
       <Toolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }}>
         {["all", ...ORDER_STATUSES].map((s) => (
@@ -755,6 +791,18 @@ function OrdersSection() {
           </Chip>
         ))}
       </Toolbar>
+
+      {selectedIds.length > 0 && (
+        <div className="mb-3 flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-inset)] px-4 py-2.5">
+          <span className="text-sm font-medium text-[var(--text-primary)]">{selectedIds.length} selected</span>
+          <div className="ml-auto flex items-center gap-2">
+            <OutlineButton size="sm" disabled={bulkPending} onClick={() => runBulkStatus("processing")}>Mark processing</OutlineButton>
+            <OutlineButton size="sm" disabled={bulkPending} onClick={() => runBulkStatus("shipped")}>Mark shipped</OutlineButton>
+            <OutlineButton size="sm" disabled={bulkPending} onClick={() => runBulkStatus("delivered")}>Mark delivered</OutlineButton>
+            <button onClick={() => setSelectedIds([])} className="text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]">Clear</button>
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading orders…</div>
@@ -765,37 +813,57 @@ function OrdersSection() {
       ) : (
         <TableShell>
           <thead className="border-b border-[var(--border)]">
-            <tr><Th>Order</Th><Th>Customer</Th><Th>Date</Th><Th>Items</Th><Th>Total</Th><Th>Status</Th><Th>Payment</Th><Th className="text-right">Actions</Th></tr>
+            <tr>
+              <Th className="w-10">
+                <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} aria-label="Select all orders on this page" />
+              </Th>
+              <Th>Order</Th>
+              <Th>Date</Th>
+              <Th>Customer</Th>
+              <Th>Channel</Th>
+              <Th>Total</Th>
+              <Th>Payment status</Th>
+              <Th>Fulfillment status</Th>
+              <Th>Items</Th>
+              <Th>Delivery status</Th>
+              <Th className="text-right">Actions</Th>
+            </tr>
           </thead>
           <tbody className="divide-y divide-[var(--border)]">
-            {orders.map((o) => (
-              <tr key={o.id}>
-                <Td className="font-medium">{o.orderNumber}</Td>
-                <Td>{o.customer}</Td>
-                <Td className="text-[var(--text-muted)]">{new Date(o.placedAt).toLocaleDateString()}</Td>
-                <Td>
-                  <button onClick={() => setItemsOrder(o)} className="text-gold-500 hover:underline">
-                    {o.itemCount} item{o.itemCount === 1 ? "" : "s"}
-                  </button>
-                </Td>
-                <Td>{CURRENCY}{Number(o.total).toLocaleString()}</Td>
-                <Td><Badge variant={ORDER_STATUS_VARIANT[o.status]}>{o.status.replace(/_/g, " ")}</Badge></Td>
-                <Td><Badge variant={PAYMENT_STATUS_VARIANT[o.paymentStatus]}>{o.paymentStatus}</Badge></Td>
-                <Td className="text-right">
-                  <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
-                    <Dropdown.Item icon={Download} onClick={() => adminApi.downloadInvoice(o.id, o.orderNumber)}>Download invoice</Dropdown.Item>
-                    <Dropdown.Item icon={Download} onClick={() => adminApi.downloadPackingSlip(o.id, o.orderNumber)}>Download packing slip</Dropdown.Item>
-                    <Dropdown.Item icon={Download} onClick={() => adminApi.downloadShippingLabel(o.id, o.orderNumber)}>Download shipping label</Dropdown.Item>
-                    <Dropdown.Separator />
-                    {ORDER_STATUSES.filter((s) => s !== o.status).map((s) => (
-                      <Dropdown.Item key={s} icon={CheckCircle2} onClick={() => statusMutation.mutate({ id: o.id, status: s })}>
-                        Mark as {s.replace(/_/g, " ")}
-                      </Dropdown.Item>
-                    ))}
-                  </Dropdown>
-                </Td>
-              </tr>
-            ))}
+            {orders.map((o) => {
+              const deliveryLabel = o.status === "cancelled" ? null : o.deliveredAt ? "Delivered" : o.trackingNumber ? "Tracking added" : null;
+              return (
+                <tr key={o.id}>
+                  <Td><input type="checkbox" checked={selectedIds.includes(o.id)} onChange={() => toggleSelectOne(o.id)} aria-label={`Select ${o.orderNumber}`} /></Td>
+                  <Td className="font-medium text-gold-600 dark:text-gold-400">{o.orderNumber}</Td>
+                  <Td className="text-[var(--text-muted)]">{new Date(o.placedAt).toLocaleDateString()}</Td>
+                  <Td>{o.customer}</Td>
+                  <Td className="text-[var(--text-muted)]">Online Store</Td>
+                  <Td>{CURRENCY}{Number(o.total).toLocaleString()}</Td>
+                  <Td><Badge variant={PAYMENT_STATUS_VARIANT[o.paymentStatus]}>{o.paymentStatus}</Badge></Td>
+                  <Td><Badge variant={ORDER_STATUS_VARIANT[o.status]}>{o.status.replace(/_/g, " ")}</Badge></Td>
+                  <Td>
+                    <button onClick={() => setItemsOrder(o)} className="text-gold-500 hover:underline">
+                      {o.itemCount} item{o.itemCount === 1 ? "" : "s"}
+                    </button>
+                  </Td>
+                  <Td>{deliveryLabel ? <Badge variant={deliveryLabel === "Delivered" ? "success" : "neutral"}>{deliveryLabel}</Badge> : <span className="text-[var(--text-muted)]">—</span>}</Td>
+                  <Td className="text-right">
+                    <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
+                      <Dropdown.Item icon={Download} onClick={() => adminApi.downloadInvoice(o.id, o.orderNumber)}>Download invoice</Dropdown.Item>
+                      <Dropdown.Item icon={Download} onClick={() => adminApi.downloadPackingSlip(o.id, o.orderNumber)}>Download packing slip</Dropdown.Item>
+                      <Dropdown.Item icon={Download} onClick={() => adminApi.downloadShippingLabel(o.id, o.orderNumber)}>Download shipping label</Dropdown.Item>
+                      <Dropdown.Separator />
+                      {ORDER_STATUSES.filter((s) => s !== o.status).map((s) => (
+                        <Dropdown.Item key={s} icon={CheckCircle2} onClick={() => statusMutation.mutate({ id: o.id, status: s })}>
+                          Mark as {s.replace(/_/g, " ")}
+                        </Dropdown.Item>
+                      ))}
+                    </Dropdown>
+                  </Td>
+                </tr>
+              );
+            })}
           </tbody>
         </TableShell>
       )}
