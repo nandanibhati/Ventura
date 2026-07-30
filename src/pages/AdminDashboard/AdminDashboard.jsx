@@ -337,8 +337,12 @@ function Th({ children, className }) {
     </th>
   );
 }
-function Td({ children, className }) {
-  return <td className={cn("px-5 py-4 text-[var(--text-primary)]", className)}>{children}</td>;
+function Td({ children, className, ...props }) {
+  return (
+    <td className={cn("px-5 py-4 text-[var(--text-primary)]", className)} {...props}>
+      {children}
+    </td>
+  );
 }
 
 function ErrorNotice({ onRetry }) {
@@ -806,6 +810,8 @@ function OrdersSection() {
 /* — Products — */
 
 const PRODUCT_STATUSES = ["draft", "published", "archived", "hidden", "upcoming", "discontinued"];
+const PRODUCT_STATUS_VARIANT = { draft: "neutral", published: "success", archived: "neutral", hidden: "neutral", upcoming: "gold", discontinued: "error" };
+const PRODUCT_STATUS_LABEL = { draft: "Draft", published: "Active", archived: "Archived", hidden: "Hidden", upcoming: "Upcoming", discontinued: "Discontinued" };
 
 function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
   const [search, setSearch] = useState("");
@@ -813,6 +819,7 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
+  const [selectedIds, setSelectedIds] = useState([]);
   const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -859,8 +866,26 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
   const removeMutation = useMutation({ mutationFn: (id) => productsApi.remove(id), onSuccess: invalidate });
   const duplicateMutation = useMutation({ mutationFn: (id) => productsApi.duplicate(id), onSuccess: invalidate });
 
+  const [bulkPending, setBulkPending] = useState(false);
+  const runBulk = async (label, fn) => {
+    setBulkPending(true);
+    try {
+      await Promise.all(selectedIds.map(fn));
+      invalidate();
+      toast({ title: `${label} ${selectedIds.length} product${selectedIds.length === 1 ? "" : "s"}`, variant: "success" });
+      setSelectedIds([]);
+    } catch {
+      toast({ title: `Couldn't ${label.toLowerCase()} all selected products`, variant: "error" });
+    } finally {
+      setBulkPending(false);
+    }
+  };
+
   const products = data?.items || [];
   const totalPages = Math.max(1, Math.ceil((data?.meta?.total || 0) / PAGE_SIZE));
+  const allOnPageSelected = products.length > 0 && products.every((p) => selectedIds.includes(p.id));
+  const toggleSelectAll = () => setSelectedIds(allOnPageSelected ? [] : products.map((p) => p.id));
+  const toggleSelectOne = (id) => setSelectedIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
   const openCreate = () => {
     setEditing(null);
@@ -1009,6 +1034,31 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
 
       <Toolbar search={search} onSearch={(v) => { setSearch(v); setPage(1); }} />
 
+      {selectedIds.length > 0 && (
+        <div className="mb-3 flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-inset)] px-4 py-2.5">
+          <span className="text-sm font-medium text-[var(--text-primary)]">{selectedIds.length} selected</span>
+          <div className="ml-auto flex items-center gap-2">
+            <OutlineButton size="sm" disabled={bulkPending} onClick={() => runBulk("Published", (id) => productsApi.update(id, { status: "published" }))}>
+              Publish
+            </OutlineButton>
+            <OutlineButton size="sm" disabled={bulkPending} onClick={() => runBulk("Archived", (id) => productsApi.update(id, { status: "archived" }))}>
+              Archive
+            </OutlineButton>
+            <OutlineButton
+              size="sm"
+              disabled={bulkPending}
+              className="border-error-500/40 text-error-500 hover:border-error-500 hover:text-error-500"
+              onClick={() => runBulk("Deleted", (id) => productsApi.remove(id))}
+            >
+              Delete
+            </OutlineButton>
+            <button onClick={() => setSelectedIds([])} className="text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="py-16 text-center text-sm text-[var(--text-muted)]">Loading products…</div>
       ) : isError ? (
@@ -1018,51 +1068,77 @@ function ProductsSection({ pendingEditId, onConsumePendingEdit } = {}) {
       ) : (
         <TableShell>
           <thead className="border-b border-[var(--border)]">
-            <tr><Th>Product</Th><Th>Category</Th><Th>Brand</Th><Th>Price</Th><Th>Stock</Th><Th>Status</Th><Th className="text-right">Actions</Th></tr>
+            <tr>
+              <Th className="w-10">
+                <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} aria-label="Select all products on this page" />
+              </Th>
+              <Th>Product</Th>
+              <Th>Status</Th>
+              <Th>Inventory</Th>
+              <Th>Category</Th>
+              <Th>Condition</Th>
+              <Th>Vendor</Th>
+              <Th>Store</Th>
+              <Th>Price</Th>
+              <Th className="text-right">Actions</Th>
+            </tr>
           </thead>
           <tbody className="divide-y divide-[var(--border)]">
-            {products.map((p) => (
-              <tr key={p.id}>
-                <Td>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-inset)] font-medium text-gold-500"
-                      style={{ fontFamily: "var(--font-display)" }}
-                    >
-                      {p.images?.[0]?.url ? <img src={resolveMediaUrl(p.images[0].url)} alt="" className="h-full w-full object-cover" /> : p.name.charAt(0)}
-                    </span>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{p.name}</span>
-                      <span className="text-xs text-[var(--text-muted)]">{p.sku}</span>
+            {products.map((p) => {
+              const variantCount = p._count?.variants || 0;
+              return (
+                <tr
+                  key={p.id}
+                  onClick={() => openEdit(p)}
+                  className="cursor-pointer transition-colors hover:bg-[var(--surface-inset)]"
+                >
+                  <Td onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => toggleSelectOne(p.id)} aria-label={`Select ${p.name}`} />
+                  </Td>
+                  <Td>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-inset)] font-medium text-gold-500"
+                        style={{ fontFamily: "var(--font-display)" }}
+                      >
+                        {p.images?.[0]?.url ? <img src={resolveMediaUrl(p.images[0].url)} alt="" className="h-full w-full object-cover" /> : p.name.charAt(0)}
+                      </span>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{p.name}</span>
+                        <span className="text-xs text-[var(--text-muted)]">{p.sku}</span>
+                      </div>
                     </div>
-                  </div>
-                </Td>
-                <Td className="text-[var(--text-muted)]">{p.category?.name}</Td>
-                <Td className="text-[var(--text-muted)]">{p.brand?.name}</Td>
-                <Td>{CURRENCY}{Number(p.price).toLocaleString()}</Td>
-                <Td>
-                  <span className={cn("flex items-center gap-1.5", p.stock === 0 ? "text-error-500" : p.stock < 5 ? "text-warning-500" : "")}>
-                    {p.stock < 5 && p.stock > 0 && <AlertTriangle className="size-3.5" />}
-                    {p.stock === 0 ? "Out of stock" : p.stock}
-                  </span>
-                </Td>
-                <Td><Badge variant={p.status === "published" ? "success" : "neutral"}>{p.status}</Badge></Td>
-                <Td className="text-right">
-                  <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
-                    <Dropdown.Item icon={Pencil} onClick={() => openEdit(p)}>Edit product</Dropdown.Item>
-                    <Dropdown.Item icon={Copy} onClick={() => duplicateMutation.mutate(p.id)}>Duplicate</Dropdown.Item>
-                    <Dropdown.Item
-                      icon={CheckCircle2}
-                      onClick={() => updateMutation.mutate({ id: p.id, payload: { status: p.status === "published" ? "archived" : "published" } })}
-                    >
-                      {p.status === "published" ? "Archive" : "Publish"}
-                    </Dropdown.Item>
-                    <Dropdown.Separator />
-                    <Dropdown.Item icon={Trash2} destructive onClick={() => removeMutation.mutate(p.id)}>Delete</Dropdown.Item>
-                  </Dropdown>
-                </Td>
-              </tr>
-            ))}
+                  </Td>
+                  <Td><Badge variant={PRODUCT_STATUS_VARIANT[p.status] || "neutral"}>{PRODUCT_STATUS_LABEL[p.status] || p.status}</Badge></Td>
+                  <Td>
+                    <span className={cn("flex items-center gap-1.5", p.stock === 0 ? "text-error-500" : p.stock < 5 ? "text-warning-500" : "")}>
+                      {p.stock < 5 && p.stock > 0 && <AlertTriangle className="size-3.5" />}
+                      {p.stock === 0 ? "Out of stock" : `${p.stock} in stock`}
+                      {variantCount > 0 && ` for ${variantCount} variant${variantCount === 1 ? "" : "s"}`}
+                    </span>
+                  </Td>
+                  <Td className="text-[var(--text-muted)]">{p.category?.name}</Td>
+                  <Td className="text-[var(--text-muted)]">{p.condition || "—"}</Td>
+                  <Td className="text-[var(--text-muted)]">{p.brand?.name}</Td>
+                  <Td className="text-[var(--text-muted)]">{p.store?.name}</Td>
+                  <Td>{CURRENCY}{Number(p.price).toLocaleString()}</Td>
+                  <Td className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <Dropdown trigger={<IconButton icon={MoreVertical} size="sm" aria-label="Row actions" />}>
+                      <Dropdown.Item icon={Pencil} onClick={() => openEdit(p)}>Edit product</Dropdown.Item>
+                      <Dropdown.Item icon={Copy} onClick={() => duplicateMutation.mutate(p.id)}>Duplicate</Dropdown.Item>
+                      <Dropdown.Item
+                        icon={CheckCircle2}
+                        onClick={() => updateMutation.mutate({ id: p.id, payload: { status: p.status === "published" ? "archived" : "published" } })}
+                      >
+                        {p.status === "published" ? "Archive" : "Publish"}
+                      </Dropdown.Item>
+                      <Dropdown.Separator />
+                      <Dropdown.Item icon={Trash2} destructive onClick={() => removeMutation.mutate(p.id)}>Delete</Dropdown.Item>
+                    </Dropdown>
+                  </Td>
+                </tr>
+              );
+            })}
           </tbody>
         </TableShell>
       )}
