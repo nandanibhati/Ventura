@@ -174,7 +174,7 @@ function ZoomGallery({ images, videos = [], fallbackKey, activeIndex, onSelect }
   );
 }
 
-function ColorSelector({ colors, selected, onSelect }) {
+function ColorSelector({ colors, images = {}, selected, onSelect }) {
   if (!colors.length) return null;
   const current = colors.find((c) => c.label === selected);
   return (
@@ -183,17 +183,31 @@ function ColorSelector({ colors, selected, onSelect }) {
         Color — <span className="font-normal text-neutral-500 dark:text-neutral-400">{current?.label}</span>
       </p>
       <div className="flex items-center gap-2.5">
-        {colors.map((color) => (
-          <button
-            key={color.label}
-            onClick={() => onSelect(color.label)}
-            aria-label={color.label}
-            style={{ backgroundColor: color.extra || "#9ca3af" }}
-            className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 ${
-              color.label === selected ? "border-neutral-900 dark:border-white" : "border-transparent"
-            }`}
-          />
-        ))}
+        {colors.map((color) => {
+          const thumb = images[color.label];
+          const isSelected = color.label === selected;
+          return (
+            <button
+              key={color.label}
+              onClick={() => onSelect(color.label)}
+              aria-label={color.label}
+              title={color.label}
+              className={`group relative flex items-center justify-center transition-transform hover:scale-105 ${
+                thumb
+                  ? `size-14 rounded-xl border-2 bg-[var(--surface-inset)] p-1 ${
+                      isSelected ? "border-neutral-900 dark:border-white" : "border-transparent"
+                    }`
+                  : `size-8 rounded-full border-2 ${isSelected ? "border-neutral-900 dark:border-white" : "border-transparent"}`
+              }`}
+              style={thumb ? undefined : { backgroundColor: color.extra || "#9ca3af" }}
+            >
+              {thumb && <img src={resolveMediaUrl(thumb)} alt="" className="size-full rounded-lg object-contain" loading="lazy" />}
+              <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 dark:bg-white dark:text-neutral-900">
+                {color.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -569,6 +583,15 @@ function ProductDetails() {
   }, [product?.id]);
 
   const colorOptions = useMemo(() => (product?.options || []).filter((o) => o.kind === "color"), [product]);
+  // Per-colour thumbnail for the swatch itself (not just the gallery jump) - falls back to
+  // the plain colour-dot swatch below for any colour that has no dedicated variant photo yet.
+  const colorImageByLabel = useMemo(() => {
+    const map = {};
+    for (const v of product?.variants || []) {
+      if (v.combination?.color && v.imageUrl && !map[v.combination.color]) map[v.combination.color] = v.imageUrl;
+    }
+    return map;
+  }, [product]);
   const storageOptions = useMemo(() => (product?.options || []).filter((o) => o.kind === "storage"), [product]);
   const variantKeys = useMemo(
     () => (product?.variants?.length ? Object.keys(product.variants[0].combination) : []),
@@ -775,6 +798,7 @@ function ProductDetails() {
               <div className="mt-8 space-y-6 border-t border-black/5 pt-7 dark:border-white/10">
                 <ColorSelector
                   colors={colorOptions}
+                  images={colorImageByLabel}
                   selected={selections.color}
                   onSelect={(label) => setSelections((s) => ({ ...s, color: label }))}
                 />
