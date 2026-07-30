@@ -84,7 +84,7 @@ export default function ProductCard({
       <Link
         to={href}
         className={cn(
-          "relative block overflow-hidden bg-[var(--surface-inset)]",
+          "relative block overflow-hidden bg-[var(--surface)]",
           cfg.dense ? "aspect-square" : cfg.tall ? "aspect-[3/4]" : "aspect-[4/5]"
         )}
       >
