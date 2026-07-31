@@ -186,7 +186,17 @@ function Navbar({ onOpenChatbot }) {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
+    // A single toggle point (scrollY > 8) let tiny scroll jitter near that exact pixel - common
+    // with trackpad momentum/rubber-banding - flip the collapsed state back and forth mid
+    // transition, making the header visibly shake. A dead zone between the two thresholds means
+    // the state only changes once scrolling has clearly moved past it, never right at the edge.
+    const onScroll = () => {
+      setScrolled((prev) => {
+        if (window.scrollY > 40) return true;
+        if (window.scrollY < 15) return false;
+        return prev;
+      });
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
