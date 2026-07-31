@@ -729,7 +729,7 @@ function ProductDetails() {
           <span className="text-neutral-600 dark:text-neutral-300">{product.name}</span>
         </div>
 
-        <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,440px)_1fr] lg:gap-16">
           <ZoomGallery images={gallery} videos={videos} fallbackKey={product.id} activeIndex={activeImage} onSelect={setActiveImage} />
 
           <div ref={buyBoxRef} className="lg:sticky lg:top-24 lg:self-start">
