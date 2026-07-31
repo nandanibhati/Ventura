@@ -832,7 +832,7 @@ function ProductDetails() {
               <button
                 onClick={handleAddToCart}
                 disabled={maxQty === 0}
-                className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-full bg-neutral-900 px-6 text-sm font-semibold text-white transition-transform hover:scale-[1.02] disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+                className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-full bg-gold-400 px-6 text-sm font-semibold text-white transition-transform hover:scale-[1.02] hover:bg-gold-500 disabled:opacity-40"
               >
                 <AnimatePresence mode="wait" initial={false}>
                   {maxQty === 0 ? (
@@ -1121,7 +1121,7 @@ function ProductDetails() {
               <button
                 onClick={handleAddToCart}
                 disabled={maxQty === 0}
-                className="flex shrink-0 items-center gap-2 rounded-full bg-neutral-900 px-6 py-3 text-sm font-semibold text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+                className="flex shrink-0 items-center gap-2 rounded-full bg-gold-400 px-6 py-3 text-sm font-semibold text-white hover:bg-gold-500 disabled:opacity-40"
               >
                 <ShoppingBag className="h-4 w-4" /> Add to Cart
               </button>
