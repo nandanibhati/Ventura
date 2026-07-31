@@ -636,7 +636,11 @@ function CategoriesSection() {
               {categories.slice(0, 12).map((cat) => {
                 const Icon = iconFor(cat.name);
                 return (
-                  <Link key={cat.id} to={`/shop?category=${cat.slug}`} className="group flex shrink-0 flex-col items-center gap-2 text-center">
+                  <Link
+                    key={cat.id}
+                    to={`/shop?category=${cat.slug}`}
+                    className="group flex w-20 shrink-0 flex-col items-center gap-2 text-center sm:w-28"
+                  >
                     <div className="relative flex h-20 w-20 items-center justify-center sm:h-28 sm:w-28">
                       {cat.imageUrl ? (
                         <img
@@ -653,7 +657,7 @@ function CategoriesSection() {
                       )}
                       {isPreview && <CmsEditOverlay onEdit={() => requestEdit("category", cat.id)} />}
                     </div>
-                    <span className="text-[13px] font-semibold text-neutral-900 sm:text-base">{cat.name}</span>
+                    <span className="text-[13px] font-semibold leading-tight text-neutral-900 sm:text-base">{cat.name}</span>
                   </Link>
                 );
               })}
