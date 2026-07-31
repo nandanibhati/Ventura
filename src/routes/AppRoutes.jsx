@@ -31,6 +31,15 @@ const Affiliate = lazyWithRetry(() => import("../pages/Affiliate/Affiliate"));
 // the footer instead of the top). Skips the reset on pure hash changes (e.g. "#reviews").
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
+  // The browser's own scroll restoration races this component on back/forward navigation - it
+  // tries to jump straight to whatever Y offset the page was at when you left it (e.g. the
+  // footer, if that's where you were scrolled to), sometimes winning the race and leaving you
+  // there instead of at the top. Turning it off makes this component the only thing in control.
+  useEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+  }, []);
   useEffect(() => {
     if (hash) return;
     window.scrollTo(0, 0);
