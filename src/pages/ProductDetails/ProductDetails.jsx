@@ -926,7 +926,10 @@ function ProductDetails() {
                   transition={{ duration: 0.25 }}
                   className="max-w-3xl"
                 >
-                  <p className="text-base leading-relaxed text-neutral-600 dark:text-neutral-300 whitespace-pre-line">{product.description}</p>
+                  <div
+                    className="text-base leading-relaxed text-neutral-600 dark:text-neutral-300 [&_h1]:mb-3 [&_h1]:mt-6 [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:text-neutral-900 [&_h1]:first:mt-0 [&_h1]:dark:text-white [&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-neutral-900 [&_h2]:dark:text-white [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-neutral-900 [&_h3]:dark:text-white [&_p]:mb-3 [&_strong]:font-semibold [&_strong]:text-neutral-900 [&_strong]:dark:text-white [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:mb-1 [&_hr]:my-5 [&_hr]:border-black/10 [&_hr]:dark:border-white/10"
+                    dangerouslySetInnerHTML={{ __html: product.description }}
+                  />
                 </motion.div>
               )}
 
