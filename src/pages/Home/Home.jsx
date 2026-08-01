@@ -566,44 +566,161 @@ function BannerCarousel({ heroConfig, isLoading }) {
 
 /** Row of small square promo tiles under the main banner (Argos/Flipkart-style ad strip) —
  * pulled from real categories so it's never fake/placeholder content. */
+const VERTICAL_UPGRADE_BANNER_URL =
+  "https://res.cloudinary.com/dmyuu0c8g/image/upload/f_auto,q_auto,w_1600,c_limit/v1785524031/veluntra/rgobblechcmaapcg2lui.jpg";
+
+const PROMO_TILES = [
+  {
+    id: "pay-later",
+    heading: "Tech now,\npay later",
+    bullets: ["0% interest", "Flexible payments", "Quick & easy"],
+    cta: "Learn more",
+    link: "/shop",
+    bg: "bg-[#EDE6FB] dark:bg-[#2e1065]/40",
+    dot: "bg-[#8B5CF6]",
+    text: "text-[#5B21B6] dark:text-white",
+    sub: "text-[#6D28D9] dark:text-gold-200",
+    categorySlug: "laptops",
+  },
+  {
+    id: "sweet-deals",
+    heading: "Sweeet\ndeals!",
+    body: "Save up to £200 on selected fridge freezers. Plus, get free recycling.",
+    cta: "Shop now",
+    link: "/shop?category=home-kitchen",
+    bg: "bg-[#FDF0D5] dark:bg-[#3a2a0a]/40",
+    dot: "bg-[#F59E0B]",
+    text: "text-[#B45309] dark:text-white",
+    sub: "text-[#92400E] dark:text-gold-200",
+    categorySlug: "home-kitchen",
+  },
+  {
+    id: "upgrade-now",
+    heading: "Upgrade Now,\nSave More.",
+    bullets: ["Top brands", "Lower prices", "Premium quality"],
+    cta: "Shop now",
+    link: "/shop?category=phones",
+    bg: "bg-[#DCF3EA] dark:bg-[#0a2e24]/40",
+    dot: "bg-[#10B981]",
+    text: "text-[#065F46] dark:text-white",
+    sub: "text-[#047857] dark:text-gold-200",
+    categorySlug: "phones",
+    badge: "Big Savings!",
+    mobileImage: VERTICAL_UPGRADE_BANNER_URL,
+  },
+];
+
+/** Client-supplied marketing promo row (financing / seasonal deal / upsell) - not tied to live
+ * category data like the rest of the homepage, since this is fixed campaign copy the store
+ * asked for verbatim. The 3rd tile has a dedicated portrait asset for mobile (supplied by the
+ * client) since the desktop illustration doesn't read well cropped down to a phone width. */
 function PromoTilesRow() {
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: categoriesApi.list });
-  const tiles = categories.slice(0, 3);
-  if (tiles.length === 0) return null;
+  const imageFor = (slug) => categories.find((c) => c.slug === slug)?.imageUrl;
 
   return (
     <div className="mx-auto max-w-7xl px-2 sm:px-3">
       <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
-        {tiles.map((cat) => {
-          const Icon = iconFor(cat.name);
+        {PROMO_TILES.map((tile) => {
+          const img = imageFor(tile.categorySlug);
           return (
             <Link
-              key={cat.id}
-              to={`/shop?category=${cat.slug}`}
-              className="group relative flex h-40 w-[75vw] shrink-0 snap-start items-center overflow-hidden rounded-lg bg-gold-100/70 px-6 py-5 dark:bg-[#2e1065]/40 sm:h-56 sm:w-auto"
+              key={tile.id}
+              to={tile.link}
+              className={cn(
+                "group relative flex h-40 w-[75vw] shrink-0 snap-start items-center overflow-hidden rounded-lg px-6 py-5 sm:h-56 sm:w-auto",
+                tile.bg
+              )}
             >
-              <div className="relative z-10 max-w-[55%]">
-                <p className="text-xs font-semibold uppercase tracking-wider text-gold-600 dark:text-gold-300">{cat.productCount}+ items</p>
-                <h3 className="mt-1 text-xl font-bold text-neutral-900 dark:text-white sm:text-2xl">{cat.name}</h3>
-                <span className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-gold-600 dark:text-gold-300">
-                  Shop now <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              {/* Decorative accent circles, standing in for the illustrated confetti/spheres in
+                  the client's reference design. */}
+              <span className={cn("pointer-events-none absolute -left-3 -top-3 size-14 rounded-full opacity-20", tile.dot)} />
+              <span className={cn("pointer-events-none absolute -right-2 top-8 size-3 rounded-full opacity-40", tile.dot)} />
+
+              {tile.badge && (
+                <span className="absolute right-3 top-3 z-10 rounded-full bg-rose-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+                  {tile.badge}
+                </span>
+              )}
+
+              <div className="relative z-10 max-w-[58%]">
+                <span className="inline-block rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-neutral-900 dark:bg-white/10 dark:text-white">
+                  Veluntra
+                </span>
+                <h3 className={cn("mt-2 whitespace-pre-line text-lg font-extrabold leading-tight sm:text-2xl", tile.text)}>
+                  {tile.heading}
+                </h3>
+                {tile.body && <p className={cn("mt-1.5 text-xs sm:text-sm", tile.sub)}>{tile.body}</p>}
+                {tile.bullets && (
+                  <ul className={cn("mt-1.5 space-y-0.5 text-xs sm:text-sm", tile.sub)}>
+                    {tile.bullets.map((b) => (
+                      <li key={b} className="flex items-center gap-1.5">
+                        <Check className="size-3 shrink-0" /> {b}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <span className={cn("mt-2 inline-flex items-center gap-1 text-sm font-semibold", tile.text)}>
+                  {tile.cta} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </span>
               </div>
-              {cat.imageUrl ? (
+
+              {tile.mobileImage && (
                 <img
-                  src={resolveMediaUrl(cat.imageUrl)}
+                  src={tile.mobileImage}
                   alt=""
                   loading="lazy"
                   decoding="async"
-                  className="absolute inset-y-0 right-0 h-full w-[52%] object-contain p-3 transition-transform duration-500 group-hover:scale-105 sm:p-6"
+                  className="absolute inset-0 size-full object-cover object-top sm:hidden"
                 />
-              ) : (
-                <Icon className="absolute right-4 top-4 z-0 h-16 w-16 shrink-0 text-gold-400/25 sm:h-20 sm:w-20" strokeWidth={1} />
+              )}
+              {img && (
+                <img
+                  src={resolveMediaUrl(img)}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className={cn(
+                    "absolute inset-y-0 right-0 h-full w-[48%] object-contain p-3 transition-transform duration-500 group-hover:scale-105 sm:p-6",
+                    tile.mobileImage && "hidden sm:block"
+                  )}
+                />
               )}
             </Link>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/** Full-width single promo banner, sitting directly below the 3-tile row - same client-supplied
+ * campaign copy pattern as PROMO_TILES above. */
+function WideBannerSection() {
+  const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: categoriesApi.list });
+  const img = categories.find((c) => c.slug === "audio")?.imageUrl;
+
+  return (
+    <div className="mx-auto max-w-7xl px-2 sm:px-3">
+      <Link
+        to="/shop"
+        className="group relative flex h-32 items-center justify-center overflow-hidden rounded-lg bg-[#FDEBC8] px-6 text-center dark:bg-[#3a2a0a]/40 sm:h-40"
+      >
+        <span className="pointer-events-none absolute left-6 top-1/2 hidden -translate-y-1/2 opacity-70 sm:block">
+          {img && <img src={resolveMediaUrl(img)} alt="" className="h-20 w-20 object-contain" />}
+        </span>
+        <div className="relative z-10">
+          <h3 className="text-lg font-extrabold text-[#7C2D12] dark:text-white sm:text-2xl">
+            Upgrade Smarter with <span className="text-gold-600 dark:text-gold-300">Veluntra</span>.
+          </h3>
+          <p className="mt-1 text-xs font-semibold text-rose-600 dark:text-rose-300 sm:text-sm">
+            Shop expertly tested devices <span className="font-normal text-[#7C2D12] dark:text-neutral-300">from top brands at unbeatable prices.</span>
+          </p>
+        </div>
+        <span className="pointer-events-none absolute right-6 top-1/2 hidden -translate-y-1/2 opacity-70 sm:block">
+          {img && <img src={resolveMediaUrl(img)} alt="" className="h-20 w-20 object-contain" />}
+        </span>
+      </Link>
     </div>
   );
 }
@@ -1305,6 +1422,7 @@ function Home() {
       </div>
       <div className="space-y-2 py-2 sm:space-y-3 sm:py-3">
         <PromoTilesRow />
+        <WideBannerSection />
         {merchandisingSections
           .filter((s) => s.type !== "categories")
           .map((section) => {
