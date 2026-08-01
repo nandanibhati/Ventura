@@ -459,14 +459,14 @@ const PROMO_TILES = [
     sub: "text-[#047857] dark:text-gold-200",
     categorySlug: "phones",
     badge: "Big Savings!",
-    mobileImage: VERTICAL_UPGRADE_BANNER_URL,
+    image: VERTICAL_UPGRADE_BANNER_URL,
   },
 ];
 
 /** Client-supplied marketing promo row (financing / seasonal deal / upsell) - not tied to live
  * category data like the rest of the homepage, since this is fixed campaign copy the store
- * asked for verbatim. The 3rd tile has a dedicated portrait asset for mobile (supplied by the
- * client) since the desktop illustration doesn't read well cropped down to a phone width. */
+ * asked for verbatim. The 3rd tile renders the client's own finished banner image directly
+ * (tile.image) instead of the coded layout the other two use. */
 function PromoTilesRow() {
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: categoriesApi.list });
   const imageFor = (slug) => categories.find((c) => c.slug === slug)?.imageUrl;
@@ -475,6 +475,17 @@ function PromoTilesRow() {
     <div className="mx-auto max-w-7xl px-2 sm:px-3">
       <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
         {PROMO_TILES.map((tile) => {
+          if (tile.image) {
+            return (
+              <Link
+                key={tile.id}
+                to={tile.link}
+                className="block h-40 w-[75vw] shrink-0 snap-start overflow-hidden rounded-lg sm:h-56 sm:w-auto"
+              >
+                <img src={tile.image} alt={tile.heading.replace(/\n/g, " ")} loading="lazy" decoding="async" className="size-full object-cover" />
+              </Link>
+            );
+          }
           const img = imageFor(tile.categorySlug);
           return (
             <Link
@@ -518,25 +529,13 @@ function PromoTilesRow() {
                 </span>
               </div>
 
-              {tile.mobileImage && (
-                <img
-                  src={tile.mobileImage}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 size-full object-cover object-top sm:hidden"
-                />
-              )}
               {img && (
                 <img
                   src={resolveMediaUrl(img)}
                   alt=""
                   loading="lazy"
                   decoding="async"
-                  className={cn(
-                    "absolute inset-y-0 right-0 h-full w-[48%] object-contain p-3 transition-transform duration-500 group-hover:scale-105 sm:p-6",
-                    tile.mobileImage && "hidden sm:block"
-                  )}
+                  className="absolute inset-y-0 right-0 h-full w-[48%] object-contain p-3 transition-transform duration-500 group-hover:scale-105 sm:p-6"
                 />
               )}
             </Link>
