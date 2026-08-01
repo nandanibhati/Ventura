@@ -419,153 +419,6 @@ function ProductGridSection({ section, defaults }) {
   );
 }
 
-/**
- * Rotating full-width banner strip (Amazon/Flipkart-style "lightning deals" banner), not a
- * heavy editorial hero. Every slide is admin-editable (Homepage CMS > hero banner > Add slide);
- * these generic ones only appear when the admin hasn't configured any slides at all, so the
- * strip is never empty on a brand-new store.
- */
-const FALLBACK_SLIDES = [
-  { id: "s1", gradient: "from-amber-500 to-orange-600", title: "Big Electronics Sale", subtitle: "Up to 60% off Audio, Wearables & more", cta: "Shop deals", link: "/shop" },
-  { id: "s2", gradient: "from-indigo-600 to-blue-700", title: "New Arrivals Just Landed", subtitle: "The latest tech, fresh in stock", cta: "Explore new", link: "/shop?sort=newest" },
-  { id: "s3", gradient: "from-emerald-600 to-teal-700", title: "Top Rated Best Sellers", subtitle: "Loved by thousands of happy customers", cta: "View best sellers", link: "/shop?sort=best-selling" },
-];
-
-function BannerCarousel({ heroConfig, isLoading }) {
-  // Older sections saved before the multi-slide editor existed have their one slide's fields
-  // directly on config (headline/backgroundImage/...) instead of a `slides` array — read those
-  // as a one-slide list too, so nothing already configured just disappears.
-  const legacySlide =
-    !heroConfig?.slides && (heroConfig?.headline || heroConfig?.backgroundImage || heroConfig?.backgroundVideo || heroConfig?.subheadline)
-      ? [heroConfig]
-      : null;
-  const rawSlides = heroConfig?.slides?.length ? heroConfig.slides : legacySlide;
-  // A slide with no image/video AND no text/CTA has nothing to show — render it as if it
-  // doesn't exist rather than a blank dark box (e.g. after "Remove" clears just the image but
-  // the empty slide entry itself is still in the list).
-  const cmsSlides = rawSlides?.filter((s) => s.backgroundImage || s.backgroundVideo || s.headline || s.subheadline || s.ctaText);
-  const slides = cmsSlides?.length
-    ? cmsSlides.map((s, i) => ({
-        id: `cms-hero-${i}`,
-        image: s.backgroundImage,
-        video: s.backgroundVideo,
-        gradient: "from-neutral-800 to-neutral-950",
-        // No fallback text here on purpose — a slide's image is often a complete, pre-designed
-        // banner graphic with its own headline baked in (e.g. an agency-made promo image), and
-        // forcing default text/button on top of it doubled up with whatever the image already
-        // says. Leaving a field blank in the editor means "no overlay for this", not "use a
-        // generic default".
-        title: s.headline,
-        subtitle: s.subheadline,
-        cta: s.ctaText,
-        link: s.ctaLink || "/shop",
-      }))
-    : FALLBACK_SLIDES;
-
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => setIndex((i) => (i + 1) % slides.length), 4500);
-    return () => clearInterval(id);
-  }, [slides.length]);
-
-  // While the real CMS config is still in flight, show a plain skeleton rather than jumping
-  // straight to the generic fallback slides — otherwise every load flashes "Big Electronics
-  // Sale" for a moment before swapping to the real content, which reads as a bug. This check
-  // comes after the hooks above (not before) so they still run on every render either way.
-  if (isLoading && !cmsSlides?.length) {
-    return (
-      <div className="mx-auto max-w-7xl px-2 sm:px-3">
-        <div className="h-[170px] animate-pulse rounded-md bg-[var(--surface-inset)] sm:h-[240px] md:h-[320px]" />
-      </div>
-    );
-  }
-
-  const slide = slides[index];
-
-  return (
-    <div className="mx-auto max-w-7xl px-2 sm:px-3">
-      <div className="relative aspect-[4/1] overflow-hidden rounded-md">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={slide.id}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            className={cn("absolute inset-0 flex items-center bg-gradient-to-br", slide.gradient)}
-          >
-            {slide.video ? (
-              <video
-                src={slide.video}
-                className="absolute inset-0 h-full w-full object-cover"
-                autoPlay
-                muted
-                loop
-                playsInline
-              />
-            ) : slide.image ? (
-              <img src={slide.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
-            ) : null}
-            {(slide.title || slide.subtitle || slide.cta) && (slide.image || slide.video) && (
-              <div className="absolute inset-0 bg-black/30" />
-            )}
-            {(slide.title || slide.subtitle || slide.cta) && (
-              <div className="relative z-10 px-5 sm:px-10 md:px-14">
-                {slide.title && (
-                  <h2 className="max-w-md text-xl font-bold leading-tight text-white sm:text-2xl md:text-4xl">{slide.title}</h2>
-                )}
-                {slide.subtitle && <p className="mt-2 max-w-sm text-xs text-white/80 sm:text-sm md:text-base">{slide.subtitle}</p>}
-                {slide.cta && (
-                  <Link
-                    to={slide.link}
-                    className="mt-4 inline-flex items-center gap-2 rounded-sm bg-white px-4 py-2 text-xs font-semibold text-neutral-900 sm:mt-5 sm:px-5 sm:py-2.5 sm:text-sm"
-                  >
-                    {slide.cta} <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                )}
-              </div>
-            )}
-            {!(slide.title || slide.subtitle || slide.cta) && (slide.image || slide.video) && (
-              // Pure-image slide (the graphic already has its own text/CTA) — make the whole
-              // banner clickable so it's not just decorative, using whatever link was set.
-              <Link to={slide.link} className="absolute inset-0" aria-label={`Banner ${index + 1}`} />
-            )}
-          </motion.div>
-        </AnimatePresence>
-
-        <button
-          onClick={() => setIndex((i) => (i - 1 + slides.length) % slides.length)}
-          aria-label="Previous banner"
-          className="absolute left-2 top-1/2 z-20 hidden size-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-neutral-900 hover:bg-white sm:flex"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <button
-          onClick={() => setIndex((i) => (i + 1) % slides.length)}
-          aria-label="Next banner"
-          className="absolute right-2 top-1/2 z-20 hidden size-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-neutral-900 hover:bg-white sm:flex"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-
-        <div className="absolute bottom-2.5 left-1/2 z-20 flex -translate-x-1/2 gap-1.5">
-          {slides.map((s, i) => (
-            <button
-              key={s.id}
-              onClick={() => setIndex(i)}
-              aria-label={`Go to slide ${i + 1}`}
-              className={cn("h-1.5 rounded-full transition-all", i === index ? "w-5 bg-white" : "w-1.5 bg-white/50")}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Row of small square promo tiles under the main banner (Argos/Flipkart-style ad strip) —
- * pulled from real categories so it's never fake/placeholder content. */
 const VERTICAL_UPGRADE_BANNER_URL =
   "https://res.cloudinary.com/dmyuu0c8g/image/upload/f_auto,q_auto,w_1600,c_limit/v1785524031/veluntra/rgobblechcmaapcg2lui.jpg";
 
@@ -694,32 +547,16 @@ function PromoTilesRow() {
   );
 }
 
-/** Full-width single promo banner, sitting directly below the 3-tile row - same client-supplied
- * campaign copy pattern as PROMO_TILES above. */
-function WideBannerSection() {
-  const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: categoriesApi.list });
-  const img = categories.find((c) => c.slug === "audio")?.imageUrl;
+const WIDE_BANNER_URL =
+  "https://res.cloudinary.com/dmyuu0c8g/image/upload/f_auto,q_auto,w_1600,c_limit/v1785599804/veluntra/fnm3qxetkfybytdnnmcw.jpg";
 
+/** Full-width single promo banner, sitting directly below the 3-tile row - client-supplied
+ * final asset, used as-is rather than recreated in code. */
+function WideBannerSection() {
   return (
     <div className="mx-auto max-w-7xl px-2 sm:px-3">
-      <Link
-        to="/shop"
-        className="group relative flex h-32 items-center justify-center overflow-hidden rounded-lg bg-[#FDEBC8] px-6 text-center dark:bg-[#3a2a0a]/40 sm:h-40"
-      >
-        <span className="pointer-events-none absolute left-6 top-1/2 hidden -translate-y-1/2 opacity-70 sm:block">
-          {img && <img src={resolveMediaUrl(img)} alt="" className="h-20 w-20 object-contain" />}
-        </span>
-        <div className="relative z-10">
-          <h3 className="text-lg font-extrabold text-[#7C2D12] dark:text-white sm:text-2xl">
-            Upgrade Smarter with <span className="text-gold-600 dark:text-gold-300">Veluntra</span>.
-          </h3>
-          <p className="mt-1 text-xs font-semibold text-rose-600 dark:text-rose-300 sm:text-sm">
-            Shop expertly tested devices <span className="font-normal text-[#7C2D12] dark:text-neutral-300">from top brands at unbeatable prices.</span>
-          </p>
-        </div>
-        <span className="pointer-events-none absolute right-6 top-1/2 hidden -translate-y-1/2 opacity-70 sm:block">
-          {img && <img src={resolveMediaUrl(img)} alt="" className="h-20 w-20 object-contain" />}
-        </span>
+      <Link to="/shop" className="block overflow-hidden rounded-lg">
+        <img src={WIDE_BANNER_URL} alt="Upgrade Smarter with Veluntra" className="w-full object-cover" />
       </Link>
     </div>
   );
@@ -1410,15 +1247,10 @@ function Home() {
       : !isCmsPreview && sectionsLoading
       ? []
       : DEFAULT_CMS_SECTION_ORDER.map((type) => ({ id: type, type, config: null, title: null }));
-  const heroSection = cmsSections?.find((s) => s.type === "hero_banner");
-
   return (
     <div className="min-h-screen bg-white dark:bg-neutral-950">
       <div className="pt-2 sm:pt-3">
         <CategoriesSection />
-      </div>
-      <div className="mt-2 sm:mt-3">
-        <BannerCarousel heroConfig={heroSection?.config} isLoading={!isCmsPreview && sectionsLoading} />
       </div>
       <div className="space-y-2 py-2 sm:space-y-3 sm:py-3">
         <PromoTilesRow />
