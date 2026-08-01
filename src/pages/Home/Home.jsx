@@ -419,9 +419,6 @@ function ProductGridSection({ section, defaults }) {
   );
 }
 
-const VERTICAL_UPGRADE_BANNER_URL =
-  "https://res.cloudinary.com/dmyuu0c8g/image/upload/f_auto,q_auto,w_1600,c_limit/v1785524031/veluntra/rgobblechcmaapcg2lui.jpg";
-
 const PROMO_TILES = [
   {
     id: "pay-later",
@@ -459,14 +456,12 @@ const PROMO_TILES = [
     sub: "text-[#047857] dark:text-gold-200",
     categorySlug: "phones",
     badge: "Big Savings!",
-    image: VERTICAL_UPGRADE_BANNER_URL,
   },
 ];
 
 /** Client-supplied marketing promo row (financing / seasonal deal / upsell) - not tied to live
  * category data like the rest of the homepage, since this is fixed campaign copy the store
- * asked for verbatim. The 3rd tile renders the client's own finished banner image directly
- * (tile.image) instead of the coded layout the other two use. */
+ * asked for verbatim. */
 function PromoTilesRow() {
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: categoriesApi.list });
   const imageFor = (slug) => categories.find((c) => c.slug === slug)?.imageUrl;
@@ -475,24 +470,13 @@ function PromoTilesRow() {
     <div className="mx-auto max-w-7xl px-2 sm:px-3">
       <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
         {PROMO_TILES.map((tile) => {
-          if (tile.image) {
-            return (
-              <Link
-                key={tile.id}
-                to={tile.link}
-                className="aspect-[942/1192] w-[75vw] shrink-0 snap-start overflow-hidden rounded-lg sm:w-auto"
-              >
-                <img src={tile.image} alt={tile.heading.replace(/\n/g, " ")} loading="lazy" decoding="async" className="size-full object-contain" />
-              </Link>
-            );
-          }
           const img = imageFor(tile.categorySlug);
           return (
             <Link
               key={tile.id}
               to={tile.link}
               className={cn(
-                "group relative flex w-[75vw] shrink-0 snap-start items-center overflow-hidden rounded-lg px-6 py-5 sm:w-auto",
+                "group relative flex h-40 w-[75vw] shrink-0 snap-start items-center overflow-hidden rounded-lg px-6 py-5 sm:h-56 sm:w-auto",
                 tile.bg
               )}
             >
