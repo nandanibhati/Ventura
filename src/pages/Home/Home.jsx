@@ -480,9 +480,9 @@ function PromoTilesRow() {
               <Link
                 key={tile.id}
                 to={tile.link}
-                className="block h-40 w-[75vw] shrink-0 snap-start overflow-hidden rounded-lg sm:h-56 sm:w-auto"
+                className="aspect-[942/1192] w-[75vw] shrink-0 snap-start overflow-hidden rounded-lg sm:w-auto"
               >
-                <img src={tile.image} alt={tile.heading.replace(/\n/g, " ")} loading="lazy" decoding="async" className="size-full object-cover" />
+                <img src={tile.image} alt={tile.heading.replace(/\n/g, " ")} loading="lazy" decoding="async" className="size-full object-contain" />
               </Link>
             );
           }
@@ -492,7 +492,7 @@ function PromoTilesRow() {
               key={tile.id}
               to={tile.link}
               className={cn(
-                "group relative flex h-40 w-[75vw] shrink-0 snap-start items-center overflow-hidden rounded-lg px-6 py-5 sm:h-56 sm:w-auto",
+                "group relative flex w-[75vw] shrink-0 snap-start items-center overflow-hidden rounded-lg px-6 py-5 sm:w-auto",
                 tile.bg
               )}
             >

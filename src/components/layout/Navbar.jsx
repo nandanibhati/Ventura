@@ -276,7 +276,7 @@ function Navbar({ onOpenChatbot }) {
   return (
     <header ref={navRef} className="sticky top-0 z-50">
       <div
-        className={`hidden border-b border-black/5 px-6 text-xs text-gold-700 transition-all duration-300 dark:border-white/10 dark:text-gold-100 lg:flex lg:items-center lg:justify-between ${
+        className={`hidden border-b border-black/5 px-6 text-xs text-gold-700 transition-[opacity] duration-200 dark:border-white/10 dark:text-gold-100 lg:flex lg:items-center lg:justify-between ${
           scrolled ? "h-0 overflow-hidden opacity-0" : "h-9 opacity-100"
         } bg-gold-100/90 backdrop-blur-xl dark:bg-[#2e1065]/70`}
       >
@@ -337,7 +337,7 @@ function Navbar({ onOpenChatbot }) {
         }`}
       >
         <div
-          className={`mx-auto flex max-w-7xl items-center gap-4 px-6 transition-all duration-300 sm:gap-6 ${
+          className={`mx-auto flex max-w-7xl items-center gap-4 px-6 sm:gap-6 ${
             scrolled ? "h-16" : "h-20"
           }`}
         >
@@ -347,7 +347,7 @@ function Navbar({ onOpenChatbot }) {
                 src={resolveMediaUrl(storeSettings.logoUrl)}
                 alt={storeSettings.storeName || "Store logo"}
                 onError={() => setLogoFailed(true)}
-                className={`w-auto max-w-[220px] object-contain transition-all duration-300 ${scrolled ? "h-12" : "h-16"}`}
+                className={`w-auto max-w-[220px] object-contain ${scrolled ? "h-12" : "h-16"}`}
               />
             ) : (
               <span className="text-[1.6rem] font-bold uppercase tracking-[0.15em] text-neutral-900 dark:text-white">
