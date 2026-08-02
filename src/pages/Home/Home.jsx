@@ -471,15 +471,9 @@ function PromoTilesRow() {
               <Link
                 key={tile.id}
                 to={tile.link}
-                className="group relative block h-40 w-[75vw] shrink-0 snap-start overflow-hidden rounded-lg sm:h-56 sm:w-auto"
+                className="relative block h-40 w-[75vw] shrink-0 snap-start overflow-hidden rounded-lg sm:h-56 sm:w-auto"
               >
-                <img
-                  src={tile.image}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
+                <img src={tile.image} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
               </Link>
             );
           }
