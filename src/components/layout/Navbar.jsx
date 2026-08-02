@@ -274,7 +274,7 @@ function Navbar({ onOpenChatbot }) {
   };
 
   return (
-    <header ref={navRef} className="sticky top-0 z-50">
+    <header ref={navRef} className="sticky top-0 z-50 [overflow-anchor:none]">
       <div
         className={`hidden border-b border-black/5 px-6 text-xs text-gold-700 transition-[opacity] duration-200 dark:border-white/10 dark:text-gold-100 lg:flex lg:items-center lg:justify-between ${
           scrolled ? "h-0 overflow-hidden opacity-0" : "h-9 opacity-100"
