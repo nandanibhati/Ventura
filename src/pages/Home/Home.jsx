@@ -537,16 +537,16 @@ function CategoriesSection() {
                 section is pinned to a fixed light background regardless of site theme, since
                 that's the only way those photos sit on it with no visible seam. object-contain
                 so nothing of the source image is ever cropped, whatever its aspect ratio. */}
-            <div ref={scrollRef} className="flex items-start gap-6 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:gap-12 sm:px-10 [&::-webkit-scrollbar]:hidden">
+            <div ref={scrollRef} className="flex items-start gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:gap-12 sm:px-10 [&::-webkit-scrollbar]:hidden">
               {categories.slice(0, 12).map((cat) => {
                 const Icon = iconFor(cat.name);
                 return (
                   <Link
                     key={cat.id}
                     to={`/shop?category=${cat.slug}`}
-                    className="group flex w-20 shrink-0 flex-col items-center gap-2 text-center sm:w-28"
+                    className="group flex w-[22vw] shrink-0 flex-col items-center gap-2 text-center sm:w-28"
                   >
-                    <div className="relative flex h-20 w-20 items-center justify-center sm:h-28 sm:w-28">
+                    <div className="relative flex h-[22vw] w-[22vw] items-center justify-center sm:h-28 sm:w-28">
                       {cat.imageUrl ? (
                         <img
                           src={resolveMediaUrl(cat.imageUrl)}
