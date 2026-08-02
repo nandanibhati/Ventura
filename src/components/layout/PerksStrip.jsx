@@ -11,7 +11,7 @@ const PERKS = [
  * this only appeared once, buried partway down the homepage. */
 export default function PerksStrip() {
   return (
-    <div className="border-b border-black/5 bg-gold-100/70 dark:border-white/10 dark:bg-[#2e1065]/40">
+    <div className="border-b border-black/5 bg-white dark:border-white/10 dark:bg-neutral-950">
       <div className="mx-auto grid max-w-7xl grid-cols-2 gap-3 px-6 py-3 sm:grid-cols-4 sm:gap-4 sm:py-3.5">
         {PERKS.map((perk) => (
           <div key={perk.title} className="flex items-center gap-2.5">
