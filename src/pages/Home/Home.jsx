@@ -421,6 +421,10 @@ function ProductGridSection({ section, defaults }) {
 
 const PAY_LATER_BANNER_URL =
   "https://res.cloudinary.com/dmyuu0c8g/image/upload/f_auto,q_auto,w_1600,c_limit/v1785669938/veluntra/spaosrgqzkga0eugtiz6.png";
+const SWEET_DEALS_BANNER_URL =
+  "https://res.cloudinary.com/dmyuu0c8g/image/upload/f_auto,q_auto,w_1600,c_limit/v1785695444/veluntra/sfvn7zivmwingxanfjka.png";
+const UPGRADE_NOW_BANNER_URL =
+  "https://res.cloudinary.com/dmyuu0c8g/image/upload/f_auto,q_auto,w_1600,c_limit/v1785695446/veluntra/tqg8npuv3uh9ezxs2q5v.png";
 
 const PROMO_TILES = [
   {
@@ -430,28 +434,13 @@ const PROMO_TILES = [
   },
   {
     id: "sweet-deals",
-    heading: "Sweeet\ndeals!",
-    body: "Save up to £200 on selected fridge freezers. Plus, get free recycling.",
-    cta: "Shop now",
+    image: SWEET_DEALS_BANNER_URL,
     link: "/shop?category=home-kitchen",
-    bg: "bg-[#FDF0D5] dark:bg-[#3a2a0a]/40",
-    dot: "bg-[#F59E0B]",
-    text: "text-[#B45309] dark:text-white",
-    sub: "text-[#92400E] dark:text-gold-200",
-    categorySlug: "home-kitchen",
   },
   {
     id: "upgrade-now",
-    heading: "Upgrade Now,\nSave More.",
-    bullets: ["Top brands", "Lower prices", "Premium quality"],
-    cta: "Shop now",
+    image: UPGRADE_NOW_BANNER_URL,
     link: "/shop?category=phones",
-    bg: "bg-[#DCF3EA] dark:bg-[#0a2e24]/40",
-    dot: "bg-[#10B981]",
-    text: "text-[#065F46] dark:text-white",
-    sub: "text-[#047857] dark:text-gold-200",
-    categorySlug: "phones",
-    badge: "Big Savings!",
   },
 ];
 
@@ -459,80 +448,18 @@ const PROMO_TILES = [
  * category data like the rest of the homepage, since this is fixed campaign copy the store
  * asked for verbatim. */
 function PromoTilesRow() {
-  const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: categoriesApi.list });
-  const imageFor = (slug) => categories.find((c) => c.slug === slug)?.imageUrl;
-
   return (
     <div className="mx-auto max-w-7xl px-2 sm:px-3">
       <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
-        {PROMO_TILES.map((tile) => {
-          if (tile.image) {
-            return (
-              <Link
-                key={tile.id}
-                to={tile.link}
-                className="relative block h-40 w-[75vw] shrink-0 snap-start overflow-hidden rounded-lg sm:h-56 sm:w-auto"
-              >
-                <img src={tile.image} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
-              </Link>
-            );
-          }
-
-          const img = imageFor(tile.categorySlug);
-          return (
-            <Link
-              key={tile.id}
-              to={tile.link}
-              className={cn(
-                "group relative flex h-40 w-[75vw] shrink-0 snap-start items-center overflow-hidden rounded-lg px-6 py-5 sm:h-56 sm:w-auto",
-                tile.bg
-              )}
-            >
-              {/* Decorative accent circles, standing in for the illustrated confetti/spheres in
-                  the client's reference design. */}
-              <span className={cn("pointer-events-none absolute -left-3 -top-3 size-14 rounded-full opacity-20", tile.dot)} />
-              <span className={cn("pointer-events-none absolute -right-2 top-8 size-3 rounded-full opacity-40", tile.dot)} />
-
-              {tile.badge && (
-                <span className="absolute right-3 top-3 z-10 rounded-full bg-rose-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
-                  {tile.badge}
-                </span>
-              )}
-
-              <div className="relative z-10 max-w-[58%]">
-                <span className="inline-block rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-neutral-900 dark:bg-white/10 dark:text-white">
-                  Veluntra
-                </span>
-                <h3 className={cn("mt-2 whitespace-pre-line text-lg font-extrabold leading-tight sm:text-2xl", tile.text)}>
-                  {tile.heading}
-                </h3>
-                {tile.body && <p className={cn("mt-1.5 text-xs sm:text-sm", tile.sub)}>{tile.body}</p>}
-                {tile.bullets && (
-                  <ul className={cn("mt-1.5 space-y-0.5 text-xs sm:text-sm", tile.sub)}>
-                    {tile.bullets.map((b) => (
-                      <li key={b} className="flex items-center gap-1.5">
-                        <Check className="size-3 shrink-0" /> {b}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <span className={cn("mt-2 inline-flex items-center gap-1 text-sm font-semibold", tile.text)}>
-                  {tile.cta} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </span>
-              </div>
-
-              {img && (
-                <img
-                  src={resolveMediaUrl(img)}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-y-0 right-0 h-full w-[48%] object-contain p-3 transition-transform duration-500 group-hover:scale-105 sm:p-6"
-                />
-              )}
-            </Link>
-          );
-        })}
+        {PROMO_TILES.map((tile) => (
+          <Link
+            key={tile.id}
+            to={tile.link}
+            className="relative block h-40 w-[75vw] shrink-0 snap-start overflow-hidden rounded-lg sm:h-56 sm:w-auto"
+          >
+            <img src={tile.image} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+          </Link>
+        ))}
       </div>
     </div>
   );
