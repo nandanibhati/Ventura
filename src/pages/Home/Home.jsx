@@ -418,7 +418,7 @@ function ProductGridSection({ section, defaults }) {
           <div className="hidden sm:block">
             <HorizontalProductRow>
               {products.map((product, i) => (
-                <div key={product.id} className="relative sm:w-[270px] lg:w-[calc((100%-4*1.5rem)/5)]">
+                <div key={product.id} className="relative shrink-0 snap-start sm:w-[270px] lg:w-[calc((100%-4*1.5rem)/5)]">
                   <HomeProductCard product={product} index={i} template={template} />
                   {isPreview && <CmsEditOverlay onEdit={() => requestEdit("product", product.id)} />}
                 </div>
@@ -682,7 +682,7 @@ function FlashSaleSection({ section }) {
           <div className="hidden sm:block">
             <HorizontalProductRow>
               {products.map((product, i) => (
-                <div key={product.id} className="relative sm:w-[270px] lg:w-[calc((100%-4*1.5rem)/5)]">
+                <div key={product.id} className="relative shrink-0 snap-start sm:w-[270px] lg:w-[calc((100%-4*1.5rem)/5)]">
                   <HomeProductCard product={product} index={i} template={template} />
                   {isPreview && <CmsEditOverlay onEdit={() => requestEdit("product", product.id)} />}
                 </div>
