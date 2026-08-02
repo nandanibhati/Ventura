@@ -419,18 +419,14 @@ function ProductGridSection({ section, defaults }) {
   );
 }
 
+const PAY_LATER_BANNER_URL =
+  "https://res.cloudinary.com/dmyuu0c8g/image/upload/f_auto,q_auto,w_1600,c_limit/v1785669938/veluntra/spaosrgqzkga0eugtiz6.png";
+
 const PROMO_TILES = [
   {
     id: "pay-later",
-    heading: "Tech now,\npay later",
-    bullets: ["0% interest", "Flexible payments", "Quick & easy"],
-    cta: "Learn more",
+    image: PAY_LATER_BANNER_URL,
     link: "/shop",
-    bg: "bg-[#EDE6FB] dark:bg-[#2e1065]/40",
-    dot: "bg-[#8B5CF6]",
-    text: "text-[#5B21B6] dark:text-white",
-    sub: "text-[#6D28D9] dark:text-gold-200",
-    categorySlug: "laptops",
   },
   {
     id: "sweet-deals",
@@ -470,6 +466,24 @@ function PromoTilesRow() {
     <div className="mx-auto max-w-7xl px-2 sm:px-3">
       <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
         {PROMO_TILES.map((tile) => {
+          if (tile.image) {
+            return (
+              <Link
+                key={tile.id}
+                to={tile.link}
+                className="group relative block h-40 w-[75vw] shrink-0 snap-start overflow-hidden rounded-lg sm:h-56 sm:w-auto"
+              >
+                <img
+                  src={tile.image}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              </Link>
+            );
+          }
+
           const img = imageFor(tile.categorySlug);
           return (
             <Link
