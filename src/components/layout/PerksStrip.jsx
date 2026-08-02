@@ -14,7 +14,10 @@ export default function PerksStrip() {
     <div className="border-b border-black/5 bg-white dark:border-white/10 dark:bg-neutral-950">
       <div className="mx-auto grid max-w-7xl grid-cols-2 gap-3 px-6 py-3 sm:grid-cols-4 sm:gap-4 sm:py-3.5">
         {PERKS.map((perk) => (
-          <div key={perk.title} className="flex items-center gap-2.5">
+          <div
+            key={perk.title}
+            className="flex items-center gap-2.5 rounded-xl border border-black/5 bg-[var(--surface)] p-2.5 sm:border-0 sm:bg-transparent sm:p-0 dark:border-white/10"
+          >
             <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gold-400/15 text-gold-600 dark:text-gold-300">
               <perk.icon className="h-4 w-4" strokeWidth={1.75} />
             </span>

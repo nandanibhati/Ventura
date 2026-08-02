@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Outlet } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
 import PerksStrip from "../components/layout/PerksStrip";
+import MobileTabBar from "../components/layout/MobileTabBar";
 import Footer from "../components/layout/Footer";
 import CookieConsentBanner from "../components/layout/CookieConsentBanner";
 import PopupBanner from "../components/layout/PopupBanner";
@@ -53,7 +54,7 @@ function MainLayout() {
   }, [data?.logoUrl]);
 
   return (
-    <div ref={rootRef} className="min-h-screen flex flex-col bg-white dark:bg-neutral-950">
+    <div ref={rootRef} className="min-h-screen flex flex-col bg-white pb-16 lg:pb-0 dark:bg-neutral-950">
 
       <Navbar onOpenChatbot={() => setChatbotOpen(true)} />
       <PerksStrip />
@@ -66,6 +67,7 @@ function MainLayout() {
       <CookieConsentBanner />
       <PopupBanner />
       <ChatbotWidget open={chatbotOpen} onOpenChange={setChatbotOpen} />
+      <MobileTabBar />
 
     </div>
   );

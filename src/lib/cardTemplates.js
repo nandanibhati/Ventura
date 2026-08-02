@@ -8,4 +8,15 @@ export const CARD_TEMPLATES = {
   luxury: { label: "Luxury", dense: false, bordered: false, align: "left", cta: "pill", showRating: true, showBadge: true, tall: false },
   grid: { label: "Grid", dense: true, bordered: true, align: "center", cta: "icon", showRating: true, showBadge: true, tall: false },
   large: { label: "Large", dense: false, bordered: false, align: "left", cta: "pill-full", showRating: true, showBadge: true, tall: true },
+  app: {
+    label: "App",
+    dense: true,
+    bordered: true,
+    align: "left",
+    cta: "icon-overlay",
+    showRating: false,
+    showBadge: true,
+    showCategory: true,
+    tall: false,
+  },
 };

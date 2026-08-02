@@ -89,7 +89,7 @@ export default function ProductCard({
         )}
       >
         {cfg.showBadge &&
-          (cfg.dense ? (
+          (cfg.dense && cfg.cta !== "icon-overlay" ? (
             discount != null && (
               <span className="absolute left-2 top-2 z-10 rounded-sm bg-rose-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
                 -{discount}%
@@ -165,6 +165,21 @@ export default function ProductCard({
           </div>
         )}
 
+        {cfg.cta === "icon-overlay" && onAdd && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onAdd();
+            }}
+            disabled={stock === 0}
+            aria-label="Add to bag"
+            className="absolute bottom-1.5 right-1.5 z-10 grid size-7 place-items-center rounded-full bg-ink-950 text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Plus className="size-3.5" />
+          </button>
+        )}
+
         {!cfg.dense && onQuickView && (
           <div className="absolute inset-x-0 bottom-0 z-10 flex translate-y-full justify-center bg-black/40 py-2.5 backdrop-blur-sm transition-transform duration-300 group-hover:translate-y-0">
             <button
@@ -183,6 +198,9 @@ export default function ProductCard({
 
       {cfg.dense ? (
         <div className={cn("flex flex-1 flex-col gap-1 p-2", cfg.align === "center" && "items-center text-center")}>
+          {cfg.showCategory && category && (
+            <span className="text-[9.5px] font-bold uppercase tracking-wide text-gold-500">{category}</span>
+          )}
           <Link to={href}>
             <h3 className="line-clamp-2 min-h-[2.4em] text-[12.5px] leading-snug text-[var(--text-primary)]">{name}</h3>
           </Link>
@@ -208,6 +226,7 @@ export default function ProductCard({
               )}
             </span>
             {onAdd &&
+              cfg.cta !== "icon-overlay" &&
               (cfg.cta === "link" ? (
                 <button onClick={onAdd} disabled={stock === 0} className="text-[11px] font-medium uppercase tracking-wide text-gold-600 hover:underline disabled:cursor-not-allowed disabled:opacity-40">
                   {stock === 0 ? "Sold out" : "Add"}

@@ -406,14 +406,26 @@ function ProductGridSection({ section, defaults }) {
       {subtitle && <p className="-mt-2 mb-3 text-xs text-neutral-500 dark:text-neutral-400">{subtitle}</p>}
       <SectionStatus isLoading={isLoading} isError={isError} isEmpty={products.length === 0} onRetry={refetch} emptyLabel={defaults.emptyLabel} />
       {!isLoading && !isError && products.length > 0 && (
-        <HorizontalProductRow>
-          {products.map((product, i) => (
-            <div key={product.id} className="relative w-[44vw] shrink-0 snap-start sm:w-[270px] lg:w-[calc((100%-4*1.5rem)/5)]">
-              <HomeProductCard product={product} index={i} template={template} />
-              {isPreview && <CmsEditOverlay onEdit={() => requestEdit("product", product.id)} />}
-            </div>
-          ))}
-        </HorizontalProductRow>
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:hidden">
+            {products.map((product, i) => (
+              <div key={product.id} className="relative">
+                <HomeProductCard product={product} index={i} template="app" />
+                {isPreview && <CmsEditOverlay onEdit={() => requestEdit("product", product.id)} />}
+              </div>
+            ))}
+          </div>
+          <div className="hidden sm:block">
+            <HorizontalProductRow>
+              {products.map((product, i) => (
+                <div key={product.id} className="relative sm:w-[270px] lg:w-[calc((100%-4*1.5rem)/5)]">
+                  <HomeProductCard product={product} index={i} template={template} />
+                  {isPreview && <CmsEditOverlay onEdit={() => requestEdit("product", product.id)} />}
+                </div>
+              ))}
+            </HorizontalProductRow>
+          </div>
+        </>
       )}
     </SectionCard>
   );
@@ -448,17 +460,38 @@ const PROMO_TILES = [
  * category data like the rest of the homepage, since this is fixed campaign copy the store
  * asked for verbatim. */
 function PromoTilesRow() {
+  const scrollRef = useRef(null);
+  const [activeDot, setActiveDot] = useState(0);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setActiveDot(Math.round(el.scrollLeft / el.clientWidth));
+  };
+
   return (
     <div className="mx-auto max-w-7xl px-2 sm:px-3">
-      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden"
+      >
         {PROMO_TILES.map((tile) => (
           <Link
             key={tile.id}
             to={tile.link}
-            className="relative block h-40 w-[75vw] shrink-0 snap-start overflow-hidden rounded-lg sm:h-56 sm:w-auto"
+            className="relative block h-40 w-full shrink-0 snap-start overflow-hidden rounded-lg sm:h-56 sm:w-auto"
           >
             <img src={tile.image} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
           </Link>
+        ))}
+      </div>
+      <div className="mt-2.5 flex justify-center gap-1.5 sm:hidden">
+        {PROMO_TILES.map((tile, i) => (
+          <span
+            key={tile.id}
+            className={cn("h-1.5 rounded-full transition-all", i === activeDot ? "w-4 bg-gold-500" : "w-1.5 bg-black/10 dark:bg-white/15")}
+          />
         ))}
       </div>
     </div>
@@ -637,14 +670,26 @@ function FlashSaleSection({ section }) {
       {isLoading || isError ? (
         <SectionStatus isLoading={isLoading} isError={isError} isEmpty={false} />
       ) : (
-        <HorizontalProductRow>
-          {products.map((product, i) => (
-            <div key={product.id} className="relative w-[44vw] shrink-0 snap-start sm:w-[270px] lg:w-[calc((100%-4*1.5rem)/5)]">
-              <HomeProductCard product={product} index={i} template={template} />
-              {isPreview && <CmsEditOverlay onEdit={() => requestEdit("product", product.id)} />}
-            </div>
-          ))}
-        </HorizontalProductRow>
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:hidden">
+            {products.map((product, i) => (
+              <div key={product.id} className="relative">
+                <HomeProductCard product={product} index={i} template="app" />
+                {isPreview && <CmsEditOverlay onEdit={() => requestEdit("product", product.id)} />}
+              </div>
+            ))}
+          </div>
+          <div className="hidden sm:block">
+            <HorizontalProductRow>
+              {products.map((product, i) => (
+                <div key={product.id} className="relative sm:w-[270px] lg:w-[calc((100%-4*1.5rem)/5)]">
+                  <HomeProductCard product={product} index={i} template={template} />
+                  {isPreview && <CmsEditOverlay onEdit={() => requestEdit("product", product.id)} />}
+                </div>
+              ))}
+            </HorizontalProductRow>
+          </div>
+        </>
       )}
     </SectionCard>
   );

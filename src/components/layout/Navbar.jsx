@@ -28,6 +28,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { wishlistApi, notificationsApi } from "../../api/orders";
+import { cn } from "../../lib/utils";
 import { settingsApi, categoriesApi } from "../../api/catalog";
 import { productsApi } from "../../api/products";
 import { resolveMediaUrl, resolveProductImageUrl } from "../../lib/api";
@@ -68,6 +69,26 @@ function NavItem({ to, label, accent }) {
           />
         </>
       )}
+    </NavLink>
+  );
+}
+
+function NavChip({ to, label, accent }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        cn(
+          "shrink-0 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
+          accent
+            ? "border-rose-200 text-rose-600 dark:border-rose-900 dark:text-rose-400"
+            : isActive
+            ? "border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900"
+            : "border-black/10 text-neutral-700 dark:border-white/15 dark:text-neutral-200"
+        )
+      }
+    >
+      {label}
     </NavLink>
   );
 }
@@ -595,6 +616,15 @@ function Navbar({ onOpenChatbot }) {
               <Menu className="h-5 w-5" strokeWidth={1.75} />
             </button>
           </div>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto border-t border-black/5 px-4 py-2.5 [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden dark:border-white/10">
+          <NavChip to="/shop?isNew=true" label="New Arrivals" />
+          <NavChip to="/shop" label="Categories" />
+          {quickNavCategories.map((cat) => (
+            <NavChip key={cat.id} to={`/shop?category=${cat.slug}`} label={cat.name} />
+          ))}
+          <NavChip to="/shop?sale=true" label="Sale" accent />
         </div>
 
         <div className="hidden border-t border-black/5 dark:border-white/10 lg:block">
